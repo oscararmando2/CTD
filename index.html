@@ -155,6 +155,19 @@
             width: 24px;
         }
         
+        .tiresvg {
+            animation: tireRotation 0.8s linear infinite;
+        }
+        
+        @keyframes tireRotation {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        
         .road {
             width: 100%;
             height: 1.5px;
@@ -869,12 +882,17 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
 
     <!-- JavaScript for Language Switcher and Mobile Menu -->
     <script>
-        // Hide loader after 8 seconds
+        // Loader configuration
+        const LOADER_DURATION = 8000; // 8 seconds
+        
+        // Hide loader after specified duration
         window.addEventListener('load', function() {
             setTimeout(function() {
                 const loader = document.getElementById('page-loader');
-                loader.classList.add('hidden');
-            }, 8000); // 8 seconds
+                if (loader) {
+                    loader.classList.add('hidden');
+                }
+            }, LOADER_DURATION);
         });
         
         // Set copyright year dynamically
