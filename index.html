@@ -226,6 +226,15 @@
             text-align: center;
             margin-top: 1rem;
         }
+        
+        /* Accessibility: Respect user's motion preferences */
+        @media (prefers-reduced-motion: reduce) {
+            .group > div[class*="group-hover"],
+            .group > div[class*="transition"] {
+                transition: none !important;
+                animation: none !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-white text-gray-800">
