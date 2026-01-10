@@ -3,37 +3,575 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Central Trade Distribution - Distribuidora de Alimentos Latinos en Kansas City</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- SEO Meta Tags -->
+    <title>Central Trade Distribution - Distribuidora de Alimentos Latinos en Kansas City | Mayoreo Productos Mexicanos</title>
+    <meta name="description" content="Central Trade Distribution (CTD) - Distribuidora mayorista de alimentos latinos en Kansas City, Missouri. Productos mexicanos, refrigerados, bebidas y snacks para tiendas y supermercados latinos. Precios mayoristas, entregas en cadena de frío.">
+    <meta name="keywords" content="distribuidora alimentos latinos Kansas City, mayoreo productos mexicanos, distribuidora mayorista Kansas City, alimentos latinos Missouri, productos mexicanos mayoreo, CTD Kansas City">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- AOS Library for Scroll Animations -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
     <style>
-        body { font-family: Arial, sans-serif; }
-        .hero { background-color: #ffcc00; padding: 50px; text-align: center; }
+        /* Smooth scroll behavior */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Custom brand colors configuration for Tailwind */
+        .bg-ctd-red { background-color: #db2c1a; }
+        .bg-ctd-orange { background-color: #f89429; }
+        .bg-ctd-green { background-color: #247232; }
+        .text-ctd-red { color: #db2c1a; }
+        .text-ctd-orange { color: #f89429; }
+        .text-ctd-green { color: #247232; }
+        .hover\:bg-ctd-orange:hover { background-color: #f89429; }
+        .border-ctd-red { border-color: #db2c1a; }
+        
+        /* Gradient background for hero */
+        .gradient-hero {
+            background: linear-gradient(135deg, #db2c1a 0%, #f89429 100%);
+        }
+        
+        /* Mobile menu toggle */
+        .mobile-menu-hidden {
+            display: none;
+        }
     </style>
 </head>
-<body>
-    <header class="navbar navbar-expand-lg navbar-light bg-light">
-        <div class="container">
-            <a class="navbar-brand" href="#">CTD - Central Trade Distribution</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="#">Inicio</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Sobre Nosotros</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Productos</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Servicios</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Contacto</a></li>
-                </ul>
+<body class="bg-white text-gray-800">
+
+    <!-- Fixed Navbar -->
+    <nav class="fixed top-0 left-0 right-0 bg-white shadow-md z-50">
+        <div class="container mx-auto px-4 py-3 md:py-4">
+            <div class="flex items-center justify-between">
+                <!-- Logo and Brand Name -->
+                <div class="flex items-center space-x-3">
+                    <img src="CTD.PNG" alt="Central Trade Distribution" class="h-10 md:h-12">
+                    <span class="hidden sm:inline-block text-lg md:text-xl font-bold text-ctd-red">Central Trade Distribution</span>
+                </div>
+                
+                <!-- Desktop Menu -->
+                <div class="hidden lg:flex items-center space-x-6">
+                    <a href="#inicio" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Inicio" data-lang-en="Home">Inicio</a>
+                    <a href="#sobre-nosotros" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Sobre Nosotros" data-lang-en="About Us">Sobre Nosotros</a>
+                    <a href="#productos" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Productos" data-lang-en="Products">Productos</a>
+                    <a href="#servicios" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Servicios" data-lang-en="Services">Servicios</a>
+                    <a href="#contacto" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Contacto" data-lang-en="Contact">Contacto</a>
+                    
+                    <!-- Language Switcher -->
+                    <div class="flex items-center space-x-2 border-l pl-4">
+                        <button onclick="switchLanguage('es')" id="btn-es" class="px-2 py-1 rounded font-semibold text-ctd-red border-2 border-ctd-red">ES</button>
+                        <button onclick="switchLanguage('en')" id="btn-en" class="px-2 py-1 rounded text-gray-600 border-2 border-gray-300 hover:border-ctd-red">EN</button>
+                    </div>
+                    
+                    <!-- CTA Button -->
+                    <a href="#contacto" class="bg-ctd-red text-white px-4 py-2 rounded-lg hover:bg-ctd-orange transition font-semibold" data-lang-es="Solicitar Cotización" data-lang-en="Request Quote">Solicitar Cotización</a>
+                </div>
+                
+                <!-- Mobile Menu Button -->
+                <button onclick="toggleMobileMenu()" class="lg:hidden text-gray-700 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Mobile Menu -->
+            <div id="mobile-menu" class="mobile-menu-hidden lg:hidden mt-4 pb-4">
+                <div class="flex flex-col space-y-3">
+                    <a href="#inicio" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Inicio" data-lang-en="Home" onclick="toggleMobileMenu()">Inicio</a>
+                    <a href="#sobre-nosotros" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Sobre Nosotros" data-lang-en="About Us" onclick="toggleMobileMenu()">Sobre Nosotros</a>
+                    <a href="#productos" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Productos" data-lang-en="Products" onclick="toggleMobileMenu()">Productos</a>
+                    <a href="#servicios" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Servicios" data-lang-en="Services" onclick="toggleMobileMenu()">Servicios</a>
+                    <a href="#contacto" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Contacto" data-lang-en="Contact" onclick="toggleMobileMenu()">Contacto</a>
+                    
+                    <div class="flex items-center space-x-2 pt-2">
+                        <button onclick="switchLanguage('es')" id="btn-es-mobile" class="px-3 py-1 rounded font-semibold text-ctd-red border-2 border-ctd-red">ES</button>
+                        <button onclick="switchLanguage('en')" id="btn-en-mobile" class="px-3 py-1 rounded text-gray-600 border-2 border-gray-300">EN</button>
+                    </div>
+                    
+                    <a href="#contacto" class="bg-ctd-red text-white px-4 py-2 rounded-lg hover:bg-ctd-orange transition text-center font-semibold" data-lang-es="Solicitar Cotización" data-lang-en="Request Quote" onclick="toggleMobileMenu()">Solicitar Cotización</a>
+                </div>
             </div>
         </div>
-    </header>
-    <section class="hero">
-        <h1>Bienvenidos a Central Trade Distribution</h1>
-        <p>Distribuyendo sabores latinos auténticos a tiendas y supermercados en Kansas City y más allá.</p>
-        <a href="#productos" class="btn btn-primary">Ver Productos</a>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="inicio" class="gradient-hero pt-24 md:pt-32 pb-16 md:pb-24">
+        <div class="container mx-auto px-4 text-center">
+            <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6" data-aos="fade-down" data-lang-es="Distribuidora Mayorista de Alimentos Latinos" data-lang-en="Wholesale Latino Food Distributor">
+                Distribuidora Mayorista de Alimentos Latinos
+            </h1>
+            <p class="text-lg md:text-xl lg:text-2xl text-white mb-8 max-w-3xl mx-auto" data-aos="fade-up" data-aos-delay="200" data-lang-es="Conectando los auténticos sabores latinos con tiendas y supermercados en Kansas City y el Midwest. Calidad, variedad y servicio excepcional." data-lang-en="Connecting authentic Latino flavors with stores and supermarkets in Kansas City and the Midwest. Quality, variety, and exceptional service.">
+                Conectando los auténticos sabores latinos con tiendas y supermercados en Kansas City y el Midwest. Calidad, variedad y servicio excepcional.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center" data-aos="zoom-in" data-aos-delay="400">
+                <a href="#productos" class="bg-white text-ctd-red px-8 py-3 rounded-lg font-bold text-lg hover:bg-gray-100 transition shadow-lg" data-lang-es="Ver Productos" data-lang-en="View Products">Ver Productos</a>
+                <a href="#contacto" class="bg-ctd-green text-white px-8 py-3 rounded-lg font-bold text-lg hover:bg-opacity-90 transition shadow-lg" data-lang-es="Contáctanos" data-lang-en="Contact Us">Contáctanos</a>
+            </div>
+        </div>
     </section>
-    <!-- Agrega más secciones aquí, como Sobre Nosotros, etc. -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- About Us Section -->
+    <section id="sobre-nosotros" class="py-16 md:py-24 bg-gray-50">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12" data-aos="fade-up">
+                <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-ctd-red mb-4" data-lang-es="Sobre Nosotros" data-lang-en="About Us">Sobre Nosotros</h2>
+                <p class="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto" data-lang-es="Central Trade Distribution (CTD) es su socio confiable en la distribución mayorista de productos latinos en Kansas City, Missouri." data-lang-en="Central Trade Distribution (CTD) is your trusted partner in wholesale distribution of Latino products in Kansas City, Missouri.">
+                    Central Trade Distribution (CTD) es su socio confiable en la distribución mayorista de productos latinos en Kansas City, Missouri.
+                </p>
+            </div>
+            
+            <!-- Mission Statement -->
+            <div class="mb-12 text-center max-w-4xl mx-auto" data-aos="fade-up" data-aos-delay="100">
+                <h3 class="text-2xl md:text-3xl font-bold text-ctd-red mb-4" data-lang-es="Nuestra Misión" data-lang-en="Our Mission">Nuestra Misión</h3>
+                <p class="text-gray-700 text-lg" data-lang-es="Proporcionar productos latinos de la más alta calidad a precios competitivos, con un servicio excepcional que impulse el éxito de nuestros clientes en el mercado minorista." data-lang-en="Provide the highest quality Latino products at competitive prices, with exceptional service that drives our clients' success in the retail market.">
+                    Proporcionar productos latinos de la más alta calidad a precios competitivos, con un servicio excepcional que impulse el éxito de nuestros clientes en el mercado minorista.
+                </p>
+            </div>
+            
+            <!-- Values Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+                <div class="bg-white p-6 rounded-lg shadow-lg" data-aos="fade-right" data-aos-delay="100">
+                    <div class="text-ctd-green text-4xl mb-4">✓</div>
+                    <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Calidad Garantizada" data-lang-en="Guaranteed Quality">Calidad Garantizada</h4>
+                    <p class="text-gray-600" data-lang-es="Productos seleccionados cuidadosamente para cumplir con los más altos estándares de calidad y frescura." data-lang-en="Carefully selected products to meet the highest standards of quality and freshness.">
+                        Productos seleccionados cuidadosamente para cumplir con los más altos estándares de calidad y frescura.
+                    </p>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow-lg" data-aos="fade-up" data-aos-delay="200">
+                    <div class="text-ctd-green text-4xl mb-4">★</div>
+                    <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Servicio Excepcional" data-lang-en="Exceptional Service">Servicio Excepcional</h4>
+                    <p class="text-gray-600" data-lang-es="Equipo dedicado que entiende las necesidades únicas de las tiendas latinas y ofrece soluciones personalizadas." data-lang-en="Dedicated team that understands the unique needs of Latino stores and offers customized solutions.">
+                        Equipo dedicado que entiende las necesidades únicas de las tiendas latinas y ofrece soluciones personalizadas.
+                    </p>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow-lg" data-aos="fade-left" data-aos-delay="300">
+                    <div class="text-ctd-green text-4xl mb-4">♥</div>
+                    <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Compromiso Comunitario" data-lang-en="Community Commitment">Compromiso Comunitario</h4>
+                    <p class="text-gray-600" data-lang-es="Apoyamos el crecimiento de la comunidad latina promoviendo los auténticos sabores de nuestras culturas." data-lang-en="We support the growth of the Latino community by promoting the authentic flavors of our cultures.">
+                        Apoyamos el crecimiento de la comunidad latina promoviendo los auténticos sabores de nuestras culturas.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Products Section -->
+    <section id="productos" class="py-16 md:py-24 bg-white">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12" data-aos="fade-up">
+                <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-ctd-red mb-4" data-lang-es="Nuestros Productos" data-lang-en="Our Products">Nuestros Productos</h2>
+                <p class="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto" data-lang-es="Amplia variedad de productos latinos para satisfacer todas las necesidades de su negocio." data-lang-en="Wide variety of Latino products to meet all your business needs.">
+                    Amplia variedad de productos latinos para satisfacer todas las necesidades de su negocio.
+                </p>
+            </div>
+            
+            <!-- Product Categories Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Category 1 -->
+                <div class="bg-gray-50 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition" data-aos="fade-up" data-aos-delay="100">
+                    <img src="https://via.placeholder.com/400x300/db2c1a/ffffff?text=Alimentos+Secos" alt="Alimentos Secos" class="w-full h-48 object-cover">
+                    <div class="p-5">
+                        <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Alimentos Secos" data-lang-en="Dry Foods">Alimentos Secos</h3>
+                        <p class="text-gray-600 text-sm" data-lang-es="Arroz, frijoles, harinas, especias y más productos básicos para su tienda." data-lang-en="Rice, beans, flours, spices, and more staple products for your store.">
+                            Arroz, frijoles, harinas, especias y más productos básicos para su tienda.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Category 2 -->
+                <div class="bg-gray-50 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition" data-aos="fade-up" data-aos-delay="200">
+                    <img src="https://via.placeholder.com/400x300/f89429/ffffff?text=Productos+Refrigerados" alt="Productos Refrigerados" class="w-full h-48 object-cover">
+                    <div class="p-5">
+                        <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Productos Refrigerados" data-lang-en="Refrigerated Products">Productos Refrigerados</h3>
+                        <p class="text-gray-600 text-sm" data-lang-es="Quesos, cremas, carnes frescas y productos lácteos con cadena de frío garantizada." data-lang-en="Cheeses, creams, fresh meats, and dairy products with guaranteed cold chain.">
+                            Quesos, cremas, carnes frescas y productos lácteos con cadena de frío garantizada.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Category 3 -->
+                <div class="bg-gray-50 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition" data-aos="fade-up" data-aos-delay="300">
+                    <img src="https://via.placeholder.com/400x300/247232/ffffff?text=Bebidas" alt="Bebidas" class="w-full h-48 object-cover">
+                    <div class="p-5">
+                        <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Bebidas" data-lang-en="Beverages">Bebidas</h3>
+                        <p class="text-gray-600 text-sm" data-lang-es="Refrescos, jugos, aguas frescas y bebidas tradicionales de toda Latinoamérica." data-lang-en="Sodas, juices, fresh waters, and traditional beverages from all over Latin America.">
+                            Refrescos, jugos, aguas frescas y bebidas tradicionales de toda Latinoamérica.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Category 4 -->
+                <div class="bg-gray-50 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition" data-aos="fade-up" data-aos-delay="400">
+                    <img src="https://via.placeholder.com/400x300/db2c1a/ffffff?text=Snacks+y+Dulces" alt="Snacks y Dulces" class="w-full h-48 object-cover">
+                    <div class="p-5">
+                        <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Snacks y Dulces" data-lang-en="Snacks & Sweets">Snacks y Dulces</h3>
+                        <p class="text-gray-600 text-sm" data-lang-es="Botanas, dulces típicos, chocolates y golosinas que sus clientes adoran." data-lang-en="Snacks, typical sweets, chocolates, and treats that your customers love.">
+                            Botanas, dulces típicos, chocolates y golosinas que sus clientes adoran.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Category 5 -->
+                <div class="bg-gray-50 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition" data-aos="fade-up" data-aos-delay="100">
+                    <img src="https://via.placeholder.com/400x300/f89429/ffffff?text=Productos+Importados" alt="Productos Importados" class="w-full h-48 object-cover">
+                    <div class="p-5">
+                        <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Productos Importados" data-lang-en="Imported Products">Productos Importados</h3>
+                        <p class="text-gray-600 text-sm" data-lang-es="Auténticos productos directamente desde México, Centroamérica y Sudamérica." data-lang-en="Authentic products directly from Mexico, Central America, and South America.">
+                            Auténticos productos directamente desde México, Centroamérica y Sudamérica.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Category 6 -->
+                <div class="bg-gray-50 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition" data-aos="fade-up" data-aos-delay="200">
+                    <img src="https://via.placeholder.com/400x300/247232/ffffff?text=Congelados" alt="Congelados" class="w-full h-48 object-cover">
+                    <div class="p-5">
+                        <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Congelados" data-lang-en="Frozen Foods">Congelados</h3>
+                        <p class="text-gray-600 text-sm" data-lang-es="Carnes, mariscos, helados y productos congelados de alta calidad." data-lang-en="Meats, seafood, ice cream, and high-quality frozen products.">
+                            Carnes, mariscos, helados y productos congelados de alta calidad.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Category 7 -->
+                <div class="bg-gray-50 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition" data-aos="fade-up" data-aos-delay="300">
+                    <img src="https://via.placeholder.com/400x300/db2c1a/ffffff?text=Panaderia" alt="Panadería" class="w-full h-48 object-cover">
+                    <div class="p-5">
+                        <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Panadería" data-lang-en="Bakery">Panadería</h3>
+                        <p class="text-gray-600 text-sm" data-lang-es="Pan dulce, tortillas, y productos de panadería tradicional latina." data-lang-en="Sweet bread, tortillas, and traditional Latin bakery products.">
+                            Pan dulce, tortillas, y productos de panadería tradicional latina.
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Category 8 -->
+                <div class="bg-gray-50 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition" data-aos="fade-up" data-aos-delay="400">
+                    <img src="https://via.placeholder.com/400x300/f89429/ffffff?text=Conservas" alt="Conservas y Enlatados" class="w-full h-48 object-cover">
+                    <div class="p-5">
+                        <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Conservas y Enlatados" data-lang-en="Canned & Preserved">Conservas y Enlatados</h3>
+                        <p class="text-gray-600 text-sm" data-lang-es="Chiles, salsas, frijoles y vegetales enlatados de marcas reconocidas." data-lang-en="Chiles, sauces, beans, and canned vegetables from recognized brands.">
+                            Chiles, salsas, frijoles y vegetales enlatados de marcas reconocidas.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="servicios" class="py-16 md:py-24 bg-gray-50">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12" data-aos="fade-up">
+                <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-ctd-red mb-4" data-lang-es="Nuestros Servicios" data-lang-en="Our Services">Nuestros Servicios</h2>
+                <p class="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto" data-lang-es="Ventajas que hacen de CTD su mejor socio comercial" data-lang-en="Advantages that make CTD your best business partner">
+                    Ventajas que hacen de CTD su mejor socio comercial
+                </p>
+            </div>
+            
+            <!-- Services/Advantages Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+                <!-- Service 1 -->
+                <div class="bg-white p-6 rounded-lg shadow-lg" data-aos="fade-up" data-aos-delay="100">
+                    <div class="w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">🚚</div>
+                    <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Entregas en Cadena de Frío" data-lang-en="Cold Chain Delivery">Entregas en Cadena de Frío</h3>
+                    <p class="text-gray-600" data-lang-es="Sistema de refrigeración certificado que garantiza la frescura de productos refrigerados y congelados desde nuestro almacén hasta su tienda." data-lang-en="Certified refrigeration system that guarantees the freshness of refrigerated and frozen products from our warehouse to your store.">
+                        Sistema de refrigeración certificado que garantiza la frescura de productos refrigerados y congelados desde nuestro almacén hasta su tienda.
+                    </p>
+                </div>
+                
+                <!-- Service 2 -->
+                <div class="bg-white p-6 rounded-lg shadow-lg" data-aos="fade-up" data-aos-delay="200">
+                    <div class="w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">💰</div>
+                    <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Precios Mayoristas Competitivos" data-lang-en="Competitive Wholesale Prices">Precios Mayoristas Competitivos</h3>
+                    <p class="text-gray-600" data-lang-es="Mejores precios del mercado con descuentos por volumen que incrementan sus márgenes de ganancia y competitividad." data-lang-en="Best market prices with volume discounts that increase your profit margins and competitiveness.">
+                        Mejores precios del mercado con descuentos por volumen que incrementan sus márgenes de ganancia y competitividad.
+                    </p>
+                </div>
+                
+                <!-- Service 3 -->
+                <div class="bg-white p-6 rounded-lg shadow-lg" data-aos="fade-up" data-aos-delay="300">
+                    <div class="w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">📊</div>
+                    <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Asesoría en Inventario" data-lang-en="Inventory Advisory">Asesoría en Inventario</h3>
+                    <p class="text-gray-600" data-lang-es="Expertos que le ayudan a optimizar su inventario, identificar productos de alta rotación y maximizar sus ventas." data-lang-en="Experts who help you optimize your inventory, identify high-turnover products, and maximize your sales.">
+                        Expertos que le ayudan a optimizar su inventario, identificar productos de alta rotación y maximizar sus ventas.
+                    </p>
+                </div>
+                
+                <!-- Service 4 -->
+                <div class="bg-white p-6 rounded-lg shadow-lg" data-aos="fade-up" data-aos-delay="100">
+                    <div class="w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">🗺️</div>
+                    <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Cobertura Kansas City y Midwest" data-lang-en="Kansas City & Midwest Coverage">Cobertura Kansas City y Midwest</h3>
+                    <p class="text-gray-600" data-lang-es="Entregas rápidas y confiables en toda el área metropolitana de Kansas City y estados vecinos del Midwest." data-lang-en="Fast and reliable deliveries throughout the Kansas City metropolitan area and neighboring Midwest states.">
+                        Entregas rápidas y confiables en toda el área metropolitana de Kansas City y estados vecinos del Midwest.
+                    </p>
+                </div>
+                
+                <!-- Service 5 -->
+                <div class="bg-white p-6 rounded-lg shadow-lg" data-aos="fade-up" data-aos-delay="200">
+                    <div class="w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">📱</div>
+                    <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Pedidos Fáciles y Rápidos" data-lang-en="Easy & Fast Orders">Pedidos Fáciles y Rápidos</h3>
+                    <p class="text-gray-600" data-lang-es="Sistema simplificado de pedidos por teléfono, email o WhatsApp. Atención personalizada en español." data-lang-en="Simplified ordering system by phone, email, or WhatsApp. Personalized attention in Spanish.">
+                        Sistema simplificado de pedidos por teléfono, email o WhatsApp. Atención personalizada en español.
+                    </p>
+                </div>
+                
+                <!-- Service 6 -->
+                <div class="bg-white p-6 rounded-lg shadow-lg" data-aos="fade-up" data-aos-delay="300">
+                    <div class="w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">⭐</div>
+                    <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Variedad y Disponibilidad" data-lang-en="Variety & Availability">Variedad y Disponibilidad</h3>
+                    <p class="text-gray-600" data-lang-es="Miles de productos latinos siempre en stock. Si no lo tenemos, lo conseguimos para usted." data-lang-en="Thousands of Latino products always in stock. If we don't have it, we'll get it for you.">
+                        Miles de productos latinos siempre en stock. Si no lo tenemos, lo conseguimos para usted.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contacto" class="py-16 md:py-24 bg-white">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12" data-aos="fade-up">
+                <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-ctd-red mb-4" data-lang-es="Contáctanos" data-lang-en="Contact Us">Contáctanos</h2>
+                <p class="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto" data-lang-es="Estamos listos para atender sus necesidades de distribución" data-lang-en="We are ready to serve your distribution needs">
+                    Estamos listos para atender sus necesidades de distribución
+                </p>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <!-- Contact Form -->
+                <div data-aos="fade-right">
+                    <div class="bg-gray-50 p-6 md:p-8 rounded-lg shadow-lg">
+                        <h3 class="text-2xl font-bold text-ctd-red mb-6" data-lang-es="Solicite una Cotización" data-lang-en="Request a Quote">Solicite una Cotización</h3>
+                        <form id="contact-form" class="space-y-4">
+                            <div>
+                                <label class="block text-gray-700 font-semibold mb-2" data-lang-es="Nombre Completo" data-lang-en="Full Name">Nombre Completo</label>
+                                <input type="text" required id="input-name" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-ctd-red" data-lang-es="Juan Pérez" data-lang-en="John Doe" placeholder="Juan Pérez">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 font-semibold mb-2" data-lang-es="Correo Electrónico" data-lang-en="Email">Correo Electrónico</label>
+                                <input type="email" required id="input-email" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-ctd-red" data-lang-es="juan@tienda.com" data-lang-en="john@store.com" placeholder="juan@tienda.com">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 font-semibold mb-2" data-lang-es="Teléfono" data-lang-en="Phone">Teléfono</label>
+                                <input type="tel" required id="input-phone" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-ctd-red" data-lang-es="(816) 555-1234" data-lang-en="(816) 555-1234" placeholder="(816) 555-1234">
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 font-semibold mb-2" data-lang-es="Tipo de Negocio" data-lang-en="Business Type">Tipo de Negocio</label>
+                                <select required id="select-business" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-ctd-red">
+                                    <option value="" data-lang-es="Seleccione una opción" data-lang-en="Select an option">Seleccione una opción</option>
+                                    <option value="supermercado" data-lang-es="Supermercado" data-lang-en="Supermarket">Supermercado</option>
+                                    <option value="tienda" data-lang-es="Tienda de Abarrotes" data-lang-en="Grocery Store">Tienda de Abarrotes</option>
+                                    <option value="restaurante" data-lang-es="Restaurante" data-lang-en="Restaurant">Restaurante</option>
+                                    <option value="otro" data-lang-es="Otro" data-lang-en="Other">Otro</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-gray-700 font-semibold mb-2" data-lang-es="Mensaje" data-lang-en="Message">Mensaje</label>
+                                <textarea required rows="4" id="textarea-message" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-ctd-red" data-lang-es="Cuéntenos sobre sus necesidades..." data-lang-en="Tell us about your needs..." placeholder="Cuéntenos sobre sus necesidades..."></textarea>
+                            </div>
+                            <button type="submit" class="w-full bg-ctd-red text-white px-6 py-3 rounded-lg font-bold hover:bg-ctd-orange transition text-lg" data-lang-es="Enviar Solicitud" data-lang-en="Send Request">Enviar Solicitud</button>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Contact Information -->
+                <div data-aos="fade-left">
+                    <div class="space-y-6">
+                        <!-- Address -->
+                        <div class="bg-gray-50 p-6 rounded-lg shadow-lg">
+                            <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Dirección" data-lang-en="Address">Dirección</h4>
+                            <p class="text-gray-700">
+                                <strong>Central Trade Distribution</strong><br>
+                                Kansas City, Missouri<br>
+                                Estados Unidos
+                            </p>
+                        </div>
+                        
+                        <!-- Phone -->
+                        <div class="bg-gray-50 p-6 rounded-lg shadow-lg">
+                            <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Teléfono" data-lang-en="Phone">Teléfono</h4>
+                            <p class="text-gray-700">
+                                <a href="tel:+18165551234" class="hover:text-ctd-red transition">(816) 555-1234</a>
+                            </p>
+                        </div>
+                        
+                        <!-- Email -->
+                        <div class="bg-gray-50 p-6 rounded-lg shadow-lg">
+                            <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Correo Electrónico" data-lang-en="Email">Correo Electrónico</h4>
+                            <p class="text-gray-700">
+                                <a href="mailto:info@ctdkansascity.com" class="hover:text-ctd-red transition">info@ctdkansascity.com</a>
+                            </p>
+                        </div>
+                        
+                        <!-- Social Media -->
+                        <div class="bg-gray-50 p-6 rounded-lg shadow-lg">
+                            <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Síguenos" data-lang-en="Follow Us">Síguenos</h4>
+                            <div class="flex space-x-4">
+                                <a href="#" class="w-10 h-10 bg-ctd-red text-white rounded-full flex items-center justify-center hover:bg-ctd-orange transition">
+                                    <span class="font-bold">f</span>
+                                </a>
+                                <a href="#" class="w-10 h-10 bg-ctd-red text-white rounded-full flex items-center justify-center hover:bg-ctd-orange transition">
+                                    <span class="font-bold">in</span>
+                                </a>
+                                <a href="#" class="w-10 h-10 bg-ctd-red text-white rounded-full flex items-center justify-center hover:bg-ctd-orange transition">
+                                    <span class="font-bold">ig</span>
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Map Placeholder -->
+                        <div class="bg-gray-200 rounded-lg overflow-hidden shadow-lg h-64">
+                            <iframe 
+                                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d198570.3625631818!2d-94.82055639999999!3d39.099724!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x87c0f75eafe99997%3A0x558525e66aaa51a2!2sKansas%20City%2C%20MO%2C%20USA!5e0!3m2!1sen!2s!4v1234567890123!5m2!1sen!2s" 
+                                width="100%" 
+                                height="100%" 
+                                style="border:0;" 
+                                allowfullscreen="" 
+                                loading="lazy">
+                            </iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-ctd-green text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                <!-- Company Info -->
+                <div>
+                    <h4 class="text-xl font-bold mb-4" data-lang-es="Central Trade Distribution" data-lang-en="Central Trade Distribution">Central Trade Distribution</h4>
+                    <p class="text-gray-200" data-lang-es="Su socio mayorista de confianza en productos latinos" data-lang-en="Your trusted wholesale partner in Latino products">Su socio mayorista de confianza en productos latinos</p>
+                </div>
+                
+                <!-- Quick Links -->
+                <div>
+                    <h4 class="text-xl font-bold mb-4" data-lang-es="Enlaces Rápidos" data-lang-en="Quick Links">Enlaces Rápidos</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#inicio" class="text-gray-200 hover:text-white transition" data-lang-es="Inicio" data-lang-en="Home">Inicio</a></li>
+                        <li><a href="#sobre-nosotros" class="text-gray-200 hover:text-white transition" data-lang-es="Sobre Nosotros" data-lang-en="About Us">Sobre Nosotros</a></li>
+                        <li><a href="#productos" class="text-gray-200 hover:text-white transition" data-lang-es="Productos" data-lang-en="Products">Productos</a></li>
+                        <li><a href="#servicios" class="text-gray-200 hover:text-white transition" data-lang-es="Servicios" data-lang-en="Services">Servicios</a></li>
+                        <li><a href="#contacto" class="text-gray-200 hover:text-white transition" data-lang-es="Contacto" data-lang-en="Contact">Contacto</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Contact Info -->
+                <div>
+                    <h4 class="text-xl font-bold mb-4" data-lang-es="Contacto" data-lang-en="Contact">Contacto</h4>
+                    <p class="text-gray-200 mb-2">Kansas City, Missouri</p>
+                    <p class="text-gray-200 mb-2"><a href="tel:+18165551234" class="hover:text-white transition">(816) 555-1234</a></p>
+                    <p class="text-gray-200"><a href="mailto:info@ctdkansascity.com" class="hover:text-white transition">info@ctdkansascity.com</a></p>
+                </div>
+            </div>
+            
+            <!-- Copyright -->
+            <div class="border-t border-gray-400 pt-8 text-center">
+                <p class="text-gray-200" id="copyright-text">&copy; <span id="copyright-year"></span> Central Trade Distribution. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript for Language Switcher and Mobile Menu -->
+    <script>
+        // Set copyright year dynamically
+        const year = new Date().getFullYear();
+        document.getElementById('copyright-year').textContent = year;
+        document.getElementById('copyright-text').innerHTML = `&copy; ${year} Central Trade Distribution. Todos los derechos reservados.`;
+        
+        // Initialize AOS (Animate On Scroll) - only if loaded
+        if (typeof AOS !== 'undefined') {
+            AOS.init({
+                duration: 800,
+                once: true,
+                easing: 'ease-out',
+                offset: 120
+            });
+        }
+        
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            if (menu.classList.contains('mobile-menu-hidden')) {
+                menu.classList.remove('mobile-menu-hidden');
+            } else {
+                menu.classList.add('mobile-menu-hidden');
+            }
+        }
+        
+        // Language switcher
+        let currentLanguage = 'es';
+        
+        function switchLanguage(lang) {
+            currentLanguage = lang;
+            
+            // Update all elements with data-lang attributes
+            const elements = document.querySelectorAll('[data-lang-es][data-lang-en]');
+            elements.forEach(element => {
+                const textEs = element.getAttribute('data-lang-es');
+                const textEn = element.getAttribute('data-lang-en');
+                
+                if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
+                    // For inputs and textareas, update placeholder only
+                    element.placeholder = lang === 'es' ? textEs : textEn;
+                } else if (element.tagName === 'OPTION') {
+                    // For option elements, update text content
+                    element.textContent = lang === 'es' ? textEs : textEn;
+                } else {
+                    // For all other elements, update text content
+                    element.textContent = lang === 'es' ? textEs : textEn;
+                }
+            });
+            
+            // Update copyright text
+            const year = new Date().getFullYear();
+            const copyrightText = document.getElementById('copyright-text');
+            if (lang === 'es') {
+                copyrightText.innerHTML = `&copy; ${year} Central Trade Distribution. Todos los derechos reservados.`;
+            } else {
+                copyrightText.innerHTML = `&copy; ${year} Central Trade Distribution. All rights reserved.`;
+            }
+            
+            // Update button styles
+            const btnEs = document.getElementById('btn-es');
+            const btnEn = document.getElementById('btn-en');
+            const btnEsMobile = document.getElementById('btn-es-mobile');
+            const btnEnMobile = document.getElementById('btn-en-mobile');
+            
+            if (lang === 'es') {
+                btnEs.className = 'px-2 py-1 rounded font-semibold text-ctd-red border-2 border-ctd-red';
+                btnEn.className = 'px-2 py-1 rounded text-gray-600 border-2 border-gray-300 hover:border-ctd-red';
+                btnEsMobile.className = 'px-3 py-1 rounded font-semibold text-ctd-red border-2 border-ctd-red';
+                btnEnMobile.className = 'px-3 py-1 rounded text-gray-600 border-2 border-gray-300';
+            } else {
+                btnEs.className = 'px-2 py-1 rounded text-gray-600 border-2 border-gray-300 hover:border-ctd-red';
+                btnEn.className = 'px-2 py-1 rounded font-semibold text-ctd-red border-2 border-ctd-red';
+                btnEsMobile.className = 'px-3 py-1 rounded text-gray-600 border-2 border-gray-300';
+                btnEnMobile.className = 'px-3 py-1 rounded font-semibold text-ctd-red border-2 border-ctd-red';
+            }
+        }
+        
+        // Form submission handler
+        document.getElementById('contact-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (currentLanguage === 'es') {
+                alert('¡Gracias por su interés! Nos pondremos en contacto con usted pronto.');
+            } else {
+                alert('Thank you for your interest! We will contact you soon.');
+            }
+            this.reset();
+        });
+    </script>
 </body>
 </html>
