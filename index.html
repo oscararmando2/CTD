@@ -485,13 +485,15 @@
 
     <!-- JavaScript for Language Switcher and Mobile Menu -->
     <script>
-        // Initialize AOS (Animate On Scroll)
-        AOS.init({
-            duration: 800,
-            once: true,
-            easing: 'ease-out',
-            offset: 120
-        });
+        // Initialize AOS (Animate On Scroll) - only if loaded
+        if (typeof AOS !== 'undefined') {
+            AOS.init({
+                duration: 800,
+                once: true,
+                easing: 'ease-out',
+                offset: 120
+            });
+        }
         
         // Mobile menu toggle
         function toggleMobileMenu() {
