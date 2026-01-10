@@ -226,6 +226,15 @@
             text-align: center;
             margin-top: 1rem;
         }
+        
+        /* Accessibility: Respect user's motion preferences */
+        @media (prefers-reduced-motion: reduce) {
+            .group > div[class*="group-hover"],
+            .group > div[class*="transition"] {
+                transition: none !important;
+                animation: none !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-white text-gray-800">
@@ -500,90 +509,178 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             <!-- Product Categories Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <!-- Category 1 -->
-                <div class="bg-gray-50 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition" data-aos="fade-up" data-aos-delay="100">
-                    <img src="https://via.placeholder.com/400x300/db2c1a/ffffff?text=Alimentos+Secos" alt="Alimentos Secos" class="w-full h-48 object-cover">
-                    <div class="p-5">
-                        <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Alimentos Secos" data-lang-en="Dry Foods">Alimentos Secos</h3>
-                        <p class="text-gray-600 text-sm" data-lang-es="Arroz, frijoles, harinas, especias y más productos básicos para su tienda." data-lang-en="Rice, beans, flours, spices, and more staple products for your store.">
-                            Arroz, frijoles, harinas, especias y más productos básicos para su tienda.
-                        </p>
+                <div class="cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="100">
+                    <!-- Animated decorative elements -->
+                    <div class="group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12"></div>
+                    <div class="group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44"></div>
+                    <div class="group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64"></div>
+                    <div class="group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4"></div>
+                    <!-- Content -->
+                    <div class="relative z-10">
+                        <img src="https://via.placeholder.com/400x300/db2c1a/ffffff?text=Alimentos+Secos" alt="Alimentos Secos" class="w-full h-48 object-cover">
+                        <div class="p-5 bg-white bg-opacity-95">
+                            <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Alimentos Secos" data-lang-en="Dry Foods">Alimentos Secos</h3>
+                            <p class="text-gray-600 text-sm" data-lang-es="Arroz, frijoles, harinas, especias y más productos básicos para su tienda." data-lang-en="Rice, beans, flours, spices, and more staple products for your store.">
+                                Arroz, frijoles, harinas, especias y más productos básicos para su tienda.
+                            </p>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Category 2 -->
-                <div class="bg-gray-50 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition" data-aos="fade-up" data-aos-delay="200">
-                    <img src="https://via.placeholder.com/400x300/f89429/ffffff?text=Productos+Refrigerados" alt="Productos Refrigerados" class="w-full h-48 object-cover">
-                    <div class="p-5">
-                        <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Productos Refrigerados" data-lang-en="Refrigerated Products">Productos Refrigerados</h3>
-                        <p class="text-gray-600 text-sm" data-lang-es="Quesos, cremas, carnes frescas y productos lácteos con cadena de frío garantizada." data-lang-en="Cheeses, creams, fresh meats, and dairy products with guaranteed cold chain.">
-                            Quesos, cremas, carnes frescas y productos lácteos con cadena de frío garantizada.
-                        </p>
+                <div class="cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="200">
+                    <!-- Animated decorative elements -->
+                    <div class="group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12"></div>
+                    <div class="group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44"></div>
+                    <div class="group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64"></div>
+                    <div class="group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4"></div>
+                    <!-- Content -->
+                    <div class="relative z-10">
+                        <img src="https://via.placeholder.com/400x300/f89429/ffffff?text=Productos+Refrigerados" alt="Productos Refrigerados" class="w-full h-48 object-cover">
+                        <div class="p-5 bg-white bg-opacity-95">
+                            <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Productos Refrigerados" data-lang-en="Refrigerated Products">Productos Refrigerados</h3>
+                            <p class="text-gray-600 text-sm" data-lang-es="Quesos, cremas, carnes frescas y productos lácteos con cadena de frío garantizada." data-lang-en="Cheeses, creams, fresh meats, and dairy products with guaranteed cold chain.">
+                                Quesos, cremas, carnes frescas y productos lácteos con cadena de frío garantizada.
+                            </p>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Category 3 -->
-                <div class="bg-gray-50 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition" data-aos="fade-up" data-aos-delay="300">
-                    <img src="https://via.placeholder.com/400x300/247232/ffffff?text=Bebidas" alt="Bebidas" class="w-full h-48 object-cover">
-                    <div class="p-5">
-                        <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Bebidas" data-lang-en="Beverages">Bebidas</h3>
-                        <p class="text-gray-600 text-sm" data-lang-es="Refrescos, jugos, aguas frescas y bebidas tradicionales de toda Latinoamérica." data-lang-en="Sodas, juices, fresh waters, and traditional beverages from all over Latin America.">
-                            Refrescos, jugos, aguas frescas y bebidas tradicionales de toda Latinoamérica.
-                        </p>
+                <div class="cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="300">
+                    <!-- Animated decorative elements -->
+                    <div class="group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12"></div>
+                    <div class="group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44"></div>
+                    <div class="group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64"></div>
+                    <div class="group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4"></div>
+                    <!-- Content -->
+                    <div class="relative z-10">
+                        <img src="https://via.placeholder.com/400x300/247232/ffffff?text=Bebidas" alt="Bebidas" class="w-full h-48 object-cover">
+                        <div class="p-5 bg-white bg-opacity-95">
+                            <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Bebidas" data-lang-en="Beverages">Bebidas</h3>
+                            <p class="text-gray-600 text-sm" data-lang-es="Refrescos, jugos, aguas frescas y bebidas tradicionales de toda Latinoamérica." data-lang-en="Sodas, juices, fresh waters, and traditional beverages from all over Latin America.">
+                                Refrescos, jugos, aguas frescas y bebidas tradicionales de toda Latinoamérica.
+                            </p>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Category 4 -->
-                <div class="bg-gray-50 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition" data-aos="fade-up" data-aos-delay="400">
-                    <img src="https://via.placeholder.com/400x300/db2c1a/ffffff?text=Snacks+y+Dulces" alt="Snacks y Dulces" class="w-full h-48 object-cover">
-                    <div class="p-5">
-                        <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Snacks y Dulces" data-lang-en="Snacks & Sweets">Snacks y Dulces</h3>
-                        <p class="text-gray-600 text-sm" data-lang-es="Botanas, dulces típicos, chocolates y golosinas que sus clientes adoran." data-lang-en="Snacks, typical sweets, chocolates, and treats that your customers love.">
-                            Botanas, dulces típicos, chocolates y golosinas que sus clientes adoran.
-                        </p>
+                <div class="cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="400">
+                    <!-- Animated decorative elements -->
+                    <div class="group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12"></div>
+                    <div class="group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44"></div>
+                    <div class="group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64"></div>
+                    <div class="group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4"></div>
+                    <!-- Content -->
+                    <div class="relative z-10">
+                        <img src="https://via.placeholder.com/400x300/db2c1a/ffffff?text=Snacks+y+Dulces" alt="Snacks y Dulces" class="w-full h-48 object-cover">
+                        <div class="p-5 bg-white bg-opacity-95">
+                            <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Snacks y Dulces" data-lang-en="Snacks & Sweets">Snacks y Dulces</h3>
+                            <p class="text-gray-600 text-sm" data-lang-es="Botanas, dulces típicos, chocolates y golosinas que sus clientes adoran." data-lang-en="Snacks, typical sweets, chocolates, and treats that your customers love.">
+                                Botanas, dulces típicos, chocolates y golosinas que sus clientes adoran.
+                            </p>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Category 5 -->
-                <div class="bg-gray-50 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition" data-aos="fade-up" data-aos-delay="100">
-                    <img src="https://via.placeholder.com/400x300/f89429/ffffff?text=Productos+Importados" alt="Productos Importados" class="w-full h-48 object-cover">
-                    <div class="p-5">
-                        <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Productos Importados" data-lang-en="Imported Products">Productos Importados</h3>
-                        <p class="text-gray-600 text-sm" data-lang-es="Auténticos productos directamente desde México, Centroamérica y Sudamérica." data-lang-en="Authentic products directly from Mexico, Central America, and South America.">
-                            Auténticos productos directamente desde México, Centroamérica y Sudamérica.
-                        </p>
+                <div class="cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="100">
+                    <!-- Animated decorative elements -->
+                    <div class="group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12"></div>
+                    <div class="group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44"></div>
+                    <div class="group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64"></div>
+                    <div class="group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4"></div>
+                    <!-- Content -->
+                    <div class="relative z-10">
+                        <img src="https://via.placeholder.com/400x300/f89429/ffffff?text=Productos+Importados" alt="Productos Importados" class="w-full h-48 object-cover">
+                        <div class="p-5 bg-white bg-opacity-95">
+                            <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Productos Importados" data-lang-en="Imported Products">Productos Importados</h3>
+                            <p class="text-gray-600 text-sm" data-lang-es="Auténticos productos directamente desde México, Centroamérica y Sudamérica." data-lang-en="Authentic products directly from Mexico, Central America, and South America.">
+                                Auténticos productos directamente desde México, Centroamérica y Sudamérica.
+                            </p>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Category 6 -->
-                <div class="bg-gray-50 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition" data-aos="fade-up" data-aos-delay="200">
-                    <img src="https://via.placeholder.com/400x300/247232/ffffff?text=Congelados" alt="Congelados" class="w-full h-48 object-cover">
-                    <div class="p-5">
-                        <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Congelados" data-lang-en="Frozen Foods">Congelados</h3>
-                        <p class="text-gray-600 text-sm" data-lang-es="Carnes, mariscos, helados y productos congelados de alta calidad." data-lang-en="Meats, seafood, ice cream, and high-quality frozen products.">
-                            Carnes, mariscos, helados y productos congelados de alta calidad.
-                        </p>
+                <div class="cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="200">
+                    <!-- Animated decorative elements -->
+                    <div class="group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12"></div>
+                    <div class="group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44"></div>
+                    <div class="group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64"></div>
+                    <div class="group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4"></div>
+                    <!-- Content -->
+                    <div class="relative z-10">
+                        <img src="https://via.placeholder.com/400x300/247232/ffffff?text=Congelados" alt="Congelados" class="w-full h-48 object-cover">
+                        <div class="p-5 bg-white bg-opacity-95">
+                            <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Congelados" data-lang-en="Frozen Foods">Congelados</h3>
+                            <p class="text-gray-600 text-sm" data-lang-es="Carnes, mariscos, helados y productos congelados de alta calidad." data-lang-en="Meats, seafood, ice cream, and high-quality frozen products.">
+                                Carnes, mariscos, helados y productos congelados de alta calidad.
+                            </p>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Category 7 -->
-                <div class="bg-gray-50 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition" data-aos="fade-up" data-aos-delay="300">
-                    <img src="https://via.placeholder.com/400x300/db2c1a/ffffff?text=Panaderia" alt="Panadería" class="w-full h-48 object-cover">
-                    <div class="p-5">
-                        <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Panadería" data-lang-en="Bakery">Panadería</h3>
-                        <p class="text-gray-600 text-sm" data-lang-es="Pan dulce, tortillas, y productos de panadería tradicional latina." data-lang-en="Sweet bread, tortillas, and traditional Latin bakery products.">
-                            Pan dulce, tortillas, y productos de panadería tradicional latina.
-                        </p>
+                <div class="cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="300">
+                    <!-- Animated decorative elements -->
+                    <div class="group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12"></div>
+                    <div class="group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44"></div>
+                    <div class="group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64"></div>
+                    <div class="group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4"></div>
+                    <!-- Content -->
+                    <div class="relative z-10">
+                        <img src="https://via.placeholder.com/400x300/db2c1a/ffffff?text=Panaderia" alt="Panadería" class="w-full h-48 object-cover">
+                        <div class="p-5 bg-white bg-opacity-95">
+                            <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Panadería" data-lang-en="Bakery">Panadería</h3>
+                            <p class="text-gray-600 text-sm" data-lang-es="Pan dulce, tortillas, y productos de panadería tradicional latina." data-lang-en="Sweet bread, tortillas, and traditional Latin bakery products.">
+                                Pan dulce, tortillas, y productos de panadería tradicional latina.
+                            </p>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Category 8 -->
-                <div class="bg-gray-50 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition" data-aos="fade-up" data-aos-delay="400">
-                    <img src="https://via.placeholder.com/400x300/f89429/ffffff?text=Conservas" alt="Conservas y Enlatados" class="w-full h-48 object-cover">
-                    <div class="p-5">
-                        <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Conservas y Enlatados" data-lang-en="Canned & Preserved">Conservas y Enlatados</h3>
-                        <p class="text-gray-600 text-sm" data-lang-es="Chiles, salsas, frijoles y vegetales enlatados de marcas reconocidas." data-lang-en="Chiles, sauces, beans, and canned vegetables from recognized brands.">
-                            Chiles, salsas, frijoles y vegetales enlatados de marcas reconocidas.
-                        </p>
+                <div class="cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="400">
+                    <!-- Animated decorative elements -->
+                    <div class="group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
+                    <div class="group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12"></div>
+                    <div class="group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44"></div>
+                    <div class="group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64"></div>
+                    <div class="group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4"></div>
+                    <!-- Content -->
+                    <div class="relative z-10">
+                        <img src="https://via.placeholder.com/400x300/f89429/ffffff?text=Conservas" alt="Conservas y Enlatados" class="w-full h-48 object-cover">
+                        <div class="p-5 bg-white bg-opacity-95">
+                            <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Conservas y Enlatados" data-lang-en="Canned & Preserved">Conservas y Enlatados</h3>
+                            <p class="text-gray-600 text-sm" data-lang-es="Chiles, salsas, frijoles y vegetales enlatados de marcas reconocidas." data-lang-en="Chiles, sauces, beans, and canned vegetables from recognized brands.">
+                                Chiles, salsas, frijoles y vegetales enlatados de marcas reconocidas.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
