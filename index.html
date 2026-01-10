@@ -16,6 +16,10 @@
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
     
+    <!-- Swiper.js for Carousel -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    
     <style>
         /* Smooth scroll behavior */
         html {
@@ -40,6 +44,33 @@
         /* Mobile menu toggle */
         .mobile-menu-hidden {
             display: none;
+        }
+        
+        /* Marcas carousel styles */
+        .marcas-carousel .swiper-slide {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        .marcas-carousel img {
+            filter: grayscale(100%);
+            transition: filter 0.3s ease;
+        }
+        
+        .marcas-carousel img:hover,
+        .marcas-carousel .swiper-slide-active img {
+            filter: grayscale(0%);
+        }
+        
+        .marcas-carousel .swiper-button-next,
+        .marcas-carousel .swiper-button-prev {
+            color: #db2c1a;
+        }
+        
+        .marcas-carousel .swiper-pagination-bullet-active {
+            background-color: #db2c1a;
         }
     </style>
 </head>
@@ -107,6 +138,9 @@
             <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6" data-aos="fade-down" data-lang-es="Distribuidora Mayorista de Alimentos Latinos" data-lang-en="Wholesale Latino Food Distributor">
                 Distribuidora Mayorista de Alimentos Latinos
             </h1>
+            <p class="text-2xl md:text-3xl font-semibold text-white mb-4" data-aos="fade-up" data-aos-delay="100" data-lang-es="Producto De Tu Tierra" data-lang-en="Products From Your Land">
+                Producto De Tu Tierra
+            </p>
             <p class="text-lg md:text-xl lg:text-2xl text-white mb-8 max-w-3xl mx-auto" data-aos="fade-up" data-aos-delay="200" data-lang-es="Conectando los auténticos sabores latinos con tiendas y supermercados en Kansas City y el Midwest. Calidad, variedad y servicio excepcional." data-lang-en="Connecting authentic Latino flavors with stores and supermarkets in Kansas City and the Midwest. Quality, variety, and exceptional service.">
                 Conectando los auténticos sabores latinos con tiendas y supermercados en Kansas City y el Midwest. Calidad, variedad y servicio excepcional.
             </p>
@@ -263,6 +297,80 @@
                         </p>
                     </div>
                 </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Marcas Destacadas Section -->
+    <section id="marcas" class="py-16 md:py-24 bg-gray-50">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-12" data-aos="fade-up">
+                <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-ctd-red mb-4" data-lang-es="Marcas que Confían en Nosotros" data-lang-en="Brands that Trust Us">Marcas que Confían en Nosotros</h2>
+                <p class="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto" data-lang-es="Trabajamos con las marcas líderes en productos latinos" data-lang-en="We work with leading brands in Latino products">
+                    Trabajamos con las marcas líderes en productos latinos
+                </p>
+            </div>
+            
+            <!-- Swiper Carousel -->
+            <div class="marcas-carousel swiper" data-aos="fade-up" data-aos-delay="100">
+                <div class="swiper-wrapper">
+                    <!-- Slide 1 - Goya -->
+                    <div class="swiper-slide">
+                        <img src="https://via.placeholder.com/200x80/ffffff/333333?text=Goya" alt="Goya" class="h-20 md:h-28 object-contain">
+                    </div>
+                    
+                    <!-- Slide 2 - La Costeña -->
+                    <div class="swiper-slide">
+                        <img src="https://via.placeholder.com/200x80/ffffff/333333?text=La+Costena" alt="La Costeña" class="h-20 md:h-28 object-contain">
+                    </div>
+                    
+                    <!-- Slide 3 - Jumex -->
+                    <div class="swiper-slide">
+                        <img src="https://via.placeholder.com/200x80/ffffff/333333?text=Jumex" alt="Jumex" class="h-20 md:h-28 object-contain">
+                    </div>
+                    
+                    <!-- Slide 4 - Jarritos -->
+                    <div class="swiper-slide">
+                        <img src="https://via.placeholder.com/200x80/ffffff/333333?text=Jarritos" alt="Jarritos" class="h-20 md:h-28 object-contain">
+                    </div>
+                    
+                    <!-- Slide 5 - Lala -->
+                    <div class="swiper-slide">
+                        <img src="https://via.placeholder.com/200x80/ffffff/333333?text=Lala" alt="Lala" class="h-20 md:h-28 object-contain">
+                    </div>
+                    
+                    <!-- Slide 6 - Sabritas -->
+                    <div class="swiper-slide">
+                        <img src="https://via.placeholder.com/200x80/ffffff/333333?text=Sabritas" alt="Sabritas" class="h-20 md:h-28 object-contain">
+                    </div>
+                    
+                    <!-- Slide 7 - Herdez -->
+                    <div class="swiper-slide">
+                        <img src="https://via.placeholder.com/200x80/ffffff/333333?text=Herdez" alt="Herdez" class="h-20 md:h-28 object-contain">
+                    </div>
+                    
+                    <!-- Slide 8 - Cacique -->
+                    <div class="swiper-slide">
+                        <img src="https://via.placeholder.com/200x80/ffffff/333333?text=Cacique" alt="Cacique" class="h-20 md:h-28 object-contain">
+                    </div>
+                    
+                    <!-- Slide 9 - Maseca -->
+                    <div class="swiper-slide">
+                        <img src="https://via.placeholder.com/200x80/ffffff/333333?text=Maseca" alt="Maseca" class="h-20 md:h-28 object-contain">
+                    </div>
+                    
+                    <!-- Slide 10 - Bimbo -->
+                    <div class="swiper-slide">
+                        <img src="https://via.placeholder.com/200x80/ffffff/333333?text=Bimbo" alt="Bimbo" class="h-20 md:h-28 object-contain">
+                    </div>
+                </div>
+                
+                <!-- Navigation arrows -->
+                <div class="swiper-button-next"></div>
+                <div class="swiper-button-prev"></div>
+                
+                <!-- Pagination -->
+                <div class="swiper-pagination"></div>
             </div>
         </div>
     </section>
@@ -571,6 +679,46 @@
                 alert('Thank you for your interest! We will contact you soon.');
             }
             this.reset();
+        });
+        
+        // Initialize Swiper for Marcas Carousel
+        document.addEventListener('DOMContentLoaded', function() {
+            const swiper = new Swiper('.marcas-carousel', {
+                // Carousel configuration
+                loop: true,
+                autoplay: {
+                    delay: 3000,
+                    disableOnInteraction: false,
+                },
+                slidesPerView: 2,
+                spaceBetween: 20,
+                breakpoints: {
+                    640: {
+                        slidesPerView: 3,
+                        spaceBetween: 30,
+                    },
+                    768: {
+                        slidesPerView: 4,
+                        spaceBetween: 30,
+                    },
+                    1024: {
+                        slidesPerView: 5,
+                        spaceBetween: 40,
+                    },
+                    1280: {
+                        slidesPerView: 6,
+                        spaceBetween: 40,
+                    },
+                },
+                navigation: {
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                },
+                pagination: {
+                    el: '.swiper-pagination',
+                    clickable: true,
+                },
+            });
         });
     </script>
 </body>
