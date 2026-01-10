@@ -354,19 +354,19 @@
                         <form id="contact-form" class="space-y-4">
                             <div>
                                 <label class="block text-gray-700 font-semibold mb-2" data-lang-es="Nombre Completo" data-lang-en="Full Name">Nombre Completo</label>
-                                <input type="text" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-ctd-red" placeholder="Juan Pérez">
+                                <input type="text" required id="input-name" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-ctd-red" data-lang-es="Juan Pérez" data-lang-en="John Doe" placeholder="Juan Pérez">
                             </div>
                             <div>
                                 <label class="block text-gray-700 font-semibold mb-2" data-lang-es="Correo Electrónico" data-lang-en="Email">Correo Electrónico</label>
-                                <input type="email" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-ctd-red" placeholder="juan@tienda.com">
+                                <input type="email" required id="input-email" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-ctd-red" data-lang-es="juan@tienda.com" data-lang-en="john@store.com" placeholder="juan@tienda.com">
                             </div>
                             <div>
                                 <label class="block text-gray-700 font-semibold mb-2" data-lang-es="Teléfono" data-lang-en="Phone">Teléfono</label>
-                                <input type="tel" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-ctd-red" placeholder="(816) 555-1234">
+                                <input type="tel" required id="input-phone" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-ctd-red" data-lang-es="(816) 555-1234" data-lang-en="(816) 555-1234" placeholder="(816) 555-1234">
                             </div>
                             <div>
                                 <label class="block text-gray-700 font-semibold mb-2" data-lang-es="Tipo de Negocio" data-lang-en="Business Type">Tipo de Negocio</label>
-                                <select required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-ctd-red">
+                                <select required id="select-business" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-ctd-red">
                                     <option value="" data-lang-es="Seleccione una opción" data-lang-en="Select an option">Seleccione una opción</option>
                                     <option value="supermercado" data-lang-es="Supermercado" data-lang-en="Supermarket">Supermercado</option>
                                     <option value="tienda" data-lang-es="Tienda de Abarrotes" data-lang-en="Grocery Store">Tienda de Abarrotes</option>
@@ -376,7 +376,7 @@
                             </div>
                             <div>
                                 <label class="block text-gray-700 font-semibold mb-2" data-lang-es="Mensaje" data-lang-en="Message">Mensaje</label>
-                                <textarea required rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-ctd-red" data-lang-es="Cuéntenos sobre sus necesidades..." data-lang-en="Tell us about your needs..." placeholder="Cuéntenos sobre sus necesidades..."></textarea>
+                                <textarea required rows="4" id="textarea-message" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-ctd-red" data-lang-es="Cuéntenos sobre sus necesidades..." data-lang-en="Tell us about your needs..." placeholder="Cuéntenos sobre sus necesidades..."></textarea>
                             </div>
                             <button type="submit" class="w-full bg-ctd-red text-white px-6 py-3 rounded-lg font-bold hover:bg-ctd-orange transition text-lg" data-lang-es="Enviar Solicitud" data-lang-en="Send Request">Enviar Solicitud</button>
                         </form>
@@ -519,16 +519,18 @@
             // Update all elements with data-lang attributes
             const elements = document.querySelectorAll('[data-lang-es][data-lang-en]');
             elements.forEach(element => {
-                if (lang === 'es') {
-                    element.textContent = element.getAttribute('data-lang-es');
-                    if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
-                        element.placeholder = element.getAttribute('data-lang-es');
-                    }
+                const textEs = element.getAttribute('data-lang-es');
+                const textEn = element.getAttribute('data-lang-en');
+                
+                if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
+                    // For inputs and textareas, update placeholder only
+                    element.placeholder = lang === 'es' ? textEs : textEn;
+                } else if (element.tagName === 'OPTION') {
+                    // For option elements, update text content
+                    element.textContent = lang === 'es' ? textEs : textEn;
                 } else {
-                    element.textContent = element.getAttribute('data-lang-en');
-                    if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
-                        element.placeholder = element.getAttribute('data-lang-en');
-                    }
+                    // For all other elements, update text content
+                    element.textContent = lang === 'es' ? textEs : textEn;
                 }
             });
             
