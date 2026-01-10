@@ -376,7 +376,7 @@
                             </div>
                             <div>
                                 <label class="block text-gray-700 font-semibold mb-2" data-lang-es="Mensaje" data-lang-en="Message">Mensaje</label>
-                                <textarea required rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-ctd-red" data-lang-es placeholder="Cuéntenos sobre sus necesidades...">placeholder="Cuéntenos sobre sus necesidades..."></textarea>
+                                <textarea required rows="4" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-ctd-red" data-lang-es="Cuéntenos sobre sus necesidades..." data-lang-en="Tell us about your needs..." placeholder="Cuéntenos sobre sus necesidades..."></textarea>
                             </div>
                             <button type="submit" class="w-full bg-ctd-red text-white px-6 py-3 rounded-lg font-bold hover:bg-ctd-orange transition text-lg" data-lang-es="Enviar Solicitud" data-lang-en="Send Request">Enviar Solicitud</button>
                         </form>
@@ -478,13 +478,18 @@
             
             <!-- Copyright -->
             <div class="border-t border-gray-400 pt-8 text-center">
-                <p class="text-gray-200" data-lang-es="&copy; 2026 Central Trade Distribution. Todos los derechos reservados." data-lang-en="&copy; 2026 Central Trade Distribution. All rights reserved.">&copy; 2026 Central Trade Distribution. Todos los derechos reservados.</p>
+                <p class="text-gray-200" id="copyright-text">&copy; <span id="copyright-year"></span> Central Trade Distribution. Todos los derechos reservados.</p>
             </div>
         </div>
     </footer>
 
     <!-- JavaScript for Language Switcher and Mobile Menu -->
     <script>
+        // Set copyright year dynamically
+        const year = new Date().getFullYear();
+        document.getElementById('copyright-year').textContent = year;
+        document.getElementById('copyright-text').innerHTML = `&copy; ${year} Central Trade Distribution. Todos los derechos reservados.`;
+        
         // Initialize AOS (Animate On Scroll) - only if loaded
         if (typeof AOS !== 'undefined') {
             AOS.init({
@@ -526,6 +531,15 @@
                     }
                 }
             });
+            
+            // Update copyright text
+            const year = new Date().getFullYear();
+            const copyrightText = document.getElementById('copyright-text');
+            if (lang === 'es') {
+                copyrightText.innerHTML = `&copy; ${year} Central Trade Distribution. Todos los derechos reservados.`;
+            } else {
+                copyrightText.innerHTML = `&copy; ${year} Central Trade Distribution. All rights reserved.`;
+            }
             
             // Update button styles
             const btnEs = document.getElementById('btn-es');
