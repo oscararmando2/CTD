@@ -1345,20 +1345,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 return true;
             }
             
-            // Detect mobile using modern API or media query fallback
-            let isMobile = false;
-            if (navigator.userAgentData && navigator.userAgentData.mobile !== undefined) {
-                // Modern API (Chromium-based browsers)
-                isMobile = navigator.userAgentData.mobile;
-            } else if (window.matchMedia) {
-                // Fallback: Use hover capability as mobile indicator
-                isMobile = window.matchMedia('(hover: none)').matches;
-            } else {
-                // Last resort: User agent string (legacy browsers only)
-                isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            }
-            
             // Check device capabilities with feature detection
+            // Note: Performance detection applies to ALL devices (desktop + mobile)
             const hasLowMemory = navigator.deviceMemory ? navigator.deviceMemory < 4 : false;
             const hasSlowConnection = navigator.connection ? 
                 (navigator.connection.effectiveType === 'slow-2g' || 
@@ -1540,11 +1528,13 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             const swiperConfig = {
                 // Carousel configuration
                 loop: true,
-                autoplay: {
-                    enabled: !reduceAnimations,
-                    delay: 3000,
-                    disableOnInteraction: false,
-                },
+                // Conditionally enable autoplay based on performance
+                ...(reduceAnimations ? {} : {
+                    autoplay: {
+                        delay: 3000,
+                        disableOnInteraction: false,
+                    }
+                }),
                 slidesPerView: 2,
                 spaceBetween: 20,
                 breakpoints: {
