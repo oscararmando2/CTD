@@ -235,6 +235,17 @@
                 animation: none !important;
             }
         }
+        
+        /* Mobile: Auto-activate card animations when in view */
+        @media (max-width: 1024px) {
+            .product-card.in-view .card-anim-1 { top: -0.75rem !important; }
+            .product-card.in-view .card-anim-2 { top: 15rem !important; }
+            .product-card.in-view .card-anim-3 { left: -3rem !important; }
+            .product-card.in-view .card-anim-4 { top: -11rem !important; }
+            .product-card.in-view .card-anim-5 { left: 11rem !important; }
+            .product-card.in-view .card-anim-6 { left: -0.5rem !important; }
+            .product-card.in-view .card-anim-7 { top: 11rem !important; }
+        }
     </style>
 </head>
 <body class="bg-white text-gray-800">
@@ -509,18 +520,18 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             <!-- Product Categories Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <!-- Category 1 -->
-                <div class="cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="100">
+                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="100">
                     <!-- Animated decorative elements -->
-                    <div class="group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12"></div>
-                    <div class="group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44"></div>
-                    <div class="group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64"></div>
-                    <div class="group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4"></div>
+                    <div class="card-anim-1 group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-2 group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-3 group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-4 group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12 z-20"></div>
+                    <div class="card-anim-5 group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44 z-20"></div>
+                    <div class="card-anim-6 group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64 z-20"></div>
+                    <div class="card-anim-7 group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4 z-20"></div>
                     <!-- Content -->
                     <div class="relative z-10">
-                        <img src="https://wallpapers.com/images/featured/supermarket-pictures-brhr0v0zqqxvtafp.jpg">
+                        <img src="https://wallpapers.com/images/featured/supermarket-pictures-brhr0v0zqqxvtafp.jpg" class="w-full h-48 object-cover">
                         <div class="p-5 bg-white bg-opacity-95">
                             <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Alimentos Secos" data-lang-en="Dry Foods">Alimentos Secos</h3>
                             <p class="text-gray-600 text-sm" data-lang-es="Arroz, frijoles, harinas, especias y más productos básicos para su tienda." data-lang-en="Rice, beans, flours, spices, and more staple products for your store.">
@@ -531,18 +542,18 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Category 2 -->
-                <div class="cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="200">
+                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="200">
                     <!-- Animated decorative elements -->
-                    <div class="group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12"></div>
-                    <div class="group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44"></div>
-                    <div class="group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64"></div>
-                    <div class="group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4"></div>
+                    <div class="card-anim-1 group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-2 group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-3 group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-4 group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12 z-20"></div>
+                    <div class="card-anim-5 group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44 z-20"></div>
+                    <div class="card-anim-6 group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64 z-20"></div>
+                    <div class="card-anim-7 group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4 z-20"></div>
                     <!-- Content -->
                     <div class="relative z-10">
-                        <img src="https://t3.ftcdn.net/jpg/01/43/88/90/360_F_143889030_ESZIkxyqSF2z2DpkfFjrKwblsvn2IdUN.jpg">
+                        <img src="https://t3.ftcdn.net/jpg/01/43/88/90/360_F_143889030_ESZIkxyqSF2z2DpkfFjrKwblsvn2IdUN.jpg" class="w-full h-48 object-cover">
                         <div class="p-5 bg-white bg-opacity-95">
                             <h3 class="text-xl font-bold text-ctd-red mb-2" data-lang-es="Productos Refrigerados" data-lang-en="Refrigerated Products">Productos Refrigerados</h3>
                             <p class="text-gray-600 text-sm" data-lang-es="Quesos, cremas, carnes frescas y productos lácteos con cadena de frío garantizada." data-lang-en="Cheeses, creams, fresh meats, and dairy products with guaranteed cold chain.">
@@ -553,15 +564,15 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Category 3 -->
-                <div class="cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="300">
+                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="300">
                     <!-- Animated decorative elements -->
-                    <div class="group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12"></div>
-                    <div class="group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44"></div>
-                    <div class="group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64"></div>
-                    <div class="group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4"></div>
+                    <div class="card-anim-1 group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-2 group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-3 group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-4 group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12 z-20"></div>
+                    <div class="card-anim-5 group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44 z-20"></div>
+                    <div class="card-anim-6 group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64 z-20"></div>
+                    <div class="card-anim-7 group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4 z-20"></div>
                     <!-- Content -->
                     <div class="relative z-10">
                         <img src="https://via.placeholder.com/400x300/247232/ffffff?text=Bebidas" alt="Bebidas" class="w-full h-48 object-cover">
@@ -575,15 +586,15 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Category 4 -->
-                <div class="cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="400">
+                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="400">
                     <!-- Animated decorative elements -->
-                    <div class="group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12"></div>
-                    <div class="group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44"></div>
-                    <div class="group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64"></div>
-                    <div class="group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4"></div>
+                    <div class="card-anim-1 group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-2 group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-3 group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-4 group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12 z-20"></div>
+                    <div class="card-anim-5 group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44 z-20"></div>
+                    <div class="card-anim-6 group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64 z-20"></div>
+                    <div class="card-anim-7 group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4 z-20"></div>
                     <!-- Content -->
                     <div class="relative z-10">
                         <img src="https://via.placeholder.com/400x300/db2c1a/ffffff?text=Snacks+y+Dulces" alt="Snacks y Dulces" class="w-full h-48 object-cover">
@@ -597,15 +608,15 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Category 5 -->
-                <div class="cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="100">
+                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="100">
                     <!-- Animated decorative elements -->
-                    <div class="group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12"></div>
-                    <div class="group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44"></div>
-                    <div class="group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64"></div>
-                    <div class="group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4"></div>
+                    <div class="card-anim-1 group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-2 group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-3 group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-4 group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12 z-20"></div>
+                    <div class="card-anim-5 group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44 z-20"></div>
+                    <div class="card-anim-6 group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64 z-20"></div>
+                    <div class="card-anim-7 group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4 z-20"></div>
                     <!-- Content -->
                     <div class="relative z-10">
                         <img src="https://via.placeholder.com/400x300/f89429/ffffff?text=Productos+Importados" alt="Productos Importados" class="w-full h-48 object-cover">
@@ -619,15 +630,15 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Category 6 -->
-                <div class="cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="200">
+                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="200">
                     <!-- Animated decorative elements -->
-                    <div class="group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12"></div>
-                    <div class="group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44"></div>
-                    <div class="group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64"></div>
-                    <div class="group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4"></div>
+                    <div class="card-anim-1 group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-2 group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-3 group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-4 group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12 z-20"></div>
+                    <div class="card-anim-5 group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44 z-20"></div>
+                    <div class="card-anim-6 group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64 z-20"></div>
+                    <div class="card-anim-7 group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4 z-20"></div>
                     <!-- Content -->
                     <div class="relative z-10">
                         <img src="https://via.placeholder.com/400x300/247232/ffffff?text=Congelados" alt="Congelados" class="w-full h-48 object-cover">
@@ -641,15 +652,15 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Category 7 -->
-                <div class="cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="300">
+                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="300">
                     <!-- Animated decorative elements -->
-                    <div class="group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12"></div>
-                    <div class="group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44"></div>
-                    <div class="group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64"></div>
-                    <div class="group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4"></div>
+                    <div class="card-anim-1 group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-2 group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-3 group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-4 group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12 z-20"></div>
+                    <div class="card-anim-5 group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44 z-20"></div>
+                    <div class="card-anim-6 group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64 z-20"></div>
+                    <div class="card-anim-7 group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4 z-20"></div>
                     <!-- Content -->
                     <div class="relative z-10">
                         <img src="https://via.placeholder.com/400x300/db2c1a/ffffff?text=Panaderia" alt="Panadería" class="w-full h-48 object-cover">
@@ -663,15 +674,15 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Category 8 -->
-                <div class="cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="400">
+                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="400">
                     <!-- Animated decorative elements -->
-                    <div class="group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24"></div>
-                    <div class="group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12"></div>
-                    <div class="group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44"></div>
-                    <div class="group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64"></div>
-                    <div class="group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4"></div>
+                    <div class="card-anim-1 group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-2 group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-3 group-hover:-left-12 bg-transparent top-24 left-56 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
+                    <div class="card-anim-4 group-hover:-top-44 bg-transparent top-12 left-12 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-12 h-12 z-20"></div>
+                    <div class="card-anim-5 group-hover:left-44 bg-transparent top-12 left-12 absolute shadow-green-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-44 h-44 z-20"></div>
+                    <div class="card-anim-6 group-hover:-left-2 bg-transparent -top-24 -left-12 absolute shadow-sky-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-64 h-64 z-20"></div>
+                    <div class="card-anim-7 group-hover:top-44 bg-transparent top-24 left-12 absolute shadow-sky-500 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-4 h-4 z-20"></div>
                     <!-- Content -->
                     <div class="relative z-10">
                         <img src="https://via.placeholder.com/400x300/f89429/ffffff?text=Conservas" alt="Conservas y Enlatados" class="w-full h-48 object-cover">
@@ -1118,6 +1129,40 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     clickable: true,
                 },
             });
+            
+            // Mobile: Auto-activate card animations when scrolling into view
+            const mobileMediaQuery = window.matchMedia('(max-width: 1024px)');
+            
+            function initMobileCardAnimations() {
+                if (mobileMediaQuery.matches) {
+                    const productCards = document.querySelectorAll('.product-card');
+                    
+                    const observerOptions = {
+                        root: null,
+                        rootMargin: '0px',
+                        threshold: 0.3  // Trigger when 30% of card is visible
+                    };
+                    
+                    const observer = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            if (entry.isIntersecting) {
+                                // Add class and keep it (don't remove on exit)
+                                entry.target.classList.add('in-view');
+                            }
+                        });
+                    }, observerOptions);
+                    
+                    productCards.forEach(card => {
+                        observer.observe(card);
+                    });
+                }
+            }
+            
+            // Initialize on load
+            initMobileCardAnimations();
+            
+            // Re-initialize if viewport changes from desktop to mobile
+            mobileMediaQuery.addEventListener('change', initMobileCardAnimations);
         });
     </script>
 </body>
