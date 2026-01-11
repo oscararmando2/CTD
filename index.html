@@ -380,12 +380,12 @@
         }
         
         .flip-card-front {
-            background: linear-gradient(120deg, bisque 60%, rgb(255, 231, 222) 88%, rgb(255, 211, 195) 40%, rgba(255, 127, 80, 0.603) 48%);
-            color: coral;
+            background: linear-gradient(135deg, #247232 0%, #ffffff 50%, #db2c1a 100%);
+            color: #247232;
         }
         
         .flip-card-back {
-            background: linear-gradient(120deg, rgb(255, 174, 145) 30%, coral 88%, bisque 40%, rgb(255, 185, 160) 78%);
+            background: linear-gradient(135deg, #db2c1a 0%, #ffffff 50%, #247232 100%);
             color: white;
             transform: rotateY(180deg);
         }
@@ -1008,12 +1008,22 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             
             <!-- Values Cards -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-                <div class="ribbon-card glass-card p-6 rounded-lg shadow-lg animate-slide-right text-center">
-                    <span class="ribbon-banner ribbon-banner-calidad"></span>
-                    <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Calidad Garantizada" data-lang-en="Guaranteed Quality">Calidad Garantizada</h4>
-                    <p class="text-gray-600" data-lang-es="Productos seleccionados cuidadosamente para cumplir con los más altos estándares de calidad y frescura." data-lang-en="Carefully selected products to meet the highest standards of quality and freshness.">
-                        Productos seleccionados cuidadosamente para cumplir con los más altos estándares de calidad y frescura.
-                    </p>
+                <div class="flip-card glass-card rounded-lg shadow-lg animate-slide-right">
+                    <div class="flip-card-inner">
+                        <!-- Front of card -->
+                        <div class="flip-card-front">
+                            <span class="ribbon-banner ribbon-banner-calidad"></span>
+                            <div class="icon-interactive text-4xl mb-4" style="color: #247232;">★</div>
+                            <h4 class="text-xl font-bold mb-3" style="color: #247232;" data-lang-es="Calidad Garantizada" data-lang-en="Guaranteed Quality">Calidad Garantizada</h4>
+                            <p style="color: #247232; font-weight: 500;" data-lang-es="Productos seleccionados cuidadosamente para cumplir con los más altos estándares de calidad y frescura." data-lang-en="Carefully selected products to meet the highest standards of quality and freshness.">
+                                Productos seleccionados cuidadosamente para cumplir con los más altos estándares de calidad y frescura.
+                            </p>
+                        </div>
+                        <!-- Back of card -->
+                        <div class="flip-card-back">
+                            <img src="CTDLOGO.PNG" alt="Central Trade Distribution Logo">
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="flip-card glass-card rounded-lg shadow-lg animate-slide-up">
@@ -1021,9 +1031,9 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                         <!-- Front of card -->
                         <div class="flip-card-front">
                             <span class="ribbon-banner ribbon-banner-servicio"></span>
-                            <div class="icon-interactive text-4xl mb-4" style="color: coral;">★</div>
-                            <h4 class="text-xl font-bold mb-3" style="color: coral;" data-lang-es="Servicio Excepcional" data-lang-en="Exceptional Service">Servicio Excepcional</h4>
-                            <p style="color: coral; font-weight: 500;" data-lang-es="Equipo dedicado que entiende las necesidades únicas de las tiendas latinas y ofrece soluciones personalizadas." data-lang-en="Dedicated team that understands the unique needs of Latino stores and offers customized solutions.">
+                            <div class="icon-interactive text-4xl mb-4" style="color: #247232;">★</div>
+                            <h4 class="text-xl font-bold mb-3" style="color: #247232;" data-lang-es="Servicio Excepcional" data-lang-en="Exceptional Service">Servicio Excepcional</h4>
+                            <p style="color: #247232; font-weight: 500;" data-lang-es="Equipo dedicado que entiende las necesidades únicas de las tiendas latinas y ofrece soluciones personalizadas." data-lang-en="Dedicated team that understands the unique needs of Latino stores and offers customized solutions.">
                                 Equipo dedicado que entiende las necesidades únicas de las tiendas latinas y ofrece soluciones personalizadas.
                             </p>
                         </div>
@@ -1034,13 +1044,22 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     </div>
                 </div>
                 
-                <div class="ribbon-card glass-card p-6 rounded-lg shadow-lg animate-slide-left">
-                    <span class="ribbon-banner ribbon-banner-compromiso"></span>
-                    <div class="icon-interactive text-ctd-green text-4xl mb-4">♥</div>
-                    <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Compromiso Comunitario" data-lang-en="Community Commitment">Compromiso Comunitario</h4>
-                    <p class="text-gray-600" data-lang-es="Apoyamos el crecimiento de la comunidad latina promoviendo los auténticos sabores de nuestras culturas." data-lang-en="We support the growth of the Latino community by promoting the authentic flavors of our cultures.">
-                        Apoyamos el crecimiento de la comunidad latina promoviendo los auténticos sabores de nuestras culturas.
-                    </p>
+                <div class="flip-card glass-card rounded-lg shadow-lg animate-slide-left">
+                    <div class="flip-card-inner">
+                        <!-- Front of card -->
+                        <div class="flip-card-front">
+                            <span class="ribbon-banner ribbon-banner-compromiso"></span>
+                            <div class="icon-interactive text-4xl mb-4" style="color: #247232;">★</div>
+                            <h4 class="text-xl font-bold mb-3" style="color: #247232;" data-lang-es="Compromiso Comunitario" data-lang-en="Community Commitment">Compromiso Comunitario</h4>
+                            <p style="color: #247232; font-weight: 500;" data-lang-es="Apoyamos el crecimiento de la comunidad latina promoviendo los auténticos sabores de nuestras culturas." data-lang-en="We support the growth of the Latino community by promoting the authentic flavors of our cultures.">
+                                Apoyamos el crecimiento de la comunidad latina promoviendo los auténticos sabores de nuestras culturas.
+                            </p>
+                        </div>
+                        <!-- Back of card -->
+                        <div class="flip-card-back">
+                            <img src="CTDLOGO.PNG" alt="Central Trade Distribution Logo">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
