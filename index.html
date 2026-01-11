@@ -339,6 +339,63 @@
             content: 'COMPROMISO';
         }
         
+        /* ============================
+           FLIP CARD EFFECT
+           ============================ */
+        .flip-card {
+            background-color: transparent;
+            width: 100%;
+            min-height: 250px;
+            perspective: 1000px;
+        }
+        
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 250px;
+            text-align: center;
+            transition: transform 0.8s;
+            transform-style: preserve-3d;
+        }
+        
+        .flip-card:hover .flip-card-inner {
+            transform: rotateY(180deg);
+        }
+        
+        .flip-card-front, .flip-card-back {
+            box-shadow: 0 8px 14px 0 rgba(0,0,0,0.2);
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            min-height: 250px;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 1rem;
+            padding: 1.5rem;
+        }
+        
+        .flip-card-front {
+            background: linear-gradient(120deg, bisque 60%, rgb(255, 231, 222) 88%, rgb(255, 211, 195) 40%, rgba(255, 127, 80, 0.603) 48%);
+            color: coral;
+        }
+        
+        .flip-card-back {
+            background: linear-gradient(120deg, rgb(255, 174, 145) 30%, coral 88%, bisque 40%, rgb(255, 185, 160) 78%);
+            color: white;
+            transform: rotateY(180deg);
+        }
+        
+        .flip-card-back img {
+            max-width: 80%;
+            height: auto;
+            object-fit: contain;
+        }
+        
         /* Service cards with depth and animated orbs */
         .service-card {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -951,22 +1008,30 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             
             <!-- Values Cards -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-                <div class="ribbon-card glass-card p-6 rounded-lg shadow-lg animate-slide-right">
+                <div class="ribbon-card glass-card p-6 rounded-lg shadow-lg animate-slide-right text-center">
                     <span class="ribbon-banner ribbon-banner-calidad"></span>
-                    <div class="icon-interactive text-ctd-green text-4xl mb-4">✓</div>
                     <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Calidad Garantizada" data-lang-en="Guaranteed Quality">Calidad Garantizada</h4>
                     <p class="text-gray-600" data-lang-es="Productos seleccionados cuidadosamente para cumplir con los más altos estándares de calidad y frescura." data-lang-en="Carefully selected products to meet the highest standards of quality and freshness.">
                         Productos seleccionados cuidadosamente para cumplir con los más altos estándares de calidad y frescura.
                     </p>
                 </div>
                 
-                <div class="ribbon-card glass-card p-6 rounded-lg shadow-lg animate-slide-up">
-                    <span class="ribbon-banner ribbon-banner-servicio"></span>
-                    <div class="icon-interactive text-ctd-green text-4xl mb-4">★</div>
-                    <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Servicio Excepcional" data-lang-en="Exceptional Service">Servicio Excepcional</h4>
-                    <p class="text-gray-600" data-lang-es="Equipo dedicado que entiende las necesidades únicas de las tiendas latinas y ofrece soluciones personalizadas." data-lang-en="Dedicated team that understands the unique needs of Latino stores and offers customized solutions.">
-                        Equipo dedicado que entiende las necesidades únicas de las tiendas latinas y ofrece soluciones personalizadas.
-                    </p>
+                <div class="flip-card glass-card rounded-lg shadow-lg animate-slide-up">
+                    <div class="flip-card-inner">
+                        <!-- Front of card -->
+                        <div class="flip-card-front">
+                            <span class="ribbon-banner ribbon-banner-servicio"></span>
+                            <div class="icon-interactive text-4xl mb-4" style="color: coral;">★</div>
+                            <h4 class="text-xl font-bold mb-3" style="color: coral;" data-lang-es="Servicio Excepcional" data-lang-en="Exceptional Service">Servicio Excepcional</h4>
+                            <p style="color: coral; font-weight: 500;" data-lang-es="Equipo dedicado que entiende las necesidades únicas de las tiendas latinas y ofrece soluciones personalizadas." data-lang-en="Dedicated team that understands the unique needs of Latino stores and offers customized solutions.">
+                                Equipo dedicado que entiende las necesidades únicas de las tiendas latinas y ofrece soluciones personalizadas.
+                            </p>
+                        </div>
+                        <!-- Back of card -->
+                        <div class="flip-card-back">
+                            <img src="CTDLOGO.PNG" alt="Central Trade Distribution Logo">
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="ribbon-card glass-card p-6 rounded-lg shadow-lg animate-slide-left">
@@ -1259,9 +1324,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             <!-- Services/Advantages Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                 <!-- Service 1 -->
-                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up" data-delay="100">
+                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up text-center" data-delay="100">
                     <div class="relative z-10">
-                        <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">🚚</div>
                         <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Entregas en Cadena de Frío" data-lang-en="Cold Chain Delivery">Entregas en Cadena de Frío</h3>
                         <p class="text-gray-600" data-lang-es="Sistema de refrigeración certificado que garantiza la frescura de productos refrigerados y congelados desde nuestro almacén hasta su tienda." data-lang-en="Certified refrigeration system that guarantees the freshness of refrigerated and frozen products from our warehouse to your store.">
                             Sistema de refrigeración certificado que garantiza la frescura de productos refrigerados y congelados desde nuestro almacén hasta su tienda.
