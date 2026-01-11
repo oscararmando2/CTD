@@ -379,6 +379,7 @@
         #page-loader.hidden {
             opacity: 0;
             pointer-events: none;
+            display: none;
         }
         
         .loader-logo {
@@ -1364,7 +1365,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                  navigator.connection.effectiveType === '2g' || 
                  navigator.connection.effectiveType === '3g') : false;
             
-            return (isMobile && (hasLowMemory || hasSlowConnection));
+            return (hasLowMemory || hasSlowConnection);
         };
         
         const reduceAnimations = isLowPerformanceDevice();
@@ -1372,7 +1373,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         // ============================
         // LOADER CONFIGURATION
         // ============================
-        const LOADER_DURATION = 8000; // 8 seconds
+        const LOADER_DURATION = 2000; // 2 seconds - optimized for better UX
         
         // Hide loader after specified duration
         window.addEventListener('load', function() {
@@ -1380,6 +1381,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 const loader = document.getElementById('page-loader');
                 if (loader) {
                     loader.classList.add('hidden');
+                    // Improve accessibility by hiding from screen readers
+                    loader.setAttribute('aria-hidden', 'true');
                 }
             }, LOADER_DURATION);
         });
@@ -1534,13 +1537,14 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             initScrollAnimations();
             
             // Initialize Swiper for Marcas Carousel
-            const swiper = new Swiper('.marcas-carousel', {
+            const swiperConfig = {
                 // Carousel configuration
                 loop: true,
-                autoplay: !reduceAnimations ? {
+                autoplay: {
+                    enabled: !reduceAnimations,
                     delay: 3000,
                     disableOnInteraction: false,
-                } : false,
+                },
                 slidesPerView: 2,
                 spaceBetween: 20,
                 breakpoints: {
@@ -1569,7 +1573,9 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     el: '.swiper-pagination',
                     clickable: true,
                 },
-            });
+            };
+            
+            const swiper = new Swiper('.marcas-carousel', swiperConfig);
             
             // Mobile: Auto-activate card animations when scrolling into view
             const mobileMediaQuery = window.matchMedia('(max-width: 1024px)');
