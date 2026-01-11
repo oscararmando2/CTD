@@ -255,7 +255,7 @@
         /* Desktop hover effects */
         @media (min-width: 1024px) {
             .card-interactive:hover {
-                transform: translateY(-8px) scale(1.02);
+                transform: scale(0.95);
                 box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
             }
         }
@@ -267,16 +267,141 @@
             }
         }
         
-        /* Service cards with depth */
+        /* ============================
+           RIBBON/BANNER CARDS (About Us Section)
+           ============================ */
+        .ribbon-card {
+            width: 100%;
+            min-height: 250px;
+            border-radius: 20px;
+            background: linear-gradient(170deg, rgba(255, 255, 255, 0.9) 0%, rgba(249, 250, 251, 1) 100%);
+            position: relative;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            transition: all 0.3s;
+            overflow: hidden;
+        }
+        
+        .ribbon-card:hover {
+            transform: scale(0.95);
+        }
+        
+        .ribbon-card .ribbon-banner {
+            position: absolute;
+            overflow: hidden;
+            width: 150px;
+            height: 150px;
+            top: -10px;
+            left: -10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .ribbon-card .ribbon-banner::before {
+            position: absolute;
+            width: 150%;
+            height: 40px;
+            background-image: linear-gradient(45deg, #db2c1a 0%, #f89429 51%, #db2c1a 100%);
+            transform: rotate(-45deg) translateY(-20px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.23);
+        }
+        
+        .ribbon-card .ribbon-banner::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            bottom: 0;
+            left: 0;
+            height: 10px;
+            z-index: -1;
+            box-shadow: 140px -140px #247232;
+            background-image: linear-gradient(45deg, #db2c1a 0%, #f89429 51%, #db2c1a 100%);
+        }
+        
+        /* Ribbon text variants */
+        .ribbon-banner-calidad::before {
+            content: 'CALIDAD';
+        }
+        
+        .ribbon-banner-servicio::before {
+            content: 'SERVICIO';
+        }
+        
+        .ribbon-banner-compromiso::before {
+            content: 'COMPROMISO';
+        }
+        
+        /* Service cards with depth and animated orbs */
         .service-card {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
+            overflow: hidden;
+        }
+        
+        /* Animated orb elements */
+        .service-card::after,
+        .service-card::before {
+            width: 100px;
+            height: 100px;
+            content: "";
+            position: absolute;
+            border-radius: 50%;
+            transition: 0.5s linear;
+        }
+        
+        .service-card::after {
+            top: -20px;
+            left: -20px;
+            background-color: rgba(219, 44, 26, 0.4); /* CTD Red with transparency */
+            animation: animFirst 5s linear infinite;
+        }
+        
+        .service-card::before {
+            background-color: rgba(36, 114, 50, 0.3); /* CTD Green with transparency */
+            top: 70%;
+            left: 70%;
+            animation: animSecond 5s linear infinite;
+            animation-delay: 3s;
+        }
+        
+        @keyframes animFirst {
+            0% { transform: scale(1) translate(0, 0); }
+            25% { transform: scale(1.1) translate(10px, -10px); }
+            50% { transform: scale(0.9) translate(-5px, 5px); }
+            75% { transform: scale(1.05) translate(5px, -5px); }
+            100% { transform: scale(1) translate(0, 0); }
+        }
+        
+        @keyframes animSecond {
+            0% { transform: scale(1) translate(0, 0); }
+            25% { transform: scale(0.9) translate(-10px, 10px); }
+            50% { transform: scale(1.1) translate(5px, -5px); }
+            75% { transform: scale(0.95) translate(-5px, 5px); }
+            100% { transform: scale(1) translate(0, 0); }
         }
         
         @media (min-width: 1024px) {
             .service-card:hover {
                 transform: translateY(-5px);
-                box-shadow: 0 15px 35px rgba(219, 44, 26, 0.2);
+                box-shadow: 0 10px 25px rgba(36, 114, 50, 0.3);
+            }
+            
+            .service-card:hover::after {
+                left: 190px;
+                transform: scale(1.2);
+            }
+            
+            .service-card:hover::before {
+                left: -10px;
+                transform: scale(1.2);
             }
         }
         
@@ -826,7 +951,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             
             <!-- Values Cards -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-                <div class="glass-card card-interactive p-6 rounded-lg shadow-lg animate-slide-right">
+                <div class="ribbon-card glass-card p-6 rounded-lg shadow-lg animate-slide-right">
+                    <span class="ribbon-banner ribbon-banner-calidad"></span>
                     <div class="icon-interactive text-ctd-green text-4xl mb-4">✓</div>
                     <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Calidad Garantizada" data-lang-en="Guaranteed Quality">Calidad Garantizada</h4>
                     <p class="text-gray-600" data-lang-es="Productos seleccionados cuidadosamente para cumplir con los más altos estándares de calidad y frescura." data-lang-en="Carefully selected products to meet the highest standards of quality and freshness.">
@@ -834,7 +960,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     </p>
                 </div>
                 
-                <div class="glass-card card-interactive p-6 rounded-lg shadow-lg animate-slide-up">
+                <div class="ribbon-card glass-card p-6 rounded-lg shadow-lg animate-slide-up">
+                    <span class="ribbon-banner ribbon-banner-servicio"></span>
                     <div class="icon-interactive text-ctd-green text-4xl mb-4">★</div>
                     <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Servicio Excepcional" data-lang-en="Exceptional Service">Servicio Excepcional</h4>
                     <p class="text-gray-600" data-lang-es="Equipo dedicado que entiende las necesidades únicas de las tiendas latinas y ofrece soluciones personalizadas." data-lang-en="Dedicated team that understands the unique needs of Latino stores and offers customized solutions.">
@@ -842,7 +969,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     </p>
                 </div>
                 
-                <div class="glass-card card-interactive p-6 rounded-lg shadow-lg animate-slide-left">
+                <div class="ribbon-card glass-card p-6 rounded-lg shadow-lg animate-slide-left">
+                    <span class="ribbon-banner ribbon-banner-compromiso"></span>
                     <div class="icon-interactive text-ctd-green text-4xl mb-4">♥</div>
                     <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Compromiso Comunitario" data-lang-en="Community Commitment">Compromiso Comunitario</h4>
                     <p class="text-gray-600" data-lang-es="Apoyamos el crecimiento de la comunidad latina promoviendo los auténticos sabores de nuestras culturas." data-lang-en="We support the growth of the Latino community by promoting the authentic flavors of our cultures.">
@@ -1132,56 +1260,68 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                 <!-- Service 1 -->
                 <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up" data-delay="100">
-                    <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">🚚</div>
-                    <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Entregas en Cadena de Frío" data-lang-en="Cold Chain Delivery">Entregas en Cadena de Frío</h3>
-                    <p class="text-gray-600" data-lang-es="Sistema de refrigeración certificado que garantiza la frescura de productos refrigerados y congelados desde nuestro almacén hasta su tienda." data-lang-en="Certified refrigeration system that guarantees the freshness of refrigerated and frozen products from our warehouse to your store.">
-                        Sistema de refrigeración certificado que garantiza la frescura de productos refrigerados y congelados desde nuestro almacén hasta su tienda.
-                    </p>
+                    <div class="relative z-10">
+                        <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">🚚</div>
+                        <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Entregas en Cadena de Frío" data-lang-en="Cold Chain Delivery">Entregas en Cadena de Frío</h3>
+                        <p class="text-gray-600" data-lang-es="Sistema de refrigeración certificado que garantiza la frescura de productos refrigerados y congelados desde nuestro almacén hasta su tienda." data-lang-en="Certified refrigeration system that guarantees the freshness of refrigerated and frozen products from our warehouse to your store.">
+                            Sistema de refrigeración certificado que garantiza la frescura de productos refrigerados y congelados desde nuestro almacén hasta su tienda.
+                        </p>
+                    </div>
                 </div>
                 
                 <!-- Service 2 -->
                 <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up" data-delay="200">
-                    <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">💰</div>
-                    <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Precios Mayoristas Competitivos" data-lang-en="Competitive Wholesale Prices">Precios Mayoristas Competitivos</h3>
-                    <p class="text-gray-600" data-lang-es="Mejores precios del mercado con descuentos por volumen que incrementan sus márgenes de ganancia y competitividad." data-lang-en="Best market prices with volume discounts that increase your profit margins and competitiveness.">
-                        Mejores precios del mercado con descuentos por volumen que incrementan sus márgenes de ganancia y competitividad.
-                    </p>
+                    <div class="relative z-10">
+                        <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">💰</div>
+                        <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Precios Mayoristas Competitivos" data-lang-en="Competitive Wholesale Prices">Precios Mayoristas Competitivos</h3>
+                        <p class="text-gray-600" data-lang-es="Mejores precios del mercado con descuentos por volumen que incrementan sus márgenes de ganancia y competitividad." data-lang-en="Best market prices with volume discounts that increase your profit margins and competitiveness.">
+                            Mejores precios del mercado con descuentos por volumen que incrementan sus márgenes de ganancia y competitividad.
+                        </p>
+                    </div>
                 </div>
                 
                 <!-- Service 3 -->
                 <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up" data-delay="300">
-                    <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">📊</div>
-                    <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Asesoría en Inventario" data-lang-en="Inventory Advisory">Asesoría en Inventario</h3>
-                    <p class="text-gray-600" data-lang-es="Expertos que le ayudan a optimizar su inventario, identificar productos de alta rotación y maximizar sus ventas." data-lang-en="Experts who help you optimize your inventory, identify high-turnover products, and maximize your sales.">
-                        Expertos que le ayudan a optimizar su inventario, identificar productos de alta rotación y maximizar sus ventas.
-                    </p>
+                    <div class="relative z-10">
+                        <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">📊</div>
+                        <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Asesoría en Inventario" data-lang-en="Inventory Advisory">Asesoría en Inventario</h3>
+                        <p class="text-gray-600" data-lang-es="Expertos que le ayudan a optimizar su inventario, identificar productos de alta rotación y maximizar sus ventas." data-lang-en="Experts who help you optimize your inventory, identify high-turnover products, and maximize your sales.">
+                            Expertos que le ayudan a optimizar su inventario, identificar productos de alta rotación y maximizar sus ventas.
+                        </p>
+                    </div>
                 </div>
                 
                 <!-- Service 4 -->
                 <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up" data-delay="100">
-                    <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">🗺️</div>
-                    <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Cobertura Kansas City y Midwest" data-lang-en="Kansas City & Midwest Coverage">Cobertura Kansas City y Midwest</h3>
-                    <p class="text-gray-600" data-lang-es="Entregas rápidas y confiables en toda el área metropolitana de Kansas City y estados vecinos del Midwest." data-lang-en="Fast and reliable deliveries throughout the Kansas City metropolitan area and neighboring Midwest states.">
-                        Entregas rápidas y confiables en toda el área metropolitana de Kansas City y estados vecinos del Midwest.
-                    </p>
+                    <div class="relative z-10">
+                        <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">🗺️</div>
+                        <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Cobertura Kansas City y Midwest" data-lang-en="Kansas City & Midwest Coverage">Cobertura Kansas City y Midwest</h3>
+                        <p class="text-gray-600" data-lang-es="Entregas rápidas y confiables en toda el área metropolitana de Kansas City y estados vecinos del Midwest." data-lang-en="Fast and reliable deliveries throughout the Kansas City metropolitan area and neighboring Midwest states.">
+                            Entregas rápidas y confiables en toda el área metropolitana de Kansas City y estados vecinos del Midwest.
+                        </p>
+                    </div>
                 </div>
                 
                 <!-- Service 5 -->
                 <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up" data-delay="200">
-                    <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">📱</div>
-                    <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Pedidos Fáciles y Rápidos" data-lang-en="Easy & Fast Orders">Pedidos Fáciles y Rápidos</h3>
-                    <p class="text-gray-600" data-lang-es="Sistema simplificado de pedidos por teléfono, email o WhatsApp. Atención personalizada en español." data-lang-en="Simplified ordering system by phone, email, or WhatsApp. Personalized attention in Spanish.">
-                        Sistema simplificado de pedidos por teléfono, email o WhatsApp. Atención personalizada en español.
-                    </p>
+                    <div class="relative z-10">
+                        <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">📱</div>
+                        <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Pedidos Fáciles y Rápidos" data-lang-en="Easy & Fast Orders">Pedidos Fáciles y Rápidos</h3>
+                        <p class="text-gray-600" data-lang-es="Sistema simplificado de pedidos por teléfono, email o WhatsApp. Atención personalizada en español." data-lang-en="Simplified ordering system by phone, email, or WhatsApp. Personalized attention in Spanish.">
+                            Sistema simplificado de pedidos por teléfono, email o WhatsApp. Atención personalizada en español.
+                        </p>
+                    </div>
                 </div>
                 
                 <!-- Service 6 -->
                 <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up" data-delay="300">
-                    <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">⭐</div>
-                    <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Variedad y Disponibilidad" data-lang-en="Variety & Availability">Variedad y Disponibilidad</h3>
-                    <p class="text-gray-600" data-lang-es="Miles de productos latinos siempre en stock. Si no lo tenemos, lo conseguimos para usted." data-lang-en="Thousands of Latino products always in stock. If we don't have it, we'll get it for you.">
-                        Miles de productos latinos siempre en stock. Si no lo tenemos, lo conseguimos para usted.
-                    </p>
+                    <div class="relative z-10">
+                        <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">⭐</div>
+                        <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Variedad y Disponibilidad" data-lang-en="Variety & Availability">Variedad y Disponibilidad</h3>
+                        <p class="text-gray-600" data-lang-es="Miles de productos latinos siempre en stock. Si no lo tenemos, lo conseguimos para usted." data-lang-en="Thousands of Latino products always in stock. If we don't have it, we'll get it for you.">
+                            Miles de productos latinos siempre en stock. Si no lo tenemos, lo conseguimos para usted.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
