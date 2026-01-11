@@ -527,30 +527,7 @@
         
         /* Desktop hover animations */
         @media (min-width: 1024px) {
-            .product-card:hover {
-                transform: translateY(-8px);
-                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-            }
-            
-            .product-card .card-anim-1 { 
-                transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-            .product-card .card-anim-2 { 
-                transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-            .product-card .card-anim-3 { 
-                transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-            .product-card .card-anim-4 { 
-                transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-            .product-card .card-anim-5 { 
-                transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-            .product-card .card-anim-6 { 
-                transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-            .product-card .card-anim-7 { 
+            .product-card [class*='card-anim-'] { 
                 transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
             }
         }
@@ -602,6 +579,13 @@
             .product-card .card-anim-7 {
                 transition: none !important;
             }
+        }
+        
+        /* Low-performance device optimization */
+        body.reduce-animations [class*="animate-"] {
+            opacity: 1 !important;
+            transform: none !important;
+            transition: none !important;
         }
     </style>
 </head>
@@ -1356,13 +1340,13 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 return true;
             }
             
-            // Check device capabilities
+            // Check device capabilities with feature detection
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            const hasLowMemory = navigator.deviceMemory && navigator.deviceMemory < 4;
-            const hasSlowConnection = navigator.connection && 
+            const hasLowMemory = navigator.deviceMemory ? navigator.deviceMemory < 4 : false;
+            const hasSlowConnection = navigator.connection ? 
                 (navigator.connection.effectiveType === 'slow-2g' || 
                  navigator.connection.effectiveType === '2g' || 
-                 navigator.connection.effectiveType === '3g');
+                 navigator.connection.effectiveType === '3g') : false;
             
             return (isMobile && (hasLowMemory || hasSlowConnection));
         };
@@ -1389,11 +1373,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         // ============================
         const initScrollAnimations = () => {
             if (reduceAnimations) {
-                // Skip animations for low-performance devices
-                document.querySelectorAll('[class*="animate-"]').forEach(el => {
-                    el.style.opacity = '1';
-                    el.style.transform = 'none';
-                });
+                // Skip animations for low-performance devices - use CSS class
+                document.body.classList.add('reduce-animations');
                 return;
             }
             
