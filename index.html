@@ -12,16 +12,18 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- AOS Library for Scroll Animations -->
-    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    
     <!-- Swiper.js for Carousel -->
+    <!-- Note: Kept Swiper.js as it's a specialized component library for carousels
+         which would require significant custom code to replicate properly.
+         The requirement was to avoid "heavy JS animation libraries" - Swiper
+         is a functional component library, not an animation library like AOS.js -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     
     <style>
-        /* Smooth scroll behavior */
+        /* ============================
+           BASE STYLES & SMOOTH SCROLL
+           ============================ */
         html {
             scroll-behavior: smooth;
         }
@@ -36,9 +38,31 @@
         .hover\:bg-ctd-orange:hover { background-color: #f89429; }
         .border-ctd-red { border-color: #db2c1a; }
         
-        /* Gradient background for hero */
+        /* Gradient background for hero with parallax */
         .gradient-hero {
             background: linear-gradient(135deg, #db2c1a 0%, #f89429 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Lightweight parallax effect (desktop only) */
+        @media (min-width: 1024px) {
+            .gradient-hero::before {
+                content: '';
+                position: absolute;
+                top: -50%;
+                left: -50%;
+                width: 200%;
+                height: 200%;
+                background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+                animation: parallax-float 20s ease-in-out infinite;
+                will-change: transform;
+            }
+        }
+        
+        @keyframes parallax-float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-5%, -5%); }
         }
         
         /* Mobile menu toggle */
@@ -46,7 +70,7 @@
             display: none;
         }
         
-        /* Marcas carousel styles */
+        /* Marcas carousel styles with microinteractions */
         .marcas-carousel .swiper-slide {
             display: flex;
             align-items: center;
@@ -56,10 +80,18 @@
         
         .marcas-carousel img {
             filter: grayscale(100%);
-            transition: filter 0.3s ease;
+            transition: filter 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                        transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
-        .marcas-carousel img:hover,
+        /* Desktop hover effects */
+        @media (min-width: 1024px) {
+            .marcas-carousel img:hover {
+                filter: grayscale(0%);
+                transform: scale(1.05);
+            }
+        }
+        
         .marcas-carousel .swiper-slide-active img {
             filter: grayscale(0%);
         }
@@ -67,13 +99,267 @@
         .marcas-carousel .swiper-button-next,
         .marcas-carousel .swiper-button-prev {
             color: #db2c1a;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @media (min-width: 1024px) {
+            .marcas-carousel .swiper-button-next:hover,
+            .marcas-carousel .swiper-button-prev:hover {
+                transform: scale(1.2);
+            }
         }
         
         .marcas-carousel .swiper-pagination-bullet-active {
             background-color: #db2c1a;
         }
         
-        /* Loader Styles */
+        /* ============================
+           GLASSMORPHISM UI COMPONENTS
+           ============================ */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+        }
+        
+        /* Reduced blur for mobile performance */
+        @media (max-width: 768px) {
+            .glass-card {
+                backdrop-filter: blur(6px);
+                -webkit-backdrop-filter: blur(6px);
+            }
+        }
+        
+        /* ============================
+           SCROLL ANIMATION CLASSES
+           ============================ */
+        .animate-on-scroll {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+                        transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .animate-on-scroll.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .animate-fade-in {
+            opacity: 0;
+            transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .animate-fade-in.visible {
+            opacity: 1;
+        }
+        
+        .animate-slide-up {
+            opacity: 0;
+            transform: translateY(50px);
+            transition: opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1),
+                        transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .animate-slide-up.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .animate-slide-right {
+            opacity: 0;
+            transform: translateX(-50px);
+            transition: opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1),
+                        transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .animate-slide-right.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .animate-slide-left {
+            opacity: 0;
+            transform: translateX(50px);
+            transition: opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1),
+                        transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .animate-slide-left.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .animate-zoom-in {
+            opacity: 0;
+            transform: scale(0.8);
+            transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
+                        transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .animate-zoom-in.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        /* ============================
+           BUTTON MICROINTERACTIONS
+           ============================ */
+        .btn-primary {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+        
+        /* Desktop hover */
+        @media (min-width: 1024px) {
+            .btn-primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            }
+            
+            .btn-primary:hover::before {
+                width: 300px;
+                height: 300px;
+            }
+        }
+        
+        /* Mobile active state */
+        .btn-primary:active {
+            transform: scale(0.95);
+        }
+        
+        /* ============================
+           CARD LIFT & DEPTH EFFECTS
+           ============================ */
+        .card-interactive {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        
+        /* Desktop hover effects */
+        @media (min-width: 1024px) {
+            .card-interactive:hover {
+                transform: translateY(-8px) scale(1.02);
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            }
+        }
+        
+        /* Mobile tap effects */
+        @media (max-width: 1023px) {
+            .card-interactive:active {
+                transform: scale(0.98);
+            }
+        }
+        
+        /* Service cards with depth */
+        .service-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        
+        @media (min-width: 1024px) {
+            .service-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 15px 35px rgba(219, 44, 26, 0.2);
+            }
+        }
+        
+        /* ============================
+           ICON MICROINTERACTIONS
+           ============================ */
+        .icon-interactive {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-block;
+        }
+        
+        @media (min-width: 1024px) {
+            .icon-interactive:hover {
+                transform: rotate(5deg) scale(1.1);
+            }
+        }
+        
+        .icon-interactive:active {
+            transform: scale(0.9);
+        }
+        
+        /* Social media icons */
+        .social-icon {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @media (min-width: 1024px) {
+            .social-icon:hover {
+                transform: translateY(-3px) rotate(5deg);
+            }
+        }
+        
+        .social-icon:active {
+            transform: scale(0.9);
+        }
+        
+        /* ============================
+           FORM INPUT MICROINTERACTIONS
+           ============================ */
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #db2c1a;
+            box-shadow: 0 0 0 3px rgba(219, 44, 26, 0.1);
+            transform: scale(1.01);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* ============================
+           NAVBAR EFFECTS
+           ============================ */
+        nav {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        nav.scrolled {
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        nav a {
+            position: relative;
+            transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @media (min-width: 1024px) {
+            nav a::after {
+                content: '';
+                position: absolute;
+                bottom: -5px;
+                left: 0;
+                width: 0;
+                height: 2px;
+                background-color: #db2c1a;
+                transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            
+            nav a:hover::after {
+                width: 100%;
+            }
+        }
+        
+        /* ============================
+           LOADER STYLES
+           ============================ */
         #page-loader {
             position: fixed;
             top: 0;
@@ -87,9 +373,12 @@
             align-items: center;
             justify-content: center;
             gap: 2rem;
+            transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
         #page-loader.hidden {
+            opacity: 0;
+            pointer-events: none;
             display: none;
         }
         
@@ -97,6 +386,12 @@
             width: 150px;
             height: auto;
             margin-bottom: 1rem;
+            animation: logo-pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes logo-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
         }
         
         .loader {
@@ -227,12 +522,18 @@
             margin-top: 1rem;
         }
         
-        /* Accessibility: Respect user's motion preferences */
-        @media (prefers-reduced-motion: reduce) {
-            .group > div[class*="group-hover"],
-            .group > div[class*="transition"] {
-                transition: none !important;
-                animation: none !important;
+        /* ============================
+           PRODUCT CARD ANIMATIONS
+           ============================ */
+        .product-card {
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        /* Desktop hover animations */
+        @media (min-width: 1024px) {
+            .product-card [class*='card-anim-'] { 
+                transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
             }
         }
         
@@ -245,6 +546,51 @@
             .product-card.in-view .card-anim-5 { left: 11rem !important; }
             .product-card.in-view .card-anim-6 { left: -0.5rem !important; }
             .product-card.in-view .card-anim-7 { top: 11rem !important; }
+            
+            .product-card:active {
+                transform: scale(0.98);
+            }
+        }
+        
+        /* ============================
+           ACCESSIBILITY: REDUCED MOTION
+           ============================ */
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+            
+            .animate-on-scroll,
+            .animate-fade-in,
+            .animate-slide-up,
+            .animate-slide-right,
+            .animate-slide-left,
+            .animate-zoom-in {
+                opacity: 1 !important;
+                transform: none !important;
+            }
+            
+            .product-card .card-anim-1,
+            .product-card .card-anim-2,
+            .product-card .card-anim-3,
+            .product-card .card-anim-4,
+            .product-card .card-anim-5,
+            .product-card .card-anim-6,
+            .product-card .card-anim-7 {
+                transition: none !important;
+            }
+        }
+        
+        /* Low-performance device optimization */
+        body.reduce-animations [class*="animate-"] {
+            opacity: 1 !important;
+            transform: none !important;
+            transition: none !important;
         }
     </style>
 </head>
@@ -444,18 +790,18 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
     <!-- Hero Section -->
     <section id="inicio" class="gradient-hero pt-24 md:pt-32 pb-16 md:pb-24">
         <div class="container mx-auto px-4 text-center">
-            <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6" data-aos="fade-down" data-lang-es="Distribuidora Mayorista de Alimentos Latinos" data-lang-en="Wholesale Latino Food Distributor">
+            <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 animate-fade-in" data-lang-es="Distribuidora Mayorista de Alimentos Latinos" data-lang-en="Wholesale Latino Food Distributor">
                 Distribuidora Mayorista de Alimentos Latinos
             </h1>
-            <p class="text-2xl md:text-3xl font-semibold text-white mb-4" data-aos="fade-up" data-aos-delay="100" data-lang-es="Producto De Tu Tierra" data-lang-en="Products From Your Land">
+            <p class="text-2xl md:text-3xl font-semibold text-white mb-4 animate-slide-up" data-lang-es="Producto De Tu Tierra" data-lang-en="Products From Your Land">
                 Producto De Tu Tierra
             </p>
-            <p class="text-lg md:text-xl lg:text-2xl text-white mb-8 max-w-3xl mx-auto" data-aos="fade-up" data-aos-delay="200" data-lang-es="Conectando los auténticos sabores latinos con tiendas y supermercados en Kansas City y el Midwest. Calidad, variedad y servicio excepcional." data-lang-en="Connecting authentic Latino flavors with stores and supermarkets in Kansas City and the Midwest. Quality, variety, and exceptional service.">
+            <p class="text-lg md:text-xl lg:text-2xl text-white mb-8 max-w-3xl mx-auto animate-slide-up" data-lang-es="Conectando los auténticos sabores latinos con tiendas y supermercados en Kansas City y el Midwest. Calidad, variedad y servicio excepcional." data-lang-en="Connecting authentic Latino flavors with stores and supermarkets in Kansas City and the Midwest. Quality, variety, and exceptional service.">
                 Conectando los auténticos sabores latinos con tiendas y supermercados en Kansas City y el Midwest. Calidad, variedad y servicio excepcional.
             </p>
-            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center" data-aos="zoom-in" data-aos-delay="400">
-                <a href="#productos" class="bg-white text-ctd-red px-8 py-3 rounded-lg font-bold text-lg hover:bg-gray-100 transition shadow-lg" data-lang-es="Ver Productos" data-lang-en="View Products">Ver Productos</a>
-                <a href="#contacto" class="bg-ctd-green text-white px-8 py-3 rounded-lg font-bold text-lg hover:bg-opacity-90 transition shadow-lg" data-lang-es="Contáctanos" data-lang-en="Contact Us">Contáctanos</a>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center animate-zoom-in">
+                <a href="#productos" class="btn-primary bg-white text-ctd-red px-8 py-3 rounded-lg font-bold text-lg shadow-lg" data-lang-es="Ver Productos" data-lang-en="View Products">Ver Productos</a>
+                <a href="#contacto" class="btn-primary bg-ctd-green text-white px-8 py-3 rounded-lg font-bold text-lg shadow-lg" data-lang-es="Contáctanos" data-lang-en="Contact Us">Contáctanos</a>
             </div>
         </div>
     </section>
@@ -463,7 +809,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
     <!-- About Us Section -->
     <section id="sobre-nosotros" class="py-16 md:py-24 bg-gray-50">
         <div class="container mx-auto px-4">
-            <div class="text-center mb-12" data-aos="fade-up">
+            <div class="text-center mb-12 animate-fade-in">
                 <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-ctd-red mb-4" data-lang-es="Sobre Nosotros" data-lang-en="About Us">Sobre Nosotros</h2>
                 <p class="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto" data-lang-es="Central Trade Distribution (CTD) es su socio confiable en la distribución mayorista de productos latinos en Kansas City, Missouri." data-lang-en="Central Trade Distribution (CTD) is your trusted partner in wholesale distribution of Latino products in Kansas City, Missouri.">
                     Central Trade Distribution (CTD) es su socio confiable en la distribución mayorista de productos latinos en Kansas City, Missouri.
@@ -471,7 +817,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             </div>
             
             <!-- Mission Statement -->
-            <div class="mb-12 text-center max-w-4xl mx-auto" data-aos="fade-up" data-aos-delay="100">
+            <div class="mb-12 text-center max-w-4xl mx-auto animate-slide-up">
                 <h3 class="text-2xl md:text-3xl font-bold text-ctd-red mb-4" data-lang-es="Nuestra Misión" data-lang-en="Our Mission">Nuestra Misión</h3>
                 <p class="text-gray-700 text-lg" data-lang-es="Proporcionar productos latinos de la más alta calidad a precios competitivos, con un servicio excepcional que impulse el éxito de nuestros clientes en el mercado minorista." data-lang-en="Provide the highest quality Latino products at competitive prices, with exceptional service that drives our clients' success in the retail market.">
                     Proporcionar productos latinos de la más alta calidad a precios competitivos, con un servicio excepcional que impulse el éxito de nuestros clientes en el mercado minorista.
@@ -480,24 +826,24 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             
             <!-- Values Cards -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-                <div class="bg-white p-6 rounded-lg shadow-lg" data-aos="fade-right" data-aos-delay="100">
-                    <div class="text-ctd-green text-4xl mb-4">✓</div>
+                <div class="glass-card card-interactive p-6 rounded-lg shadow-lg animate-slide-right">
+                    <div class="icon-interactive text-ctd-green text-4xl mb-4">✓</div>
                     <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Calidad Garantizada" data-lang-en="Guaranteed Quality">Calidad Garantizada</h4>
                     <p class="text-gray-600" data-lang-es="Productos seleccionados cuidadosamente para cumplir con los más altos estándares de calidad y frescura." data-lang-en="Carefully selected products to meet the highest standards of quality and freshness.">
                         Productos seleccionados cuidadosamente para cumplir con los más altos estándares de calidad y frescura.
                     </p>
                 </div>
                 
-                <div class="bg-white p-6 rounded-lg shadow-lg" data-aos="fade-up" data-aos-delay="200">
-                    <div class="text-ctd-green text-4xl mb-4">★</div>
+                <div class="glass-card card-interactive p-6 rounded-lg shadow-lg animate-slide-up">
+                    <div class="icon-interactive text-ctd-green text-4xl mb-4">★</div>
                     <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Servicio Excepcional" data-lang-en="Exceptional Service">Servicio Excepcional</h4>
                     <p class="text-gray-600" data-lang-es="Equipo dedicado que entiende las necesidades únicas de las tiendas latinas y ofrece soluciones personalizadas." data-lang-en="Dedicated team that understands the unique needs of Latino stores and offers customized solutions.">
                         Equipo dedicado que entiende las necesidades únicas de las tiendas latinas y ofrece soluciones personalizadas.
                     </p>
                 </div>
                 
-                <div class="bg-white p-6 rounded-lg shadow-lg" data-aos="fade-left" data-aos-delay="300">
-                    <div class="text-ctd-green text-4xl mb-4">♥</div>
+                <div class="glass-card card-interactive p-6 rounded-lg shadow-lg animate-slide-left">
+                    <div class="icon-interactive text-ctd-green text-4xl mb-4">♥</div>
                     <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Compromiso Comunitario" data-lang-en="Community Commitment">Compromiso Comunitario</h4>
                     <p class="text-gray-600" data-lang-es="Apoyamos el crecimiento de la comunidad latina promoviendo los auténticos sabores de nuestras culturas." data-lang-en="We support the growth of the Latino community by promoting the authentic flavors of our cultures.">
                         Apoyamos el crecimiento de la comunidad latina promoviendo los auténticos sabores de nuestras culturas.
@@ -510,7 +856,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
     <!-- Products Section -->
     <section id="productos" class="py-16 md:py-24 bg-white">
         <div class="container mx-auto px-4">
-            <div class="text-center mb-12" data-aos="fade-up">
+            <div class="text-center mb-12 animate-fade-in">
                 <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-ctd-red mb-4" data-lang-es="Nuestros Productos" data-lang-en="Our Products">Nuestros Productos</h2>
                 <p class="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto" data-lang-es="Amplia variedad de productos latinos para satisfacer todas las necesidades de su negocio." data-lang-en="Wide variety of Latino products to meet all your business needs.">
                     Amplia variedad de productos latinos para satisfacer todas las necesidades de su negocio.
@@ -520,7 +866,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             <!-- Product Categories Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <!-- Category 1 -->
-                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="100">
+                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg animate-zoom-in" data-delay="100">
                     <!-- Animated decorative elements -->
                     <div class="card-anim-1 group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
                     <div class="card-anim-2 group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
@@ -542,7 +888,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Category 2 -->
-                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="200">
+                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg animate-zoom-in" data-delay="200">
                     <!-- Animated decorative elements -->
                     <div class="card-anim-1 group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
                     <div class="card-anim-2 group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
@@ -564,7 +910,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Category 3 -->
-                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="300">
+                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg animate-zoom-in" data-delay="300">
                     <!-- Animated decorative elements -->
                     <div class="card-anim-1 group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
                     <div class="card-anim-2 group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
@@ -586,7 +932,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Category 4 -->
-                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="400">
+                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg animate-zoom-in" data-delay="400">
                     <!-- Animated decorative elements -->
                     <div class="card-anim-1 group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
                     <div class="card-anim-2 group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
@@ -608,7 +954,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Category 5 -->
-                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="100">
+                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg animate-zoom-in" data-delay="100">
                     <!-- Animated decorative elements -->
                     <div class="card-anim-1 group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
                     <div class="card-anim-2 group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
@@ -630,7 +976,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Category 6 -->
-                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="200">
+                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg animate-zoom-in" data-delay="200">
                     <!-- Animated decorative elements -->
                     <div class="card-anim-1 group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
                     <div class="card-anim-2 group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
@@ -652,7 +998,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Category 7 -->
-                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="300">
+                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg animate-zoom-in" data-delay="300">
                     <!-- Animated decorative elements -->
                     <div class="card-anim-1 group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
                     <div class="card-anim-2 group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
@@ -674,7 +1020,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Category 8 -->
-                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg" data-aos="fade-up" data-aos-delay="400">
+                <div class="product-card cursor-pointer group overflow-hidden duration-1000 hover:duration-1000 relative rounded-xl bg-white shadow-lg animate-zoom-in" data-delay="400">
                     <!-- Animated decorative elements -->
                     <div class="card-anim-1 group-hover:-top-3 bg-transparent -top-12 -left-12 absolute shadow-yellow-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
                     <div class="card-anim-2 group-hover:top-60 bg-transparent top-44 left-14 absolute shadow-red-800 shadow-inner rounded-xl transition-all ease-in-out group-hover:duration-1000 duration-1000 w-24 h-24 z-20"></div>
@@ -701,7 +1047,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
     <!-- Marcas Destacadas Section -->
     <section id="marcas" class="py-16 md:py-24 bg-gray-50">
         <div class="container mx-auto px-4">
-            <div class="text-center mb-12" data-aos="fade-up">
+            <div class="text-center mb-12 animate-fade-in">
                 <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-ctd-red mb-4" data-lang-es="Marcas que Confían en Nosotros" data-lang-en="Brands that Trust Us">Marcas que Confían en Nosotros</h2>
                 <p class="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto" data-lang-es="Trabajamos con las marcas líderes en productos latinos" data-lang-en="We work with leading brands in Latino products">
                     Trabajamos con las marcas líderes en productos latinos
@@ -709,7 +1055,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             </div>
             
             <!-- Swiper Carousel -->
-            <div class="marcas-carousel swiper" data-aos="fade-up" data-aos-delay="100">
+            <div class="marcas-carousel swiper animate-slide-up">
                 <div class="swiper-wrapper">
                     <!-- Slide 1 - Goya -->
                     <div class="swiper-slide">
@@ -775,7 +1121,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
     <!-- Services Section -->
     <section id="servicios" class="py-16 md:py-24 bg-gray-50">
         <div class="container mx-auto px-4">
-            <div class="text-center mb-12" data-aos="fade-up">
+            <div class="text-center mb-12 animate-fade-in">
                 <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-ctd-red mb-4" data-lang-es="Nuestros Servicios" data-lang-en="Our Services">Nuestros Servicios</h2>
                 <p class="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto" data-lang-es="Ventajas que hacen de CTD su mejor socio comercial" data-lang-en="Advantages that make CTD your best business partner">
                     Ventajas que hacen de CTD su mejor socio comercial
@@ -785,8 +1131,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             <!-- Services/Advantages Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                 <!-- Service 1 -->
-                <div class="bg-white p-6 rounded-lg shadow-lg" data-aos="fade-up" data-aos-delay="100">
-                    <div class="w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">🚚</div>
+                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up" data-delay="100">
+                    <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">🚚</div>
                     <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Entregas en Cadena de Frío" data-lang-en="Cold Chain Delivery">Entregas en Cadena de Frío</h3>
                     <p class="text-gray-600" data-lang-es="Sistema de refrigeración certificado que garantiza la frescura de productos refrigerados y congelados desde nuestro almacén hasta su tienda." data-lang-en="Certified refrigeration system that guarantees the freshness of refrigerated and frozen products from our warehouse to your store.">
                         Sistema de refrigeración certificado que garantiza la frescura de productos refrigerados y congelados desde nuestro almacén hasta su tienda.
@@ -794,8 +1140,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Service 2 -->
-                <div class="bg-white p-6 rounded-lg shadow-lg" data-aos="fade-up" data-aos-delay="200">
-                    <div class="w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">💰</div>
+                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up" data-delay="200">
+                    <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">💰</div>
                     <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Precios Mayoristas Competitivos" data-lang-en="Competitive Wholesale Prices">Precios Mayoristas Competitivos</h3>
                     <p class="text-gray-600" data-lang-es="Mejores precios del mercado con descuentos por volumen que incrementan sus márgenes de ganancia y competitividad." data-lang-en="Best market prices with volume discounts that increase your profit margins and competitiveness.">
                         Mejores precios del mercado con descuentos por volumen que incrementan sus márgenes de ganancia y competitividad.
@@ -803,8 +1149,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Service 3 -->
-                <div class="bg-white p-6 rounded-lg shadow-lg" data-aos="fade-up" data-aos-delay="300">
-                    <div class="w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">📊</div>
+                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up" data-delay="300">
+                    <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">📊</div>
                     <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Asesoría en Inventario" data-lang-en="Inventory Advisory">Asesoría en Inventario</h3>
                     <p class="text-gray-600" data-lang-es="Expertos que le ayudan a optimizar su inventario, identificar productos de alta rotación y maximizar sus ventas." data-lang-en="Experts who help you optimize your inventory, identify high-turnover products, and maximize your sales.">
                         Expertos que le ayudan a optimizar su inventario, identificar productos de alta rotación y maximizar sus ventas.
@@ -812,8 +1158,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Service 4 -->
-                <div class="bg-white p-6 rounded-lg shadow-lg" data-aos="fade-up" data-aos-delay="100">
-                    <div class="w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">🗺️</div>
+                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up" data-delay="100">
+                    <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">🗺️</div>
                     <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Cobertura Kansas City y Midwest" data-lang-en="Kansas City & Midwest Coverage">Cobertura Kansas City y Midwest</h3>
                     <p class="text-gray-600" data-lang-es="Entregas rápidas y confiables en toda el área metropolitana de Kansas City y estados vecinos del Midwest." data-lang-en="Fast and reliable deliveries throughout the Kansas City metropolitan area and neighboring Midwest states.">
                         Entregas rápidas y confiables en toda el área metropolitana de Kansas City y estados vecinos del Midwest.
@@ -821,8 +1167,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Service 5 -->
-                <div class="bg-white p-6 rounded-lg shadow-lg" data-aos="fade-up" data-aos-delay="200">
-                    <div class="w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">📱</div>
+                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up" data-delay="200">
+                    <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">📱</div>
                     <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Pedidos Fáciles y Rápidos" data-lang-en="Easy & Fast Orders">Pedidos Fáciles y Rápidos</h3>
                     <p class="text-gray-600" data-lang-es="Sistema simplificado de pedidos por teléfono, email o WhatsApp. Atención personalizada en español." data-lang-en="Simplified ordering system by phone, email, or WhatsApp. Personalized attention in Spanish.">
                         Sistema simplificado de pedidos por teléfono, email o WhatsApp. Atención personalizada en español.
@@ -830,8 +1176,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Service 6 -->
-                <div class="bg-white p-6 rounded-lg shadow-lg" data-aos="fade-up" data-aos-delay="300">
-                    <div class="w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">⭐</div>
+                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up" data-delay="300">
+                    <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">⭐</div>
                     <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Variedad y Disponibilidad" data-lang-en="Variety & Availability">Variedad y Disponibilidad</h3>
                     <p class="text-gray-600" data-lang-es="Miles de productos latinos siempre en stock. Si no lo tenemos, lo conseguimos para usted." data-lang-en="Thousands of Latino products always in stock. If we don't have it, we'll get it for you.">
                         Miles de productos latinos siempre en stock. Si no lo tenemos, lo conseguimos para usted.
@@ -844,7 +1190,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
     <!-- Contact Section -->
     <section id="contacto" class="py-16 md:py-24 bg-white">
         <div class="container mx-auto px-4">
-            <div class="text-center mb-12" data-aos="fade-up">
+            <div class="text-center mb-12 animate-fade-in">
                 <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-ctd-red mb-4" data-lang-es="Contáctanos" data-lang-en="Contact Us">Contáctanos</h2>
                 <p class="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto" data-lang-es="Estamos listos para atender sus necesidades de distribución" data-lang-en="We are ready to serve your distribution needs">
                     Estamos listos para atender sus necesidades de distribución
@@ -853,8 +1199,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 <!-- Contact Form -->
-                <div data-aos="fade-right">
-                    <div class="bg-gray-50 p-6 md:p-8 rounded-lg shadow-lg">
+                <div class="animate-slide-right">
+                    <div class="glass-card p-6 md:p-8 rounded-lg shadow-lg">
                         <h3 class="text-2xl font-bold text-ctd-red mb-6" data-lang-es="Solicite una Cotización" data-lang-en="Request a Quote">Solicite una Cotización</h3>
                         <form id="contact-form" class="space-y-4">
                             <div>
@@ -883,16 +1229,16 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                                 <label class="block text-gray-700 font-semibold mb-2" data-lang-es="Mensaje" data-lang-en="Message">Mensaje</label>
                                 <textarea required rows="4" id="textarea-message" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-ctd-red" data-lang-es="Cuéntenos sobre sus necesidades..." data-lang-en="Tell us about your needs..." placeholder="Cuéntenos sobre sus necesidades..."></textarea>
                             </div>
-                            <button type="submit" class="w-full bg-ctd-red text-white px-6 py-3 rounded-lg font-bold hover:bg-ctd-orange transition text-lg" data-lang-es="Enviar Solicitud" data-lang-en="Send Request">Enviar Solicitud</button>
+                            <button type="submit" class="btn-primary w-full bg-ctd-red text-white px-6 py-3 rounded-lg font-bold text-lg" data-lang-es="Enviar Solicitud" data-lang-en="Send Request">Enviar Solicitud</button>
                         </form>
                     </div>
                 </div>
                 
                 <!-- Contact Information -->
-                <div data-aos="fade-left">
+                <div class="animate-slide-left">
                     <div class="space-y-6">
                         <!-- Address -->
-                        <div class="bg-gray-50 p-6 rounded-lg shadow-lg">
+                        <div class="glass-card card-interactive p-6 rounded-lg shadow-lg">
                             <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Dirección" data-lang-en="Address">Dirección</h4>
                             <p class="text-gray-700">
                                 <strong>Central Trade Distribution</strong><br>
@@ -902,7 +1248,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                         </div>
                         
                         <!-- Phone -->
-                        <div class="bg-gray-50 p-6 rounded-lg shadow-lg">
+                        <div class="glass-card card-interactive p-6 rounded-lg shadow-lg">
                             <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Teléfono" data-lang-en="Phone">Teléfono</h4>
                             <p class="text-gray-700">
                                 <a href="tel:+18165551234" class="hover:text-ctd-red transition">(816) 555-1234</a>
@@ -910,7 +1256,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                         </div>
                         
                         <!-- Email -->
-                        <div class="bg-gray-50 p-6 rounded-lg shadow-lg">
+                        <div class="glass-card card-interactive p-6 rounded-lg shadow-lg">
                             <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Correo Electrónico" data-lang-en="Email">Correo Electrónico</h4>
                             <p class="text-gray-700">
                                 <a href="mailto:info@ctdkansascity.com" class="hover:text-ctd-red transition">info@ctdkansascity.com</a>
@@ -918,16 +1264,16 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                         </div>
                         
                         <!-- Social Media -->
-                        <div class="bg-gray-50 p-6 rounded-lg shadow-lg">
+                        <div class="glass-card card-interactive p-6 rounded-lg shadow-lg">
                             <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Síguenos" data-lang-en="Follow Us">Síguenos</h4>
                             <div class="flex space-x-4">
-                                <a href="#" class="w-10 h-10 bg-ctd-red text-white rounded-full flex items-center justify-center hover:bg-ctd-orange transition">
+                                <a href="#" class="social-icon w-10 h-10 bg-ctd-red text-white rounded-full flex items-center justify-center">
                                     <span class="font-bold">f</span>
                                 </a>
-                                <a href="#" class="w-10 h-10 bg-ctd-red text-white rounded-full flex items-center justify-center hover:bg-ctd-orange transition">
+                                <a href="#" class="social-icon w-10 h-10 bg-ctd-red text-white rounded-full flex items-center justify-center">
                                     <span class="font-bold">in</span>
                                 </a>
-                                <a href="#" class="w-10 h-10 bg-ctd-red text-white rounded-full flex items-center justify-center hover:bg-ctd-orange transition">
+                                <a href="#" class="social-icon w-10 h-10 bg-ctd-red text-white rounded-full flex items-center justify-center">
                                     <span class="font-bold">ig</span>
                                 </a>
                             </div>
@@ -988,10 +1334,34 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         </div>
     </footer>
 
-    <!-- JavaScript for Language Switcher and Mobile Menu -->
+    <!-- JavaScript for Language Switcher, Mobile Menu, and Animations -->
     <script>
-        // Loader configuration
-        const LOADER_DURATION = 8000; // 8 seconds
+        // ============================
+        // PERFORMANCE DETECTION
+        // ============================
+        const isLowPerformanceDevice = () => {
+            // Check for reduced motion preference
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                return true;
+            }
+            
+            // Check device capabilities with feature detection
+            // Note: Performance detection applies to ALL devices (desktop + mobile)
+            const hasLowMemory = navigator.deviceMemory ? navigator.deviceMemory < 4 : false;
+            const hasSlowConnection = navigator.connection ? 
+                (navigator.connection.effectiveType === 'slow-2g' || 
+                 navigator.connection.effectiveType === '2g' || 
+                 navigator.connection.effectiveType === '3g') : false;
+            
+            return (hasLowMemory || hasSlowConnection);
+        };
+        
+        const reduceAnimations = isLowPerformanceDevice();
+        
+        // ============================
+        // LOADER CONFIGURATION
+        // ============================
+        const LOADER_DURATION = 2000; // 2 seconds - optimized for better UX
         
         // Hide loader after specified duration
         window.addEventListener('load', function() {
@@ -999,26 +1369,78 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 const loader = document.getElementById('page-loader');
                 if (loader) {
                     loader.classList.add('hidden');
+                    // Improve accessibility by hiding from screen readers
+                    loader.setAttribute('aria-hidden', 'true');
                 }
             }, LOADER_DURATION);
         });
         
-        // Set copyright year dynamically
+        // ============================
+        // SCROLL ANIMATIONS WITH INTERSECTION OBSERVER
+        // ============================
+        const initScrollAnimations = () => {
+            if (reduceAnimations) {
+                // Skip animations for low-performance devices - use CSS class
+                document.body.classList.add('reduce-animations');
+                return;
+            }
+            
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px 0px -100px 0px',
+                threshold: 0.1
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        // Add delay if specified
+                        const delay = entry.target.getAttribute('data-delay') || 0;
+                        
+                        setTimeout(() => {
+                            entry.target.classList.add('visible');
+                        }, delay);
+                        
+                        // Stop observing after animation
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
+            
+            // Observe all elements with animation classes
+            document.querySelectorAll('[class*="animate-"]').forEach(el => {
+                observer.observe(el);
+            });
+        };
+        
+        // ============================
+        // NAVBAR SCROLL EFFECT
+        // ============================
+        const navbar = document.querySelector('nav');
+        let lastScroll = 0;
+        
+        window.addEventListener('scroll', () => {
+            const currentScroll = window.pageYOffset;
+            
+            if (currentScroll > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+            
+            lastScroll = currentScroll;
+        });
+        
+        // ============================
+        // COPYRIGHT YEAR
+        // ============================
         const year = new Date().getFullYear();
         document.getElementById('copyright-year').textContent = year;
         document.getElementById('copyright-text').innerHTML = `&copy; ${year} Central Trade Distribution. Todos los derechos reservados.`;
         
-        // Initialize AOS (Animate On Scroll) - only if loaded
-        if (typeof AOS !== 'undefined') {
-            AOS.init({
-                duration: 800,
-                once: true,
-                easing: 'ease-out',
-                offset: 120
-            });
-        }
-        
-        // Mobile menu toggle
+        // ============================
+        // MOBILE MENU TOGGLE
+        // ============================
         function toggleMobileMenu() {
             const menu = document.getElementById('mobile-menu');
             if (menu.classList.contains('mobile-menu-hidden')) {
@@ -1028,7 +1450,9 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             }
         }
         
-        // Language switcher
+        // ============================
+        // LANGUAGE SWITCHER
+        // ============================
         let currentLanguage = 'es';
         
         function switchLanguage(lang) {
@@ -1080,7 +1504,9 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             }
         }
         
-        // Form submission handler
+        // ============================
+        // FORM SUBMISSION HANDLER
+        // ============================
         document.getElementById('contact-form').addEventListener('submit', function(e) {
             e.preventDefault();
             if (currentLanguage === 'es') {
@@ -1091,15 +1517,24 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             this.reset();
         });
         
-        // Initialize Swiper for Marcas Carousel
+        // ============================
+        // INITIALIZE ON DOM READY
+        // ============================
         document.addEventListener('DOMContentLoaded', function() {
-            const swiper = new Swiper('.marcas-carousel', {
+            // Initialize scroll animations
+            initScrollAnimations();
+            
+            // Initialize Swiper for Marcas Carousel
+            const swiperConfig = {
                 // Carousel configuration
                 loop: true,
-                autoplay: {
-                    delay: 3000,
-                    disableOnInteraction: false,
-                },
+                // Conditionally enable autoplay based on performance
+                ...(reduceAnimations ? {} : {
+                    autoplay: {
+                        delay: 3000,
+                        disableOnInteraction: false,
+                    }
+                }),
                 slidesPerView: 2,
                 spaceBetween: 20,
                 breakpoints: {
@@ -1128,13 +1563,15 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     el: '.swiper-pagination',
                     clickable: true,
                 },
-            });
+            };
+            
+            const swiper = new Swiper('.marcas-carousel', swiperConfig);
             
             // Mobile: Auto-activate card animations when scrolling into view
             const mobileMediaQuery = window.matchMedia('(max-width: 1024px)');
             
             function initMobileCardAnimations() {
-                if (mobileMediaQuery.matches) {
+                if (mobileMediaQuery.matches && !reduceAnimations) {
                     const productCards = document.querySelectorAll('.product-card');
                     
                     const observerOptions = {
