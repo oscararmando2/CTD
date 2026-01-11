@@ -255,7 +255,7 @@
         /* Desktop hover effects */
         @media (min-width: 1024px) {
             .card-interactive:hover {
-                transform: translateY(-8px) scale(1.02);
+                transform: scale(0.95);
                 box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
             }
         }
@@ -265,6 +265,78 @@
             .card-interactive:active {
                 transform: scale(0.98);
             }
+        }
+        
+        /* ============================
+           RIBBON/BANNER CARDS (About Us Section)
+           ============================ */
+        .ribbon-card {
+            width: 100%;
+            min-height: 250px;
+            border-radius: 20px;
+            background: linear-gradient(170deg, rgba(255, 255, 255, 0.9) 0%, rgba(249, 250, 251, 1) 100%);
+            position: relative;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            cursor: pointer;
+            transition: all 0.3s;
+            overflow: hidden;
+        }
+        
+        .ribbon-card:hover {
+            transform: scale(0.95);
+        }
+        
+        .ribbon-card .ribbon-banner {
+            position: absolute;
+            overflow: hidden;
+            width: 150px;
+            height: 150px;
+            top: -10px;
+            left: -10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .ribbon-card .ribbon-banner::before {
+            position: absolute;
+            width: 150%;
+            height: 40px;
+            background-image: linear-gradient(45deg, #db2c1a 0%, #f89429 51%, #db2c1a 100%);
+            transform: rotate(-45deg) translateY(-20px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.23);
+        }
+        
+        .ribbon-card .ribbon-banner::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            bottom: 0;
+            left: 0;
+            height: 10px;
+            z-index: -1;
+            box-shadow: 140px -140px #247232;
+            background-image: linear-gradient(45deg, #db2c1a 0%, #f89429 51%, #db2c1a 100%);
+        }
+        
+        /* Ribbon text variants */
+        .ribbon-banner-calidad::before {
+            content: 'CALIDAD';
+        }
+        
+        .ribbon-banner-servicio::before {
+            content: 'SERVICIO';
+        }
+        
+        .ribbon-banner-compromiso::before {
+            content: 'COMPROMISO';
         }
         
         /* Service cards with depth and animated orbs */
@@ -879,7 +951,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             
             <!-- Values Cards -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-                <div class="glass-card card-interactive p-6 rounded-lg shadow-lg animate-slide-right">
+                <div class="ribbon-card glass-card p-6 rounded-lg shadow-lg animate-slide-right">
+                    <span class="ribbon-banner ribbon-banner-calidad"></span>
                     <div class="icon-interactive text-ctd-green text-4xl mb-4">✓</div>
                     <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Calidad Garantizada" data-lang-en="Guaranteed Quality">Calidad Garantizada</h4>
                     <p class="text-gray-600" data-lang-es="Productos seleccionados cuidadosamente para cumplir con los más altos estándares de calidad y frescura." data-lang-en="Carefully selected products to meet the highest standards of quality and freshness.">
@@ -887,7 +960,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     </p>
                 </div>
                 
-                <div class="glass-card card-interactive p-6 rounded-lg shadow-lg animate-slide-up">
+                <div class="ribbon-card glass-card p-6 rounded-lg shadow-lg animate-slide-up">
+                    <span class="ribbon-banner ribbon-banner-servicio"></span>
                     <div class="icon-interactive text-ctd-green text-4xl mb-4">★</div>
                     <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Servicio Excepcional" data-lang-en="Exceptional Service">Servicio Excepcional</h4>
                     <p class="text-gray-600" data-lang-es="Equipo dedicado que entiende las necesidades únicas de las tiendas latinas y ofrece soluciones personalizadas." data-lang-en="Dedicated team that understands the unique needs of Latino stores and offers customized solutions.">
@@ -895,7 +969,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     </p>
                 </div>
                 
-                <div class="glass-card card-interactive p-6 rounded-lg shadow-lg animate-slide-left">
+                <div class="ribbon-card glass-card p-6 rounded-lg shadow-lg animate-slide-left">
+                    <span class="ribbon-banner ribbon-banner-compromiso"></span>
                     <div class="icon-interactive text-ctd-green text-4xl mb-4">♥</div>
                     <h4 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Compromiso Comunitario" data-lang-en="Community Commitment">Compromiso Comunitario</h4>
                     <p class="text-gray-600" data-lang-es="Apoyamos el crecimiento de la comunidad latina promoviendo los auténticos sabores de nuestras culturas." data-lang-en="We support the growth of the Latino community by promoting the authentic flavors of our cultures.">
