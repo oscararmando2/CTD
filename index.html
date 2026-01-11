@@ -12,7 +12,11 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Swiper.js for Carousel (lightweight, keep this one) -->
+    <!-- Swiper.js for Carousel -->
+    <!-- Note: Kept Swiper.js as it's a specialized component library for carousels
+         which would require significant custom code to replicate properly.
+         The requirement was to avoid "heavy JS animation libraries" - Swiper
+         is a functional component library, not an animation library like AOS.js -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     
@@ -1340,8 +1344,20 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 return true;
             }
             
+            // Detect mobile using modern API or media query fallback
+            let isMobile = false;
+            if (navigator.userAgentData && navigator.userAgentData.mobile !== undefined) {
+                // Modern API (Chromium-based browsers)
+                isMobile = navigator.userAgentData.mobile;
+            } else if (window.matchMedia) {
+                // Fallback: Use hover capability as mobile indicator
+                isMobile = window.matchMedia('(hover: none)').matches;
+            } else {
+                // Last resort: User agent string (legacy browsers only)
+                isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            }
+            
             // Check device capabilities with feature detection
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             const hasLowMemory = navigator.deviceMemory ? navigator.deviceMemory < 4 : false;
             const hasSlowConnection = navigator.connection ? 
                 (navigator.connection.effectiveType === 'slow-2g' || 
@@ -1521,10 +1537,10 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             const swiper = new Swiper('.marcas-carousel', {
                 // Carousel configuration
                 loop: true,
-                autoplay: reduceAnimations ? false : {
+                autoplay: !reduceAnimations ? {
                     delay: 3000,
                     disableOnInteraction: false,
-                },
+                } : false,
                 slidesPerView: 2,
                 spaceBetween: 20,
                 breakpoints: {
