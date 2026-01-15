@@ -820,19 +820,22 @@
             z-index: 20;
         }
 
-        .word {
-            display: block;
-            height: 100%;
-            padding-left: 6px;
-            color: #956afa;
+        .words-slider {
             animation: spin_words 9s infinite;
         }
 
+        .word {
+            display: block;
+            height: 40px;
+            padding-left: 6px;
+            color: #956afa;
+        }
+
         @keyframes spin_words {
-            0%, 28%   { transform: translateY(0%); }      /* DE visible */
-            33%, 61%  { transform: translateY(-100%); }   /* TU visible */
-            66%, 94%  { transform: translateY(-200%); }   /* TIERRA visible */
-            100%      { transform: translateY(0%); }      /* loop back to start */
+            0%, 28%   { transform: translateY(0); }        /* DE visible */
+            33%, 61%  { transform: translateY(-40px); }    /* TU visible */
+            66%, 94%  { transform: translateY(-80px); }    /* TIERRA visible */
+            100%      { transform: translateY(0); }        /* loop back to start */
         }
     </style>
 </head>
@@ -1040,9 +1043,11 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     <div class="loader">
                         <p>PRODUCTO</p>
                         <div class="words">
-                            <span class="word">DE</span>
-                            <span class="word">TU</span>
-                            <span class="word">TIERRA</span>
+                            <div class="words-slider">
+                                <span class="word">DE</span>
+                                <span class="word">TU</span>
+                                <span class="word">TIERRA</span>
+                            </div>
                         </div>
                     </div>
                 </div>
