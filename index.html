@@ -1715,6 +1715,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         // LOADER CONFIGURATION
         // ============================
         const LOADER_DURATION = 2000; // 2 seconds - optimized for better UX
+        const VIDEO_TIMEOUT_DURATION = 10000; // 10 seconds - fallback if video doesn't load/play
+        const VIDEO_FADEOUT_DURATION = 500; // 500ms - matches CSS transition
         
         // Hide loader and show video splash after specified duration
         window.addEventListener('load', function() {
@@ -1753,23 +1755,23 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     // When video ends, hide splash and show main content
                     splashVideo.addEventListener('ended', hideVideoSplash);
                     
-                    // Fallback: if video doesn't load or play within 10 seconds, show content
+                    // Fallback: if video doesn't load or play within timeout, show content
                     setTimeout(function() {
                         if (videoSplash.classList.contains('active') && !videoSplash.classList.contains('hidden')) {
                             console.warn('Video timeout - showing main content');
                             hideVideoSplash();
                         }
-                    }, 10000);
+                    }, VIDEO_TIMEOUT_DURATION);
                 }
                 
                 function hideVideoSplash() {
                     const videoSplash = document.getElementById('video-splash');
-                    if (videoSplash) {
+                    if (videoSplash && !videoSplash.classList.contains('hidden')) {
                         videoSplash.classList.add('hidden');
                         setTimeout(function() {
                             videoSplash.classList.remove('active');
                             videoSplash.style.display = 'none';
-                        }, 500); // Wait for fade out transition
+                        }, VIDEO_FADEOUT_DURATION);
                     }
                     // Remove class from body to show main content
                     document.body.classList.remove('video-playing');
