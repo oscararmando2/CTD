@@ -608,6 +608,14 @@
             object-fit: cover;
         }
         
+        /* Mobile-specific fixes for video splash */
+        @media (max-width: 768px) {
+            #video-splash video {
+                /* Use contain on mobile to ensure video is fully visible within viewport */
+                object-fit: contain;
+            }
+        }
+        
         /* Hide main content until video finishes */
         body.video-playing {
             overflow: hidden;
