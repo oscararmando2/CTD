@@ -586,7 +586,7 @@
             width: 100%;
             height: 100%;
             background-color: black;
-            z-index: 9998;
+            z-index: 9997;
             display: none;
             align-items: center;
             justify-content: center;
@@ -606,6 +606,24 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+        }
+        
+        /* Mobile-specific fixes for video splash */
+        @media (max-width: 768px) {
+            #video-splash {
+                /* Ensure video splash is visible after page loader on mobile */
+                z-index: 9998;
+            }
+            
+            #video-splash video {
+                /* Use contain on mobile to ensure video is fully visible */
+                object-fit: contain;
+                /* Ensure video takes full viewport */
+                max-width: 100vw;
+                max-height: 100vh;
+                /* Center the video */
+                margin: auto;
+            }
         }
         
         /* Hide main content until video finishes */
@@ -1732,11 +1750,15 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     loader.classList.add('hidden');
                     // Improve accessibility by hiding from screen readers
                     loader.setAttribute('aria-hidden', 'true');
+                    // Explicitly set display none to ensure it's fully removed
+                    loader.style.display = 'none';
                 }
                 
                 // Show video splash and play video
                 if (videoSplash && splashVideo) {
                     videoSplash.classList.add('active');
+                    // Ensure video splash is visible
+                    videoSplash.style.display = 'flex';
                     
                     // Try to play video
                     const playPromise = splashVideo.play();
