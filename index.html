@@ -1762,9 +1762,13 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 // Show video splash and play video
                 if (videoSplash && splashVideo) {
                     // Set appropriate video source based on device type
-                    if (isMobileDevice() && videoSource) {
-                        videoSource.src = MOBILE_VIDEO_SRC;
-                        splashVideo.load(); // Reload video with new source
+                    if (isMobileDevice()) {
+                        if (videoSource) {
+                            videoSource.src = MOBILE_VIDEO_SRC;
+                            splashVideo.load(); // Reload video with new source
+                        } else {
+                            console.warn('Mobile device detected but video source element not found, using default video');
+                        }
                     }
                     
                     videoSplash.classList.add('active');
