@@ -1722,11 +1722,13 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         // ============================
         // MOBILE DETECTION
         // ============================
+        const MOBILE_BREAKPOINT = 768; // px - matches CSS mobile breakpoint
+        
         const isMobileDevice = () => {
             // Check for mobile devices using user agent and screen size
             const userAgent = navigator.userAgent || navigator.vendor || window.opera;
             const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
-            const isMobileScreen = window.innerWidth <= 768;
+            const isMobileScreen = window.innerWidth <= MOBILE_BREAKPOINT;
             return isMobileUA || isMobileScreen;
         };
         
@@ -1757,7 +1759,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 // Show video splash and play video
                 if (videoSplash && splashVideo) {
                     // Set appropriate video source based on device type
-                    if (isMobileDevice()) {
+                    if (isMobileDevice() && videoSource) {
                         videoSource.src = 'loadermobile.pm4.mp4';
                         splashVideo.load(); // Reload video with new source
                     }
