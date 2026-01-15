@@ -1815,6 +1815,76 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         });
         
         // ============================
+        // BANNER VIDEO AUTOPLAY FIX FOR MOBILE
+        // ============================
+        const initBannerVideo = () => {
+            // Get the hero section banner video (not the splash video)
+            const heroSection = document.querySelector('#inicio');
+            if (!heroSection) return;
+            
+            const bannerVideo = heroSection.querySelector('video');
+            if (!bannerVideo) return;
+            
+            // Function to attempt playing the banner video
+            const attemptPlayBannerVideo = () => {
+                const playPromise = bannerVideo.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        console.log('Banner video playing successfully');
+                    }).catch((error) => {
+                        console.warn('Banner video autoplay blocked:', error);
+                        // Video was blocked, will retry on user interaction
+                    });
+                }
+            };
+            
+            // Try to play video immediately when main content is visible
+            setTimeout(() => {
+                if (!document.body.classList.contains('video-playing')) {
+                    attemptPlayBannerVideo();
+                }
+            }, 100);
+            
+            // Retry when splash video ends and main content becomes visible
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        if (!document.body.classList.contains('video-playing')) {
+                            // Main content is now visible, try to play banner video
+                            setTimeout(attemptPlayBannerVideo, 200);
+                            observer.disconnect();
+                        }
+                    }
+                });
+            });
+            
+            observer.observe(document.body, {
+                attributes: true,
+                attributeFilter: ['class']
+            });
+            
+            // Fallback: Play video on first user interaction (mobile devices)
+            const playOnInteraction = () => {
+                attemptPlayBannerVideo();
+                // Remove listeners after first successful attempt
+                document.removeEventListener('touchstart', playOnInteraction);
+                document.removeEventListener('click', playOnInteraction);
+                document.removeEventListener('scroll', playOnInteraction);
+            };
+            
+            // Add interaction listeners for mobile
+            if (isMobileDevice()) {
+                document.addEventListener('touchstart', playOnInteraction, { once: true, passive: true });
+                document.addEventListener('scroll', playOnInteraction, { once: true, passive: true });
+            }
+            document.addEventListener('click', playOnInteraction, { once: true });
+        };
+        
+        // Initialize banner video handling
+        initBannerVideo();
+        
+        // ============================
         // SCROLL ANIMATIONS WITH INTERSECTION OBSERVER
         // ============================
         const initScrollAnimations = () => {
