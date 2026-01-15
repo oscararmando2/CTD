@@ -1036,7 +1036,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
     <!-- Fullscreen Video Splash -->
     <div id="video-splash">
         <video id="splash-video" muted playsinline preload="auto">
-            <source src="banner web ctde.mp4" type="video/mp4">
+            <source id="splash-video-source" src="banner web ctde.mp4" type="video/mp4">
             Your browser does not support the video tag.
         </video>
     </div>
@@ -1720,6 +1720,17 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         const reduceAnimations = isLowPerformanceDevice();
         
         // ============================
+        // MOBILE DETECTION
+        // ============================
+        const isMobileDevice = () => {
+            // Check for mobile devices using user agent and screen size
+            const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+            const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+            const isMobileScreen = window.innerWidth <= 768;
+            return isMobileUA || isMobileScreen;
+        };
+        
+        // ============================
         // LOADER CONFIGURATION
         // ============================
         const LOADER_DURATION = 2000; // 2 seconds - optimized for better UX
@@ -1735,6 +1746,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 const loader = document.getElementById('page-loader');
                 const videoSplash = document.getElementById('video-splash');
                 const splashVideo = document.getElementById('splash-video');
+                const videoSource = document.getElementById('splash-video-source');
                 
                 if (loader) {
                     loader.classList.add('hidden');
@@ -1744,6 +1756,12 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 
                 // Show video splash and play video
                 if (videoSplash && splashVideo) {
+                    // Set appropriate video source based on device type
+                    if (isMobileDevice()) {
+                        videoSource.src = 'loadermobile.pm4.mp4';
+                        splashVideo.load(); // Reload video with new source
+                    }
+                    
                     videoSplash.classList.add('active');
                     
                     // Try to play video
