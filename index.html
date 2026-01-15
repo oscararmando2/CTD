@@ -586,7 +586,7 @@
             width: 100%;
             height: 100%;
             background-color: black;
-            z-index: 9997;
+            z-index: 9998;
             display: none;
             align-items: center;
             justify-content: center;
@@ -610,11 +610,6 @@
         
         /* Mobile-specific fixes for video splash */
         @media (max-width: 768px) {
-            #video-splash {
-                /* Ensure video splash is visible after page loader on mobile */
-                z-index: 9998;
-            }
-            
             #video-splash video {
                 /* Use contain on mobile to ensure video is fully visible */
                 object-fit: contain;
@@ -1757,7 +1752,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 // Show video splash and play video
                 if (videoSplash && splashVideo) {
                     videoSplash.classList.add('active');
-                    // Ensure video splash is visible
+                    // Explicitly set display to ensure visibility across all browsers
+                    // This provides a fallback if CSS class doesn't apply immediately
                     videoSplash.style.display = 'flex';
                     
                     // Try to play video
