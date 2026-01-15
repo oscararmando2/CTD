@@ -1745,16 +1745,11 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     loader.classList.add('hidden');
                     // Improve accessibility by hiding from screen readers
                     loader.setAttribute('aria-hidden', 'true');
-                    // Explicitly set display none to ensure it's fully removed
-                    loader.style.display = 'none';
                 }
                 
                 // Show video splash and play video
                 if (videoSplash && splashVideo) {
                     videoSplash.classList.add('active');
-                    // Explicitly set display to ensure visibility across all browsers
-                    // This provides a fallback if CSS class doesn't apply immediately
-                    videoSplash.style.display = 'flex';
                     
                     // Try to play video
                     const playPromise = splashVideo.play();
