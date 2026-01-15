@@ -1818,6 +1818,10 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         // BANNER VIDEO AUTOPLAY FIX FOR MOBILE
         // ============================
         const initBannerVideo = () => {
+            // Configuration constants
+            const INITIAL_PLAY_DELAY = 100;  // Wait for DOM to be fully ready
+            const SPLASH_END_DELAY = 200;    // Wait for splash video transitions to complete
+            
             // Get the hero section banner video (not the splash video)
             const heroSection = document.querySelector('#inicio');
             if (!heroSection) return;
@@ -1844,7 +1848,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 if (!document.body.classList.contains('video-playing')) {
                     attemptPlayBannerVideo();
                 }
-            }, 100);
+            }, INITIAL_PLAY_DELAY);
             
             // Retry when splash video ends and main content becomes visible
             const observer = new MutationObserver((mutations) => {
@@ -1852,7 +1856,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
                         if (!document.body.classList.contains('video-playing')) {
                             // Main content is now visible, try to play banner video
-                            setTimeout(attemptPlayBannerVideo, 200);
+                            setTimeout(attemptPlayBannerVideo, SPLASH_END_DELAY);
                             observer.disconnect();
                         }
                     }
@@ -1865,20 +1869,12 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             });
             
             // Fallback: Play video on first user interaction (mobile devices)
-            const playOnInteraction = () => {
-                attemptPlayBannerVideo();
-                // Remove listeners after first successful attempt
-                document.removeEventListener('touchstart', playOnInteraction);
-                document.removeEventListener('click', playOnInteraction);
-                document.removeEventListener('scroll', playOnInteraction);
-            };
-            
-            // Add interaction listeners for mobile
+            // Note: { once: true } option automatically removes the listener after first trigger
             if (isMobileDevice()) {
-                document.addEventListener('touchstart', playOnInteraction, { once: true, passive: true });
-                document.addEventListener('scroll', playOnInteraction, { once: true, passive: true });
+                document.addEventListener('touchstart', attemptPlayBannerVideo, { once: true, passive: true });
+                document.addEventListener('scroll', attemptPlayBannerVideo, { once: true, passive: true });
             }
-            document.addEventListener('click', playOnInteraction, { once: true });
+            document.addEventListener('click', attemptPlayBannerVideo, { once: true });
         };
         
         // Initialize banner video handling
