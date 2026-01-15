@@ -576,6 +576,47 @@
             display: none;
         }
         
+        /* ============================
+           FULLSCREEN VIDEO SPLASH
+           ============================ */
+        #video-splash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            z-index: 9998;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        #video-splash.active {
+            display: flex;
+        }
+        
+        #video-splash.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        #video-splash video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        /* Hide main content until video finishes */
+        body.video-playing {
+            overflow: hidden;
+        }
+        
+        body.video-playing #main-content {
+            visibility: hidden;
+        }
+        
         .loader-logo {
             width: 150px;
             height: auto;
@@ -984,6 +1025,16 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         <p class="loader-text">Vamos en camino</p>
     </div>
 
+    <!-- Fullscreen Video Splash -->
+    <div id="video-splash">
+        <video id="splash-video" muted playsinline preload="auto">
+            <source src="banner web ctde.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+
+    <!-- Main Content Wrapper -->
+    <div id="main-content">
     <!-- Fixed Navbar -->
     <nav class="fixed top-0 left-0 right-0 bg-white shadow-md z-50">
         <div class="container mx-auto px-4 py-3 md:py-4">
@@ -1665,14 +1716,63 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         // ============================
         const LOADER_DURATION = 2000; // 2 seconds - optimized for better UX
         
-        // Hide loader after specified duration
+        // Hide loader and show video splash after specified duration
         window.addEventListener('load', function() {
+            // Add class to body to hide main content
+            document.body.classList.add('video-playing');
+            
             setTimeout(function() {
                 const loader = document.getElementById('page-loader');
+                const videoSplash = document.getElementById('video-splash');
+                const splashVideo = document.getElementById('splash-video');
+                
                 if (loader) {
                     loader.classList.add('hidden');
                     // Improve accessibility by hiding from screen readers
                     loader.setAttribute('aria-hidden', 'true');
+                }
+                
+                // Show video splash and play video
+                if (videoSplash && splashVideo) {
+                    videoSplash.classList.add('active');
+                    
+                    // Try to play video
+                    const playPromise = splashVideo.play();
+                    
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            // Video started playing successfully
+                            console.log('Video splash started playing');
+                        }).catch((error) => {
+                            // Auto-play was prevented, show main content immediately
+                            console.warn('Video autoplay prevented:', error);
+                            hideVideoSplash();
+                        });
+                    }
+                    
+                    // When video ends, hide splash and show main content
+                    splashVideo.addEventListener('ended', hideVideoSplash);
+                    
+                    // Fallback: if video doesn't load or play within 10 seconds, show content
+                    setTimeout(function() {
+                        if (videoSplash.classList.contains('active') && !videoSplash.classList.contains('hidden')) {
+                            console.warn('Video timeout - showing main content');
+                            hideVideoSplash();
+                        }
+                    }, 10000);
+                }
+                
+                function hideVideoSplash() {
+                    const videoSplash = document.getElementById('video-splash');
+                    if (videoSplash) {
+                        videoSplash.classList.add('hidden');
+                        setTimeout(function() {
+                            videoSplash.classList.remove('active');
+                            videoSplash.style.display = 'none';
+                        }, 500); // Wait for fade out transition
+                    }
+                    // Remove class from body to show main content
+                    document.body.classList.remove('video-playing');
                 }
             }, LOADER_DURATION);
         });
@@ -1904,5 +2004,6 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             mobileMediaQuery.addEventListener('change', initMobileCardAnimations);
         });
     </script>
+    </div><!-- End of main-content -->
 </body>
 </html>
