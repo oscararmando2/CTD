@@ -1723,11 +1723,14 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         // MOBILE DETECTION
         // ============================
         const MOBILE_BREAKPOINT = 768; // px - matches CSS mobile breakpoint
+        const MOBILE_USER_AGENTS = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
+        const MOBILE_VIDEO_SRC = 'loadermobile.pm4.mp4';
+        const DESKTOP_VIDEO_SRC = 'banner web ctde.mp4';
         
         const isMobileDevice = () => {
             // Check for mobile devices using user agent and screen size
             const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-            const isMobileUA = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+            const isMobileUA = MOBILE_USER_AGENTS.test(userAgent.toLowerCase());
             const isMobileScreen = window.innerWidth <= MOBILE_BREAKPOINT;
             return isMobileUA || isMobileScreen;
         };
@@ -1760,7 +1763,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 if (videoSplash && splashVideo) {
                     // Set appropriate video source based on device type
                     if (isMobileDevice() && videoSource) {
-                        videoSource.src = 'loadermobile.pm4.mp4';
+                        videoSource.src = MOBILE_VIDEO_SRC;
                         splashVideo.load(); // Reload video with new source
                     }
                     
