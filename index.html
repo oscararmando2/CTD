@@ -542,6 +542,111 @@
         }
         
         /* ============================
+           BURGER LOADER (HAMBURGER BUTTON)
+           ============================ */
+        /* Button positioning - keep existing button styles intact */
+        .menu-toggle { 
+            position: relative; 
+        }
+
+        /* Loader container - sized to fit button */
+        .menu-toggle .burger-loader {
+            position: relative;
+            margin: 0;
+            width: 1.5em;
+            height: 1.5em;
+            display: block;
+            pointer-events: none;
+            animation: none; /* disabled by default */
+        }
+
+        /* Dots scaled to icon size */
+        .menu-toggle .burger-loader .dot {
+            width: 45%;
+            height: 45%;
+            position: absolute;
+            margin: auto;
+            border-radius: 100%;
+            transition: all 1s ease;
+        }
+
+        /* Color dots - maintain exact colors from snippet */
+        .menu-toggle .burger-loader .dot:nth-child(1) {
+            top: 0; 
+            bottom: 0; 
+            left: 0;
+            background: #FF4444;
+            animation: none;
+        }
+        .menu-toggle .burger-loader .dot:nth-child(2) {
+            left: 0; 
+            right: 0; 
+            top: 0;
+            background: #FFBB33;
+            animation: none;
+        }
+        .menu-toggle .burger-loader .dot:nth-child(3) {
+            top: 0; 
+            bottom: 0; 
+            right: 0;
+            background: #99CC00;
+            animation: none;
+        }
+        .menu-toggle .burger-loader .dot:nth-child(4) {
+            left: 0; 
+            right: 0; 
+            bottom: 0;
+            background: #33B5E5;
+            animation: none;
+        }
+        .menu-toggle .burger-loader .white {
+            top: 0; 
+            bottom: 0; 
+            left: 0; 
+            right: 0;
+            background: white;
+            opacity: 0;
+            animation: none;
+        }
+
+        /* ACTIVATE ANIMATION ONLY WHEN SCROLLING DOWN */
+        .menu-toggle.is-scrolling-down .burger-loader {
+            animation: rotate5123 2.4s linear infinite;
+        }
+        .menu-toggle.is-scrolling-down .burger-loader .dot:nth-child(1),
+        .menu-toggle.is-scrolling-down .burger-loader .dot:nth-child(3) {
+            animation: dotsY 2.4s linear infinite;
+        }
+        .menu-toggle.is-scrolling-down .burger-loader .dot:nth-child(2),
+        .menu-toggle.is-scrolling-down .burger-loader .dot:nth-child(4) {
+            animation: dotsX 2.4s linear infinite;
+        }
+        .menu-toggle.is-scrolling-down .burger-loader .white {
+            animation: flash 2.4s linear infinite;
+        }
+
+        /* Original keyframes from snippet */
+        @keyframes rotate5123 {
+            0% { transform: rotate(0); }
+            10% { width: 6.250em; height: 6.250em; }
+            66% { width: 2.4em; height: 2.4em; }
+            100% { transform: rotate(360deg); width: 6.250em; height: 6.250em; }
+        }
+        @keyframes dotsY {
+            66% { opacity: .1; width: 2.4em; }
+            77% { opacity: 1; width: 0; }
+        }
+        @keyframes dotsX {
+            66% { opacity: .1; height: 2.4em; }
+            77% { opacity: 1; height: 0; }
+        }
+        @keyframes flash {
+            33% { opacity: 0; border-radius: 0%; }
+            55% { opacity: .6; border-radius: 100%; }
+            66% { opacity: 0; }
+        }
+        
+        /* ============================
            LOADER STYLES
            ============================ */
         #page-loader {
@@ -1046,10 +1151,14 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Mobile Menu Button -->
-                <button onclick="toggleMobileMenu()" class="lg:hidden text-gray-700 focus:outline-none">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                    </svg>
+                <button onclick="toggleMobileMenu()" class="menu-toggle lg:hidden text-gray-700 focus:outline-none" aria-label="Toggle menu">
+                    <div class="burger-loader" aria-hidden="true">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot white"></div>
+                    </div>
                 </button>
             </div>
             
@@ -1867,6 +1976,40 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         // INITIALIZE ON DOM READY
         // ============================
         document.addEventListener('DOMContentLoaded', function() {
+            // ============================
+            // HAMBURGER BUTTON SCROLL ANIMATION
+            // ============================
+            let lastScrollY = window.scrollY;
+            let scrollTimeout;
+            let ticking = false;
+            const menuBtn = document.querySelector('.menu-toggle');
+
+            if (menuBtn) {
+                window.addEventListener('scroll', () => {
+                    if (!ticking) {
+                        window.requestAnimationFrame(() => {
+                            const current = window.scrollY;
+
+                            if (current > lastScrollY) {
+                                menuBtn.classList.add('is-scrolling-down');
+                            } else {
+                                menuBtn.classList.remove('is-scrolling-down');
+                            }
+
+                            lastScrollY = current;
+
+                            clearTimeout(scrollTimeout);
+                            scrollTimeout = setTimeout(() => {
+                                menuBtn.classList.remove('is-scrolling-down');
+                            }, 200);
+                            
+                            ticking = false;
+                        });
+                        ticking = true;
+                    }
+                });
+            }
+            
             // Initialize scroll animations
             initScrollAnimations();
             
