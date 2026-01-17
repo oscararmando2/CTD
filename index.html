@@ -1973,35 +1973,43 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         });
         
         // ============================
-        // HAMBURGER BUTTON SCROLL ANIMATION
-        // ============================
-        let lastScrollY = window.scrollY;
-        let scrollTimeout;
-        const menuBtn = document.querySelector('.menu-toggle');
-
-        window.addEventListener('scroll', () => {
-            if (!menuBtn) return;
-
-            const current = window.scrollY;
-
-            if (current > lastScrollY) {
-                menuBtn.classList.add('is-scrolling-down');
-            } else {
-                menuBtn.classList.remove('is-scrolling-down');
-            }
-
-            lastScrollY = current;
-
-            clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(() => {
-                menuBtn.classList.remove('is-scrolling-down');
-            }, 200);
-        });
-        
-        // ============================
         // INITIALIZE ON DOM READY
         // ============================
         document.addEventListener('DOMContentLoaded', function() {
+            // ============================
+            // HAMBURGER BUTTON SCROLL ANIMATION
+            // ============================
+            let lastScrollY = window.scrollY;
+            let scrollTimeout;
+            let ticking = false;
+            const menuBtn = document.querySelector('.menu-toggle');
+
+            if (menuBtn) {
+                window.addEventListener('scroll', () => {
+                    if (!ticking) {
+                        window.requestAnimationFrame(() => {
+                            const current = window.scrollY;
+
+                            if (current > lastScrollY) {
+                                menuBtn.classList.add('is-scrolling-down');
+                            } else {
+                                menuBtn.classList.remove('is-scrolling-down');
+                            }
+
+                            lastScrollY = current;
+
+                            clearTimeout(scrollTimeout);
+                            scrollTimeout = setTimeout(() => {
+                                menuBtn.classList.remove('is-scrolling-down');
+                            }, 200);
+                            
+                            ticking = false;
+                        });
+                        ticking = true;
+                    }
+                });
+            }
+            
             // Initialize scroll animations
             initScrollAnimations();
             
