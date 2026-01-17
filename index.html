@@ -699,12 +699,48 @@
             }
         }
         
-        .loader-text {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #db2c1a;
-            text-align: center;
+        .scanner {
             margin-top: 1rem;
+            text-align: center;
+        }
+
+        .scanner span {
+            color: transparent;
+            font-size: 1.4rem;
+            position: relative;
+            overflow: hidden;
+            font-weight: 600;
+        }
+
+        .scanner span::before {
+            content: "En Camino...";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 100%;
+            border-right: 4px solid #db2c1a;
+            overflow: hidden;
+            color: #db2c1a;
+            animation: load91371 2s linear infinite;
+        }
+
+        @keyframes load91371 {
+            0%, 10%, 100% {
+                width: 0;
+            }
+
+            10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, 90%, 100% {
+                border-right-color: transparent;
+            }
+
+            11%, 21%, 31%, 41%, 51%, 61%, 71%, 81%, 91% {
+                border-right-color: #db2c1a;
+            }
+
+            60%, 80% {
+                width: 100%;
+            }
         }
         
         /* ============================
@@ -972,7 +1008,9 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </svg>
             </div>
         </div>
-        <p class="loader-text">Vamos en camino</p>
+        <div class="scanner">
+            <span>En Camino...</span>
+        </div>
     </div>
 
     <!-- Main Content Wrapper -->
