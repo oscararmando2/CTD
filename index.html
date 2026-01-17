@@ -513,8 +513,6 @@
            ============================ */
         nav {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            /* Ensure navbar doesn't resize */
-            min-height: fit-content;
         }
         
         /* Prevent navbar container from resizing */
@@ -647,6 +645,7 @@
         }
 
         /* Modified keyframes - use scale instead of width/height to prevent layout shifts */
+        /* Rotation angles calculated to match timing of original animation (10% = 36deg, 66% = 237.6deg of 360deg) */
         @keyframes rotate5123 {
             0% { transform: rotate(0) scale(1); }
             10% { transform: rotate(36deg) scale(1.05); }
