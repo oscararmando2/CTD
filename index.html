@@ -515,6 +515,17 @@
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         
+        /* Prevent navbar container from resizing */
+        nav .container > div {
+            min-height: 64px; /* Fixed minimum height for mobile */
+        }
+        
+        @media (min-width: 768px) {
+            nav .container > div {
+                min-height: 72px; /* Fixed minimum height for desktop */
+            }
+        }
+        
         nav.scrolled {
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         }
@@ -546,10 +557,16 @@
            ============================ */
         /* Button positioning - keep existing button styles intact */
         .menu-toggle { 
-            position: relative; 
+            position: relative;
+            /* Fixed size to prevent layout shifts */
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        /* Loader container - sized to fit button */
+        /* Loader container - fixed size, animation contained within */
         .menu-toggle .burger-loader {
             position: relative;
             margin: 0;
@@ -558,6 +575,8 @@
             display: block;
             pointer-events: none;
             animation: none; /* disabled by default */
+            /* Prevent any overflow from affecting layout */
+            flex-shrink: 0;
         }
 
         /* Dots scaled to icon size */
@@ -625,20 +644,21 @@
             animation: flash 2.4s linear infinite;
         }
 
-        /* Original keyframes from snippet */
+        /* Modified keyframes - use scale instead of width/height to prevent layout shifts */
+        /* Rotation angles calculated to match timing of original animation (10% = 36deg, 66% = 237.6deg of 360deg) */
         @keyframes rotate5123 {
-            0% { transform: rotate(0); }
-            10% { width: 6.250em; height: 6.250em; }
-            66% { width: 2.4em; height: 2.4em; }
-            100% { transform: rotate(360deg); width: 6.250em; height: 6.250em; }
+            0% { transform: rotate(0) scale(1); }
+            10% { transform: rotate(36deg) scale(1.05); }
+            66% { transform: rotate(237.6deg) scale(1); }
+            100% { transform: rotate(360deg) scale(1); }
         }
         @keyframes dotsY {
-            66% { opacity: .1; width: 2.4em; }
-            77% { opacity: 1; width: 0; }
+            66% { opacity: .1; transform: scaleY(1.6); }
+            77% { opacity: 1; transform: scaleY(0); }
         }
         @keyframes dotsX {
-            66% { opacity: .1; height: 2.4em; }
-            77% { opacity: 1; height: 0; }
+            66% { opacity: .1; transform: scaleX(1.6); }
+            77% { opacity: 1; transform: scaleX(0); }
         }
         @keyframes flash {
             33% { opacity: 0; border-radius: 0%; }
