@@ -970,17 +970,15 @@
            ANIMATED TEXT LOADER
            ============================ */
         .card {
-            /* color used to softly clip top and bottom of the .words container */
-            --bg-color: #111;
-            background-color: var(--bg-color);
+            /* Clean background - no solid colors behind text */
+            background: transparent;
             padding: 1rem 2rem;
             border-radius: 1.25rem;
         }
         
         .loader {
-            color: rgb(124, 124, 124);
             font-family: "Poppins", sans-serif;
-            font-weight: 500;
+            font-weight: 600;
             font-size: 25px;
             -webkit-box-sizing: content-box;
             box-sizing: content-box;
@@ -992,29 +990,25 @@
             border-radius: 8px;
         }
 
+        /* Shared gradient text effect class */
+        .gradient-text {
+            /* Gradient shows through transparent text */
+            background: linear-gradient(135deg, #db2c1a 0%, #f89429 100%);
+            color: transparent;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
         .words {
             overflow: hidden;
             position: relative;
-        }
-        
-        .words::after {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(
-                var(--bg-color) 10%,
-                transparent 30%,
-                transparent 70%,
-                var(--bg-color) 90%
-            );
-            z-index: 20;
         }
 
         .word {
             display: block;
             height: 100%;
             padding-left: 6px;
-            color: #956afa;
             animation: spin_4991 4s infinite;
         }
 
@@ -1290,13 +1284,13 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
     <section class="w-full py-8 flex items-center justify-center">
         <div class="card">
             <div class="loader">
-                <p>PRODUCTO</p>
+                <p class="gradient-text">PRODUCTO</p>
                 <div class="words">
-                    <span class="word">DE</span>
-                    <span class="word">TU</span>
-                    <span class="word">TIERRA</span>
-                    <span class="word">CTD</span>
-                    <span class="word">DE</span>
+                    <span class="word gradient-text">DE</span>
+                    <span class="word gradient-text">TU</span>
+                    <span class="word gradient-text">TIERRA</span>
+                    <span class="word gradient-text">CTD</span>
+                    <span class="word gradient-text">DE</span>
                 </div>
             </div>
         </div>
