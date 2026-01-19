@@ -966,6 +966,102 @@
             transition: none !important;
         }
         
+        /* ============================
+           ANIMATED TEXT LOADER
+           ============================ */
+        .card {
+            /* color used to softly clip top and bottom of the .words container */
+            --bg-color: #111;
+            background-color: var(--bg-color);
+            padding: 1rem 2rem;
+            border-radius: .25rem;
+            width: 100%;
+        }
+        
+        .loader {
+            color: rgb(219, 219, 219);
+            font-family: "Poppins", sans-serif;
+            font-weight: 500;
+            font-size: 25px;
+            -webkit-box-sizing: content-box;
+            box-sizing: content-box;
+            height: 40px;
+            padding: 10px 10px;
+            display: -webkit-box;
+            display: -ms-flexbox;
+            display: flex;
+            border-radius: 8px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .words {
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .words::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                var(--bg-color) 10%,
+                transparent 30%,
+                transparent 70%,
+                var(--bg-color) 90%
+            );
+            z-index: 20;
+        }
+
+        .word {
+            display: block;
+            height: 100%;
+            padding-left: 6px;
+            color: #db2c1a; /* CTD Red */
+            animation: spin_4991 4s infinite;
+        }
+
+        @keyframes spin_4991 {
+            10% {
+                -webkit-transform: translateY(-102%);
+                transform: translateY(-102%);
+            }
+
+            25% {
+                -webkit-transform: translateY(-100%);
+                transform: translateY(-100%);
+            }
+
+            35% {
+                -webkit-transform: translateY(-202%);
+                transform: translateY(-202%);
+            }
+
+            50% {
+                -webkit-transform: translateY(-200%);
+                transform: translateY(-200%);
+            }
+
+            60% {
+                -webkit-transform: translateY(-302%);
+                transform: translateY(-302%);
+            }
+
+            75% {
+                -webkit-transform: translateY(-300%);
+                transform: translateY(-300%);
+            }
+
+            85% {
+                -webkit-transform: translateY(-402%);
+                transform: translateY(-402%);
+            }
+
+            100% {
+                -webkit-transform: translateY(-400%);
+                transform: translateY(-400%);
+            }
+        }
 
     </style>
 </head>
@@ -1189,6 +1285,24 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             <div class="flex flex-col sm:flex-row gap-4 justify-center items-center animate-zoom-in">
                 <a href="#productos" class="btn-primary bg-white text-ctd-red px-8 py-3 rounded-lg font-bold text-lg shadow-lg" data-lang-es="Ver Productos" data-lang-en="View Products">Ver Productos</a>
                 <a href="#contacto" class="btn-primary bg-ctd-green text-white px-8 py-3 rounded-lg font-bold text-lg shadow-lg" data-lang-es="Contáctanos" data-lang-en="Contact Us">Contáctanos</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Animated Text Loader Section -->
+    <section class="w-full py-8 bg-gradient-to-r from-ctd-red via-ctd-orange to-ctd-green">
+        <div class="container mx-auto px-4">
+            <div class="card w-full">
+                <div class="loader">
+                    <p>PRODUCTO</p>
+                    <div class="words">
+                        <span class="word">DE</span>
+                        <span class="word">TU</span>
+                        <span class="word">TIERRA</span>
+                        <span class="word">CTD</span>
+                        <span class="word">DE</span>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
