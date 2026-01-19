@@ -20,9 +20,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     
-    <!-- GradualBlur Effect CSS -->
-    <link rel="stylesheet" href="GradualBlur.css"/>
-    
     <style>
         /* ============================
            BASE STYLES & SMOOTH SCROLL
@@ -1253,7 +1250,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             
             <!-- Values Cards -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-                <div id="card-calidad" class="flip-card glass-card rounded-lg shadow-lg animate-slide-right">
+                <div class="flip-card glass-card rounded-lg shadow-lg animate-slide-right">
                     <div class="flip-card-inner">
                         <!-- Front of card -->
                         <div class="flip-card-front">
@@ -1269,7 +1266,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     </div>
                 </div>
                 
-                <div id="card-servicio" class="flip-card glass-card rounded-lg shadow-lg animate-slide-up">
+                <div class="flip-card glass-card rounded-lg shadow-lg animate-slide-up">
                     <div class="flip-card-inner">
                         <!-- Front of card -->
                         <div class="flip-card-front">
@@ -1285,7 +1282,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     </div>
                 </div>
                 
-                <div id="card-compromiso" class="flip-card glass-card rounded-lg shadow-lg animate-slide-left">
+                <div class="flip-card glass-card rounded-lg shadow-lg animate-slide-left">
                     <div class="flip-card-inner">
                         <!-- Front of card -->
                         <div class="flip-card-front">
@@ -2112,34 +2109,6 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             
             // Re-initialize if viewport changes from desktop to mobile
             mobileMediaQuery.addEventListener('change', initMobileCardAnimations);
-        });
-    </script>
-    
-    <!-- GradualBlur Effect Script -->
-    <script src="gradual-blur.js"></script>
-    <script>
-        // Initialize GradualBlur effect on the three About Us cards
-        document.addEventListener('DOMContentLoaded', function() {
-            // Shared configuration for all cards
-            const blurConfig = {
-                target: 'parent',
-                position: 'bottom',
-                height: '7rem',
-                strength: 2,
-                divCount: 5,
-                curve: 'bezier',
-                exponential: true,
-                opacity: 1
-            };
-            
-            // Apply gradual blur effect to each card
-            const cardIds = ['card-calidad', 'card-servicio', 'card-compromiso'];
-            cardIds.forEach(function(cardId) {
-                const card = document.getElementById(cardId);
-                if (card) {
-                    new GradualBlur(card, blurConfig);
-                }
-            });
         });
     </script>
     </div><!-- End of main-content -->
