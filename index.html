@@ -46,6 +46,31 @@
             min-height: 600px;
         }
 
+        /* Hero video background */
+        .hero-video {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            transform: translate(-50%, -50%);
+            z-index: 0;
+            object-fit: cover;
+        }
+
+        /* Video overlay for better text readability */
+        .hero-video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 1;
+        }
+
         
         /* Lightweight parallax effect (desktop only) */
         @media (min-width: 1024px) {
@@ -1147,6 +1172,13 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
 
     <!-- Hero Section -->
     <section id="inicio" class="gradient-hero pt-24 md:pt-32 pb-16 md:pb-24 relative overflow-hidden">
+        <!-- Background Video -->
+        <video autoplay muted loop playsinline class="hero-video" poster="CTDLOGO.PNG" aria-label="Background video showing CTD branding">
+            <source src="LOADERCTD.mp4" type="video/mp4">
+            Tu navegador no soporta el elemento de video.
+        </video>
+        <!-- Video Overlay -->
+        <div class="hero-video-overlay"></div>
         <div class="container mx-auto px-4 text-center relative z-10">
             <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 animate-fade-in" data-lang-es="Distribuidora Mayorista de Alimentos Latinos" data-lang-en="Wholesale Latino Food Distributor">
                 Distribuidora Mayorista de Alimentos Latinos
@@ -1483,7 +1515,12 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     
                     <!-- Slide 10 - La Finca-->
                     <div class="swiper-slide">
-                        <img src="https://cortesdist.com/wp-content/uploads/2024/10/logos-web-cortes_la-finca-1-e1730255629364.png" alt="Bimbo" class="h-20 md:h-28 object-contain">
+                        <img src="https://cortesdist.com/wp-content/uploads/2024/10/logos-web-cortes_la-finca-1-e1730255629364.png" alt="La Finca" class="h-20 md:h-28 object-contain">
+                    </div>
+                    
+                    <!-- Slide 11 - Yeyas -->
+                    <div class="swiper-slide">
+                        <img src="yeyas_Mesa de trabajo 1.png" alt="Yeyas" class="h-20 md:h-28 object-contain">
                     </div>
                 </div>
                 
@@ -1520,9 +1557,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Service 2 -->
-                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up" data-delay="200">
+                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up text-center" data-delay="200">
                     <div class="relative z-10">
-                        <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">💰</div>
                         <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Precios Mayoristas Competitivos" data-lang-en="Competitive Wholesale Prices">Precios Mayoristas Competitivos</h3>
                         <p class="text-gray-600" data-lang-es="Mejores precios del mercado con descuentos por volumen que incrementan sus márgenes de ganancia y competitividad." data-lang-en="Best market prices with volume discounts that increase your profit margins and competitiveness.">
                             Mejores precios del mercado con descuentos por volumen que incrementan sus márgenes de ganancia y competitividad.
@@ -1531,9 +1567,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Service 3 -->
-                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up" data-delay="300">
+                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up text-center" data-delay="300">
                     <div class="relative z-10">
-                        <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">📊</div>
                         <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Asesoría en Inventario" data-lang-en="Inventory Advisory">Asesoría en Inventario</h3>
                         <p class="text-gray-600" data-lang-es="Expertos que le ayudan a optimizar su inventario, identificar productos de alta rotación y maximizar sus ventas." data-lang-en="Experts who help you optimize your inventory, identify high-turnover products, and maximize your sales.">
                             Expertos que le ayudan a optimizar su inventario, identificar productos de alta rotación y maximizar sus ventas.
@@ -1542,9 +1577,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Service 4 -->
-                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up" data-delay="100">
+                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up text-center" data-delay="100">
                     <div class="relative z-10">
-                        <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">🗺️</div>
                         <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Cobertura Kansas City y Midwest" data-lang-en="Kansas City & Midwest Coverage">Cobertura Kansas City y Midwest</h3>
                         <p class="text-gray-600" data-lang-es="Entregas rápidas y confiables en toda el área metropolitana de Kansas City y estados vecinos del Midwest." data-lang-en="Fast and reliable deliveries throughout the Kansas City metropolitan area and neighboring Midwest states.">
                             Entregas rápidas y confiables en toda el área metropolitana de Kansas City y estados vecinos del Midwest.
@@ -1553,9 +1587,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Service 5 -->
-                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up" data-delay="200">
+                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up text-center" data-delay="200">
                     <div class="relative z-10">
-                        <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">📱</div>
                         <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Pedidos Fáciles y Rápidos" data-lang-en="Easy & Fast Orders">Pedidos Fáciles y Rápidos</h3>
                         <p class="text-gray-600" data-lang-es="Sistema simplificado de pedidos por teléfono, email o WhatsApp. Atención personalizada en español." data-lang-en="Simplified ordering system by phone, email, or WhatsApp. Personalized attention in Spanish.">
                             Sistema simplificado de pedidos por teléfono, email o WhatsApp. Atención personalizada en español.
@@ -1564,9 +1597,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
                 
                 <!-- Service 6 -->
-                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up" data-delay="300">
+                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up text-center" data-delay="300">
                     <div class="relative z-10">
-                        <div class="icon-interactive w-16 h-16 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-full flex items-center justify-center mb-4 text-white text-2xl font-bold">⭐</div>
                         <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Variedad y Disponibilidad" data-lang-en="Variety & Availability">Variedad y Disponibilidad</h3>
                         <p class="text-gray-600" data-lang-es="Miles de productos latinos siempre en stock. Si no lo tenemos, lo conseguimos para usted." data-lang-en="Thousands of Latino products always in stock. If we don't have it, we'll get it for you.">
                             Miles de productos latinos siempre en stock. Si no lo tenemos, lo conseguimos para usted.
