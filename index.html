@@ -1018,24 +1018,60 @@
         }
 
         @keyframes spin_4991 {
-            0%, 20% {
+            /* Animation cycles through 4 words: DE, TU, TIERRA, CTD
+               Timing breakdown:
+               - 0-22%: Show word 1 (DE)
+               - 22-25%: Transition to word 2 (3% transition)
+               - 25-47%: Show word 2 (TU)  
+               - 47-50%: Transition to word 3 (3% transition)
+               - 50-72%: Show word 3 (TIERRA)
+               - 72-75%: Transition to word 4 (3% transition)
+               - 75-97%: Show word 4 (CTD)
+               - 97-100%: Transition back to word 1 (3% transition)
+               Then loops infinitely back to 0% */
+            0% {
                 -webkit-transform: translateY(0%);
                 transform: translateY(0%);
             }
 
-            25%, 45% {
+            22% {  /* Display first word (DE) */
+                -webkit-transform: translateY(0%);
+                transform: translateY(0%);
+            }
+
+            25% {  /* Transition to second word */
                 -webkit-transform: translateY(-100%);
                 transform: translateY(-100%);
             }
 
-            50%, 70% {
+            47% {  /* Display second word (TU) */
+                -webkit-transform: translateY(-100%);
+                transform: translateY(-100%);
+            }
+
+            50% {  /* Transition to third word */
                 -webkit-transform: translateY(-200%);
                 transform: translateY(-200%);
             }
 
-            75%, 100% {
+            72% {  /* Display third word (TIERRA) */
+                -webkit-transform: translateY(-200%);
+                transform: translateY(-200%);
+            }
+
+            75% {  /* Transition to fourth word */
                 -webkit-transform: translateY(-300%);
                 transform: translateY(-300%);
+            }
+
+            97% {  /* Display fourth word (CTD) */
+                -webkit-transform: translateY(-300%);
+                transform: translateY(-300%);
+            }
+
+            100% {  /* Loop back to first word */
+                -webkit-transform: translateY(0%);
+                transform: translateY(0%);
             }
         }
 
@@ -1899,6 +1935,46 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             }, LOADER_DURATION);
         });
 
+        // ============================
+        // HERO VIDEO AUTOPLAY FIX FOR MOBILE
+        // ============================
+        // Ensure video plays on mobile devices where autoplay might be blocked
+        document.addEventListener('DOMContentLoaded', function() {
+            const heroVideo = document.querySelector('.hero-video');
+            
+            if (heroVideo) {
+                // Attempt to play the video
+                const playPromise = heroVideo.play();
+                
+                // Check if play() returned a valid Promise (newer browsers)
+                if (playPromise && typeof playPromise.then === 'function') {
+                    playPromise.then(() => {
+                        // Video is playing successfully
+                        console.log('Hero video is playing');
+                    }).catch(error => {
+                        // Autoplay was prevented, try to play on user interaction
+                        console.log('Autoplay prevented, will try on user interaction');
+                        
+                        // Try to play on any user interaction (once: true auto-removes after first trigger)
+                        const playOnInteraction = function() {
+                            heroVideo.play().catch(e => console.log('Could not play video:', e));
+                        };
+                        
+                        // Use only touchstart for touch devices, click for others
+                        // Check for touch capability using multiple methods for accuracy
+                        const isTouchDevice = ('ontouchstart' in window) || 
+                                            (navigator.maxTouchPoints > 0) || 
+                                            (navigator.msMaxTouchPoints > 0);
+                        
+                        if (isTouchDevice) {
+                            document.addEventListener('touchstart', playOnInteraction, { once: true });
+                        } else {
+                            document.addEventListener('click', playOnInteraction, { once: true });
+                        }
+                    });
+                }
+            }
+        });
         
         // ============================
         // SCROLL ANIMATIONS WITH INTERSECTION OBSERVER
