@@ -971,16 +971,14 @@
            ============================ */
         .card {
             /* color used to softly clip top and bottom of the .words container */
-            --bg-color: #111;
-            --loader-text-color: #dbdbdb;
+            --bg-color: #ed821e;
             background-color: var(--bg-color);
             padding: 1rem 2rem;
             border-radius: .25rem;
-            width: 100%;
         }
         
         .loader {
-            color: var(--loader-text-color);
+            color: rgb(219, 219, 219);
             font-family: "Poppins", sans-serif;
             font-weight: 500;
             font-size: 25px;
@@ -992,8 +990,6 @@
             display: -ms-flexbox;
             display: flex;
             border-radius: 8px;
-            justify-content: center;
-            align-items: center;
         }
 
         .words {
@@ -1018,7 +1014,7 @@
             display: block;
             height: 100%;
             padding-left: 6px;
-            color: #db2c1a; /* CTD Red */
+            color: #f50606;
             animation: spin_4991 4s infinite;
         }
 
@@ -1291,18 +1287,16 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
     </section>
 
     <!-- Animated Text Loader Section -->
-    <section class="w-full py-8 bg-gradient-to-r from-ctd-red via-ctd-orange to-ctd-green">
-        <div class="container mx-auto px-4">
-            <div class="card w-full">
-                <div class="loader">
-                    <p>PRODUCTO</p>
-                    <div class="words">
-                        <span class="word">DE</span>
-                        <span class="word">TU</span>
-                        <span class="word">TIERRA</span>
-                        <span class="word">CTD</span>
-                        <span class="word">DE</span>
-                    </div>
+    <section class="w-full py-8 flex items-center justify-center">
+        <div class="card">
+            <div class="loader">
+                <p>PRODUCTO</p>
+                <div class="words">
+                    <span class="word">DE</span>
+                    <span class="word">TU</span>
+                    <span class="word">TIERRA</span>
+                    <span class="word">CTD</span>
+                    <span class="word">DE</span>
                 </div>
             </div>
         </div>
