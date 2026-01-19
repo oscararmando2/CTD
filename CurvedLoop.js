@@ -57,11 +57,16 @@ class CurvedLoop {
   }
   
   createSVG() {
-    const pathD = `M-100,40 Q500,${40 + this.curveAmount} 1540,40`;
+    // Adjust curve amount based on screen size
+    const isMobile = window.innerWidth <= 768;
+    const adjustedCurve = isMobile ? this.curveAmount * 0.5 : this.curveAmount;
+    const viewBoxHeight = isMobile ? 100 : 120;
+    
+    const pathD = `M-100,40 Q500,${40 + adjustedCurve} 1540,40`;
     
     const svgHTML = `
       <div class="curved-loop-jacket" style="visibility: hidden; cursor: ${this.interactive ? 'grab' : 'auto'};">
-        <svg class="curved-loop-svg" viewBox="0 0 1440 120">
+        <svg class="curved-loop-svg" viewBox="0 0 1440 ${viewBoxHeight}">
           <text class="measure-text" xml:space="preserve" style="visibility: hidden; opacity: 0; pointer-events: none;">
             ${this.text}
           </text>
