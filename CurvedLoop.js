@@ -57,8 +57,8 @@ class CurvedLoop {
   }
   
   createSVG() {
-    // Adjust curve amount based on screen size
-    const isMobile = window.innerWidth <= 768;
+    // Adjust curve amount based on screen size (consistent with CSS media query)
+    const isMobile = window.innerWidth < 768;
     const adjustedCurve = isMobile ? this.curveAmount * 0.5 : this.curveAmount;
     const viewBoxHeight = isMobile ? 100 : 120;
     
