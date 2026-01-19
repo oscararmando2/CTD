@@ -1018,24 +1018,49 @@
         }
 
         @keyframes spin_4991 {
-            0%, 20% {
+            0% {
                 -webkit-transform: translateY(0%);
                 transform: translateY(0%);
             }
 
-            25%, 45% {
+            22% {
+                -webkit-transform: translateY(0%);
+                transform: translateY(0%);
+            }
+
+            25% {
                 -webkit-transform: translateY(-100%);
                 transform: translateY(-100%);
             }
 
-            50%, 70% {
+            47% {
+                -webkit-transform: translateY(-100%);
+                transform: translateY(-100%);
+            }
+
+            50% {
                 -webkit-transform: translateY(-200%);
                 transform: translateY(-200%);
             }
 
-            75%, 100% {
+            72% {
+                -webkit-transform: translateY(-200%);
+                transform: translateY(-200%);
+            }
+
+            75% {
                 -webkit-transform: translateY(-300%);
                 transform: translateY(-300%);
+            }
+
+            97% {
+                -webkit-transform: translateY(-300%);
+                transform: translateY(-300%);
+            }
+
+            100% {
+                -webkit-transform: translateY(0%);
+                transform: translateY(0%);
             }
         }
 
@@ -1899,6 +1924,39 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             }, LOADER_DURATION);
         });
 
+        // ============================
+        // HERO VIDEO AUTOPLAY FIX FOR MOBILE
+        // ============================
+        // Ensure video plays on mobile devices where autoplay might be blocked
+        document.addEventListener('DOMContentLoaded', function() {
+            const heroVideo = document.querySelector('.hero-video');
+            
+            if (heroVideo) {
+                // Attempt to play the video
+                const playPromise = heroVideo.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        // Video is playing successfully
+                        console.log('Hero video is playing');
+                    }).catch(error => {
+                        // Autoplay was prevented, try to play on user interaction
+                        console.log('Autoplay prevented, will try on user interaction');
+                        
+                        // Try to play on any user interaction
+                        const playOnInteraction = function() {
+                            heroVideo.play().catch(e => console.log('Could not play video:', e));
+                            // Remove listeners after first interaction
+                            document.removeEventListener('touchstart', playOnInteraction);
+                            document.removeEventListener('click', playOnInteraction);
+                        };
+                        
+                        document.addEventListener('touchstart', playOnInteraction, { once: true });
+                        document.addEventListener('click', playOnInteraction, { once: true });
+                    });
+                }
+            }
+        });
         
         // ============================
         // SCROLL ANIMATIONS WITH INTERSECTION OBSERVER
