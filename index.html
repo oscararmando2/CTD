@@ -2121,17 +2121,13 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             
             // Re-initialize if viewport changes from desktop to mobile
             mobileMediaQuery.addEventListener('change', initMobileCardAnimations);
-        });
-    </script>
-    
-    <!-- CurvedLoop Component -->
-    <script src="CurvedLoop.js"></script>
-    <script>
-        // Initialize CurvedLoop after DOM is loaded
-        document.addEventListener('DOMContentLoaded', function() {
-            const container = document.getElementById('curved-loop-container');
-            if (container) {
-                new CurvedLoop(container, {
+            
+            // ============================
+            // INITIALIZE CURVEDLOOP COMPONENT
+            // ============================
+            const curvedLoopContainer = document.getElementById('curved-loop-container');
+            if (curvedLoopContainer) {
+                new CurvedLoop(curvedLoopContainer, {
                     marqueeText: "PRODUCTO ✦ DE ✦ TU ✦ TIERRA ✦ CTD ✦",
                     speed: 2,
                     curveAmount: 400,
@@ -2141,6 +2137,9 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             }
         });
     </script>
+    
+    <!-- CurvedLoop Component -->
+    <script src="CurvedLoop.js"></script>
     </div><!-- End of main-content -->
 </body>
 </html>

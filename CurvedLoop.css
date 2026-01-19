@@ -9,14 +9,13 @@
 
 .curved-loop-svg {
   user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
   width: 100%;
   aspect-ratio: 100 / 12;
   overflow: visible;
   display: block;
   font-size: 6rem;
-  user-select: none;
-  -moz-user-select: none;
-  -webkit-user-select: none;
   font-weight: 700;
   text-transform: uppercase;
   line-height: 1;
