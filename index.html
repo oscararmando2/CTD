@@ -1943,16 +1943,17 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                         // Autoplay was prevented, try to play on user interaction
                         console.log('Autoplay prevented, will try on user interaction');
                         
-                        // Try to play on any user interaction
+                        // Try to play on any user interaction (once: true auto-removes after first trigger)
                         const playOnInteraction = function() {
                             heroVideo.play().catch(e => console.log('Could not play video:', e));
-                            // Remove listeners after first interaction
-                            document.removeEventListener('touchstart', playOnInteraction);
-                            document.removeEventListener('click', playOnInteraction);
                         };
                         
-                        document.addEventListener('touchstart', playOnInteraction, { once: true });
-                        document.addEventListener('click', playOnInteraction, { once: true });
+                        // Use only touchstart for touch devices, click for others
+                        if ('ontouchstart' in window) {
+                            document.addEventListener('touchstart', playOnInteraction, { once: true });
+                        } else {
+                            document.addEventListener('click', playOnInteraction, { once: true });
+                        }
                     });
                 }
             }
