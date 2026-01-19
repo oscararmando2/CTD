@@ -1953,7 +1953,12 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                         };
                         
                         // Use only touchstart for touch devices, click for others
-                        if ('ontouchstart' in window) {
+                        // Check for touch capability using multiple methods for accuracy
+                        const isTouchDevice = ('ontouchstart' in window) || 
+                                            (navigator.maxTouchPoints > 0) || 
+                                            (navigator.msMaxTouchPoints > 0);
+                        
+                        if (isTouchDevice) {
                             document.addEventListener('touchstart', playOnInteraction, { once: true });
                         } else {
                             document.addEventListener('click', playOnInteraction, { once: true });
