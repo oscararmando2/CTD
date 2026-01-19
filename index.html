@@ -2120,49 +2120,26 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
     <script>
         // Initialize GradualBlur effect on the three About Us cards
         document.addEventListener('DOMContentLoaded', function() {
+            // Shared configuration for all cards
+            const blurConfig = {
+                target: 'parent',
+                position: 'bottom',
+                height: '7rem',
+                strength: 2,
+                divCount: 5,
+                curve: 'bezier',
+                exponential: true,
+                opacity: 1
+            };
+            
             // Apply gradual blur effect to each card
-            const cardCalidad = document.getElementById('card-calidad');
-            const cardServicio = document.getElementById('card-servicio');
-            const cardCompromiso = document.getElementById('card-compromiso');
-            
-            if (cardCalidad) {
-                new GradualBlur(cardCalidad, {
-                    target: 'parent',
-                    position: 'bottom',
-                    height: '7rem',
-                    strength: 2,
-                    divCount: 5,
-                    curve: 'bezier',
-                    exponential: true,
-                    opacity: 1
-                });
-            }
-            
-            if (cardServicio) {
-                new GradualBlur(cardServicio, {
-                    target: 'parent',
-                    position: 'bottom',
-                    height: '7rem',
-                    strength: 2,
-                    divCount: 5,
-                    curve: 'bezier',
-                    exponential: true,
-                    opacity: 1
-                });
-            }
-            
-            if (cardCompromiso) {
-                new GradualBlur(cardCompromiso, {
-                    target: 'parent',
-                    position: 'bottom',
-                    height: '7rem',
-                    strength: 2,
-                    divCount: 5,
-                    curve: 'bezier',
-                    exponential: true,
-                    opacity: 1
-                });
-            }
+            const cardIds = ['card-calidad', 'card-servicio', 'card-compromiso'];
+            cardIds.forEach(function(cardId) {
+                const card = document.getElementById(cardId);
+                if (card) {
+                    new GradualBlur(card, blurConfig);
+                }
+            });
         });
     </script>
     </div><!-- End of main-content -->

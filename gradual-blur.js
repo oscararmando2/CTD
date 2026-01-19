@@ -7,14 +7,14 @@ class GradualBlur {
   constructor(element, options = {}) {
     this.element = element;
     this.config = {
+      ...options,
       position: options.position || 'bottom',
       strength: options.strength || 2,
       height: options.height || '7rem',
       divCount: options.divCount || 5,
       exponential: options.exponential || false,
       curve: options.curve || 'bezier',
-      opacity: options.opacity !== undefined ? options.opacity : 1,
-      ...options
+      opacity: options.opacity !== undefined ? options.opacity : 1
     };
     
     this.init();
@@ -133,7 +133,7 @@ class GradualBlur {
   
   destroy() {
     if (this.container && this.container.parentNode) {
-      this.container.parentNode.removeChild(this.container);
+      this.container.remove();
     }
   }
 }
