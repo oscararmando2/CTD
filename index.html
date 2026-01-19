@@ -972,6 +972,7 @@
         .card {
             /* color used to softly clip top and bottom of the .words container */
             --bg-color: #111;
+            --loader-text-color: #dbdbdb;
             background-color: var(--bg-color);
             padding: 1rem 2rem;
             border-radius: .25rem;
@@ -979,7 +980,7 @@
         }
         
         .loader {
-            color: rgb(219, 219, 219);
+            color: var(--loader-text-color);
             font-family: "Poppins", sans-serif;
             font-weight: 500;
             font-size: 25px;
