@@ -990,13 +990,18 @@
             border-radius: 8px;
         }
 
-        .loader p {
-            /* Gradient text effect - gradient shows through transparent text */
+        /* Shared gradient text effect class */
+        .gradient-text {
+            /* Gradient shows through transparent text */
             background: linear-gradient(135deg, #db2c1a 0%, #f89429 100%);
+            color: transparent;
             -webkit-background-clip: text;
             background-clip: text;
             -webkit-text-fill-color: transparent;
-            color: transparent;
+        }
+
+        .loader p {
+            /* Apply gradient text effect */
         }
 
         .words {
@@ -1013,12 +1018,7 @@
             display: block;
             height: 100%;
             padding-left: 6px;
-            /* Gradient text effect - gradient shows through transparent text */
-            background: linear-gradient(135deg, #db2c1a 0%, #f89429 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            color: transparent;
+            /* Apply gradient text effect */
             animation: spin_4991 4s infinite;
         }
 
@@ -1294,13 +1294,13 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
     <section class="w-full py-8 flex items-center justify-center">
         <div class="card">
             <div class="loader">
-                <p>PRODUCTO</p>
+                <p class="gradient-text">PRODUCTO</p>
                 <div class="words">
-                    <span class="word">DE</span>
-                    <span class="word">TU</span>
-                    <span class="word">TIERRA</span>
-                    <span class="word">CTD</span>
-                    <span class="word">DE</span>
+                    <span class="word gradient-text">DE</span>
+                    <span class="word gradient-text">TU</span>
+                    <span class="word gradient-text">TIERRA</span>
+                    <span class="word gradient-text">CTD</span>
+                    <span class="word gradient-text">DE</span>
                 </div>
             </div>
         </div>
