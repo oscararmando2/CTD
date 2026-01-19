@@ -35,7 +35,7 @@ class CurvedLoop {
     this.animationFrame = null;
     
     // Generate unique ID for this instance
-    this.uid = 'curve-' + Math.random().toString(36).substr(2, 9);
+    this.uid = 'curve-' + Math.random().toString(36).substring(2, 11);
     
     // Initialize
     this.init();
