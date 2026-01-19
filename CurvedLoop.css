@@ -1,0 +1,46 @@
+/* CurvedLoop CSS */
+.curved-loop-jacket {
+  min-height: 20vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.curved-loop-svg {
+  user-select: none;
+  width: 100%;
+  aspect-ratio: 100 / 12;
+  overflow: visible;
+  display: block;
+  font-size: 6rem;
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+/* Gradient fill for the text matching CTD branding */
+.custom-curved-text {
+  fill: url(#curved-text-gradient);
+}
+
+/* Add gradient definition via JavaScript or inline SVG */
+.curved-loop-svg .main-text {
+  fill: #db2c1a; /* Fallback color - CTD red */
+}
+
+/* Responsive font sizes */
+@media (max-width: 768px) {
+  .curved-loop-svg {
+    font-size: 3rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .curved-loop-svg {
+    font-size: 2rem;
+  }
+}
