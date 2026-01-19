@@ -20,6 +20,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     
+    <!-- CurvedLoop CSS -->
+    <link rel="stylesheet" href="CurvedLoop.css">
+    
     <style>
         /* ============================
            BASE STYLES & SMOOTH SCROLL
@@ -966,114 +969,7 @@
             transition: none !important;
         }
         
-        /* ============================
-           ANIMATED TEXT LOADER
-           ============================ */
-        .card {
-            /* Clean background - no solid colors behind text */
-            background: transparent;
-            padding: 1rem 2rem;
-            border-radius: 1.25rem;
-        }
-        
-        .loader {
-            font-family: "Poppins", sans-serif;
-            font-weight: 600;
-            font-size: 25px;
-            -webkit-box-sizing: content-box;
-            box-sizing: content-box;
-            height: 40px;
-            padding: 10px 10px;
-            display: -webkit-box;
-            display: -ms-flexbox;
-            display: flex;
-            border-radius: 8px;
-        }
 
-        /* Shared gradient text effect class */
-        .gradient-text {
-            /* Gradient shows through transparent text */
-            background: linear-gradient(135deg, #db2c1a 0%, #f89429 100%);
-            color: transparent;
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .words {
-            overflow: hidden;
-            position: relative;
-            height: 40px;
-        }
-
-        .word {
-            display: block;
-            height: 100%;
-            padding-left: 6px;
-            animation: spin_4991 5s infinite;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-        }
-
-        @keyframes spin_4991 {
-            /* Animation cycles through 4 words: DE, TU, TIERRA, CTD
-               Timing breakdown:
-               - 0-22%: Show word 1 (DE)
-               - 22-25%: Transition to word 2 (3% transition)
-               - 25-47%: Show word 2 (TU)  
-               - 47-50%: Transition to word 3 (3% transition)
-               - 50-72%: Show word 3 (TIERRA)
-               - 72-75%: Transition to word 4 (3% transition)
-               - 75-97%: Show word 4 (CTD)
-               - 97-100%: Transition back to word 1 (3% transition)
-               Then loops infinitely back to 0% */
-            0% {
-                -webkit-transform: translateY(0%);
-                transform: translateY(0%);
-            }
-
-            22% {  /* Display first word (DE) */
-                -webkit-transform: translateY(0%);
-                transform: translateY(0%);
-            }
-
-            25% {  /* Transition to second word */
-                -webkit-transform: translateY(-100%);
-                transform: translateY(-100%);
-            }
-
-            47% {  /* Display second word (TU) */
-                -webkit-transform: translateY(-100%);
-                transform: translateY(-100%);
-            }
-
-            50% {  /* Transition to third word */
-                -webkit-transform: translateY(-200%);
-                transform: translateY(-200%);
-            }
-
-            72% {  /* Display third word (TIERRA) */
-                -webkit-transform: translateY(-200%);
-                transform: translateY(-200%);
-            }
-
-            75% {  /* Transition to fourth word */
-                -webkit-transform: translateY(-300%);
-                transform: translateY(-300%);
-            }
-
-            97% {  /* Display fourth word (CTD) */
-                -webkit-transform: translateY(-300%);
-                transform: translateY(-300%);
-            }
-
-            100% {  /* Loop back to first word */
-                -webkit-transform: translateY(0%);
-                transform: translateY(0%);
-            }
-        }
 
     </style>
 </head>
@@ -1301,19 +1197,9 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         </div>
     </section>
 
-    <!-- Animated Text Loader Section -->
+    <!-- CurvedLoop Text Section -->
     <section class="w-full py-8 flex items-center justify-center">
-        <div class="card">
-            <div class="loader">
-                <p class="gradient-text">PRODUCTO</p>
-                <div class="words">
-                    <span class="word gradient-text">DE</span>
-                    <span class="word gradient-text">TU</span>
-                    <span class="word gradient-text">TIERRA</span>
-                    <span class="word gradient-text">CTD</span>
-                </div>
-            </div>
-        </div>
+        <div id="curved-loop-container"></div>
     </section>
 
     <!-- About Us Section -->
@@ -1879,6 +1765,9 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         </div>
     </footer>
 
+    <!-- CurvedLoop Component Script -->
+    <script src="CurvedLoop.js"></script>
+
     <!-- JavaScript for Language Switcher, Mobile Menu, and Animations -->
     <script>
         // ============================
@@ -2235,6 +2124,20 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             
             // Re-initialize if viewport changes from desktop to mobile
             mobileMediaQuery.addEventListener('change', initMobileCardAnimations);
+            
+            // ============================
+            // INITIALIZE CURVEDLOOP COMPONENT
+            // ============================
+            const curvedLoopContainer = document.getElementById('curved-loop-container');
+            if (curvedLoopContainer) {
+                new CurvedLoop(curvedLoopContainer, {
+                    marqueeText: "PRODUCTO ✦ DE ✦ TU ✦ TIERRA ✦ CTD ✦",
+                    speed: 2,
+                    curveAmount: 400,
+                    interactive: true,
+                    className: "custom-curved-text"
+                });
+            }
         });
     </script>
     </div><!-- End of main-content -->
