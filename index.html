@@ -1019,8 +1019,16 @@
 
         @keyframes spin_4991 {
             /* Animation cycles through 4 words: DE, TU, TIERRA, CTD
-               Each word visible for ~22%, with ~3% transition time
-               Total: 4 words * 25% = 100% cycle, then loops back to start */
+               Timing breakdown:
+               - 0-22%: Show word 1 (DE)
+               - 22-25%: Transition to word 2 (3% transition)
+               - 25-47%: Show word 2 (TU)  
+               - 47-50%: Transition to word 3 (3% transition)
+               - 50-72%: Show word 3 (TIERRA)
+               - 72-75%: Transition to word 4 (3% transition)
+               - 75-97%: Show word 4 (CTD)
+               - 97-100%: Transition back to word 1 (3% transition)
+               Then loops infinitely back to 0% */
             0% {
                 -webkit-transform: translateY(0%);
                 transform: translateY(0%);
