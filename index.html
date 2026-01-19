@@ -1018,47 +1018,50 @@
         }
 
         @keyframes spin_4991 {
+            /* Animation cycles through 4 words: DE, TU, TIERRA, CTD
+               Each word visible for ~22%, with ~3% transition time
+               Total: 4 words * 25% = 100% cycle, then loops back to start */
             0% {
                 -webkit-transform: translateY(0%);
                 transform: translateY(0%);
             }
 
-            22% {
+            22% {  /* Display first word (DE) */
                 -webkit-transform: translateY(0%);
                 transform: translateY(0%);
             }
 
-            25% {
+            25% {  /* Transition to second word */
                 -webkit-transform: translateY(-100%);
                 transform: translateY(-100%);
             }
 
-            47% {
+            47% {  /* Display second word (TU) */
                 -webkit-transform: translateY(-100%);
                 transform: translateY(-100%);
             }
 
-            50% {
+            50% {  /* Transition to third word */
                 -webkit-transform: translateY(-200%);
                 transform: translateY(-200%);
             }
 
-            72% {
+            72% {  /* Display third word (TIERRA) */
                 -webkit-transform: translateY(-200%);
                 transform: translateY(-200%);
             }
 
-            75% {
+            75% {  /* Transition to fourth word */
                 -webkit-transform: translateY(-300%);
                 transform: translateY(-300%);
             }
 
-            97% {
+            97% {  /* Display fourth word (CTD) */
                 -webkit-transform: translateY(-300%);
                 transform: translateY(-300%);
             }
 
-            100% {
+            100% {  /* Loop back to first word */
                 -webkit-transform: translateY(0%);
                 transform: translateY(0%);
             }
@@ -1935,7 +1938,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 // Attempt to play the video
                 const playPromise = heroVideo.play();
                 
-                if (playPromise !== undefined) {
+                // Check if play() returned a valid Promise (newer browsers)
+                if (playPromise && typeof playPromise.then === 'function') {
                     playPromise.then(() => {
                         // Video is playing successfully
                         console.log('Hero video is playing');
