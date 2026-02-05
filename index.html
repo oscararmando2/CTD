@@ -143,6 +143,37 @@
             background-color: #db2c1a;
         }
         
+        /* Services carousel styles */
+        .services-carousel .swiper-slide {
+            height: auto;
+            display: flex;
+        }
+        
+        .services-carousel .service-card {
+            min-height: 280px;
+        }
+        
+        .services-carousel .swiper-button-next,
+        .services-carousel .swiper-button-prev {
+            color: #db2c1a;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @media (min-width: 1024px) {
+            .services-carousel .swiper-button-next:hover,
+            .services-carousel .swiper-button-prev:hover {
+                transform: scale(1.2);
+            }
+        }
+        
+        .services-carousel .swiper-pagination-bullet-active {
+            background-color: #db2c1a;
+        }
+        
+        .services-carousel .services-pagination {
+            margin-top: 2rem;
+        }
+        
         /* ============================
            GLASSMORPHISM UI COMPONENTS
            ============================ */
@@ -1553,67 +1584,88 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </p>
             </div>
             
-            <!-- Services/Advantages Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-                <!-- Service 1 -->
-                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up text-center" data-delay="100">
-                    <div class="relative z-10">
-                        <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Entregas en Cadena de Frío" data-lang-en="Cold Chain Delivery">Entregas en Cadena de Frío</h3>
-                        <p class="text-gray-600" data-lang-es="Sistema de refrigeración certificado que garantiza la frescura de productos refrigerados y congelados desde nuestro almacén hasta su tienda." data-lang-en="Certified refrigeration system that guarantees the freshness of refrigerated and frozen products from our warehouse to your store.">
-                            Sistema de refrigeración certificado que garantiza la frescura de productos refrigerados y congelados desde nuestro almacén hasta su tienda.
-                        </p>
+            <!-- Services Carousel -->
+            <div class="services-carousel swiper animate-slide-up">
+                <div class="swiper-wrapper">
+                    <!-- Service 1 -->
+                    <div class="swiper-slide">
+                        <div class="service-card glass-card p-6 rounded-lg shadow-lg text-center h-full flex flex-col">
+                            <div class="relative z-10 flex-grow flex flex-col">
+                                <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Entregas en Cadena de Frío" data-lang-en="Cold Chain Delivery">Entregas en Cadena de Frío</h3>
+                                <p class="text-gray-600 flex-grow" data-lang-es="Sistema de refrigeración certificado que garantiza la frescura de productos refrigerados y congelados desde nuestro almacén hasta su tienda." data-lang-en="Certified refrigeration system that guarantees the freshness of refrigerated and frozen products from our warehouse to your store.">
+                                    Sistema de refrigeración certificado que garantiza la frescura de productos refrigerados y congelados desde nuestro almacén hasta su tienda.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Service 2 -->
+                    <div class="swiper-slide">
+                        <div class="service-card glass-card p-6 rounded-lg shadow-lg text-center h-full flex flex-col">
+                            <div class="relative z-10 flex-grow flex flex-col">
+                                <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Precios Mayoristas Competitivos" data-lang-en="Competitive Wholesale Prices">Precios Mayoristas Competitivos</h3>
+                                <p class="text-gray-600 flex-grow" data-lang-es="Mejores precios del mercado con descuentos por volumen que incrementan sus márgenes de ganancia y competitividad." data-lang-en="Best market prices with volume discounts that increase your profit margins and competitiveness.">
+                                    Mejores precios del mercado con descuentos por volumen que incrementan sus márgenes de ganancia y competitividad.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Service 3 -->
+                    <div class="swiper-slide">
+                        <div class="service-card glass-card p-6 rounded-lg shadow-lg text-center h-full flex flex-col">
+                            <div class="relative z-10 flex-grow flex flex-col">
+                                <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Asesoría en Inventario" data-lang-en="Inventory Advisory">Asesoría en Inventario</h3>
+                                <p class="text-gray-600 flex-grow" data-lang-es="Expertos que le ayudan a optimizar su inventario, identificar productos de alta rotación y maximizar sus ventas." data-lang-en="Experts who help you optimize your inventory, identify high-turnover products, and maximize your sales.">
+                                    Expertos que le ayudan a optimizar su inventario, identificar productos de alta rotación y maximizar sus ventas.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Service 4 -->
+                    <div class="swiper-slide">
+                        <div class="service-card glass-card p-6 rounded-lg shadow-lg text-center h-full flex flex-col">
+                            <div class="relative z-10 flex-grow flex flex-col">
+                                <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Cobertura Kansas City y Midwest" data-lang-en="Kansas City & Midwest Coverage">Cobertura Kansas City y Midwest</h3>
+                                <p class="text-gray-600 flex-grow" data-lang-es="Entregas rápidas y confiables en toda el área metropolitana de Kansas City y estados vecinos del Midwest." data-lang-en="Fast and reliable deliveries throughout the Kansas City metropolitan area and neighboring Midwest states.">
+                                    Entregas rápidas y confiables en toda el área metropolitana de Kansas City y estados vecinos del Midwest.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Service 5 -->
+                    <div class="swiper-slide">
+                        <div class="service-card glass-card p-6 rounded-lg shadow-lg text-center h-full flex flex-col">
+                            <div class="relative z-10 flex-grow flex flex-col">
+                                <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Pedidos Fáciles y Rápidos" data-lang-en="Easy & Fast Orders">Pedidos Fáciles y Rápidos</h3>
+                                <p class="text-gray-600 flex-grow" data-lang-es="Sistema simplificado de pedidos por teléfono, email o WhatsApp. Atención personalizada en español." data-lang-en="Simplified ordering system by phone, email, or WhatsApp. Personalized attention in Spanish.">
+                                    Sistema simplificado de pedidos por teléfono, email o WhatsApp. Atención personalizada en español.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Service 6 -->
+                    <div class="swiper-slide">
+                        <div class="service-card glass-card p-6 rounded-lg shadow-lg text-center h-full flex flex-col">
+                            <div class="relative z-10 flex-grow flex flex-col">
+                                <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Variedad y Disponibilidad" data-lang-en="Variety & Availability">Variedad y Disponibilidad</h3>
+                                <p class="text-gray-600 flex-grow" data-lang-es="Miles de productos latinos siempre en stock. Si no lo tenemos, lo conseguimos para usted." data-lang-en="Thousands of Latino products always in stock. If we don't have it, we'll get it for you.">
+                                    Miles de productos latinos siempre en stock. Si no lo tenemos, lo conseguimos para usted.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
-                <!-- Service 2 -->
-                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up text-center" data-delay="200">
-                    <div class="relative z-10">
-                        <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Precios Mayoristas Competitivos" data-lang-en="Competitive Wholesale Prices">Precios Mayoristas Competitivos</h3>
-                        <p class="text-gray-600" data-lang-es="Mejores precios del mercado con descuentos por volumen que incrementan sus márgenes de ganancia y competitividad." data-lang-en="Best market prices with volume discounts that increase your profit margins and competitiveness.">
-                            Mejores precios del mercado con descuentos por volumen que incrementan sus márgenes de ganancia y competitividad.
-                        </p>
-                    </div>
-                </div>
+                <!-- Navigation Buttons -->
+                <div class="swiper-button-next services-button-next"></div>
+                <div class="swiper-button-prev services-button-prev"></div>
                 
-                <!-- Service 3 -->
-                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up text-center" data-delay="300">
-                    <div class="relative z-10">
-                        <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Asesoría en Inventario" data-lang-en="Inventory Advisory">Asesoría en Inventario</h3>
-                        <p class="text-gray-600" data-lang-es="Expertos que le ayudan a optimizar su inventario, identificar productos de alta rotación y maximizar sus ventas." data-lang-en="Experts who help you optimize your inventory, identify high-turnover products, and maximize your sales.">
-                            Expertos que le ayudan a optimizar su inventario, identificar productos de alta rotación y maximizar sus ventas.
-                        </p>
-                    </div>
-                </div>
-                
-                <!-- Service 4 -->
-                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up text-center" data-delay="100">
-                    <div class="relative z-10">
-                        <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Cobertura Kansas City y Midwest" data-lang-en="Kansas City & Midwest Coverage">Cobertura Kansas City y Midwest</h3>
-                        <p class="text-gray-600" data-lang-es="Entregas rápidas y confiables en toda el área metropolitana de Kansas City y estados vecinos del Midwest." data-lang-en="Fast and reliable deliveries throughout the Kansas City metropolitan area and neighboring Midwest states.">
-                            Entregas rápidas y confiables en toda el área metropolitana de Kansas City y estados vecinos del Midwest.
-                        </p>
-                    </div>
-                </div>
-                
-                <!-- Service 5 -->
-                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up text-center" data-delay="200">
-                    <div class="relative z-10">
-                        <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Pedidos Fáciles y Rápidos" data-lang-en="Easy & Fast Orders">Pedidos Fáciles y Rápidos</h3>
-                        <p class="text-gray-600" data-lang-es="Sistema simplificado de pedidos por teléfono, email o WhatsApp. Atención personalizada en español." data-lang-en="Simplified ordering system by phone, email, or WhatsApp. Personalized attention in Spanish.">
-                            Sistema simplificado de pedidos por teléfono, email o WhatsApp. Atención personalizada en español.
-                        </p>
-                    </div>
-                </div>
-                
-                <!-- Service 6 -->
-                <div class="service-card glass-card p-6 rounded-lg shadow-lg animate-slide-up text-center" data-delay="300">
-                    <div class="relative z-10">
-                        <h3 class="text-xl font-bold text-ctd-red mb-3" data-lang-es="Variedad y Disponibilidad" data-lang-en="Variety & Availability">Variedad y Disponibilidad</h3>
-                        <p class="text-gray-600" data-lang-es="Miles de productos latinos siempre en stock. Si no lo tenemos, lo conseguimos para usted." data-lang-en="Thousands of Latino products always in stock. If we don't have it, we'll get it for you.">
-                            Miles de productos latinos siempre en stock. Si no lo tenemos, lo conseguimos para usted.
-                        </p>
-                    </div>
-                </div>
+                <!-- Pagination -->
+                <div class="swiper-pagination services-pagination"></div>
             </div>
         </div>
     </section>
@@ -2090,6 +2142,31 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             };
             
             const swiper = new Swiper('.marcas-carousel', swiperConfig);
+            
+            // Initialize Swiper for Services Carousel
+            const servicesSwiper = new Swiper('.services-carousel', {
+                loop: true,
+                slidesPerView: 1,
+                spaceBetween: 20,
+                breakpoints: {
+                    640: {
+                        slidesPerView: 2,
+                        spaceBetween: 20,
+                    },
+                    1024: {
+                        slidesPerView: 3,
+                        spaceBetween: 30,
+                    },
+                },
+                navigation: {
+                    nextEl: '.services-button-next',
+                    prevEl: '.services-button-prev',
+                },
+                pagination: {
+                    el: '.services-pagination',
+                    clickable: true,
+                },
+            });
             
             // Mobile: Auto-activate card animations when scrolling into view
             const mobileMediaQuery = window.matchMedia('(max-width: 1024px)');
