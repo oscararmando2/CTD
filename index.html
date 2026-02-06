@@ -20,10 +20,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     
-    <!-- PDF.js for PDF rendering -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
-    
     <!-- CurvedLoop CSS -->
     <link rel="stylesheet" href="CurvedLoop.css">
     
@@ -2203,17 +2199,17 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         });
     </script>
     
-    <!-- PDF Flipbook Modal -->
-    <div id="promos-flipbook-modal" class="fixed inset-0 bg-black bg-opacity-90 z-[100] hidden items-center justify-center p-4">
+    <!-- PDF Viewer Modal -->
+    <div id="promos-flipbook-modal" class="fixed inset-0 bg-black bg-opacity-90 z-[100] hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="relative w-full max-w-7xl h-[90vh] bg-gray-900 rounded-lg shadow-2xl overflow-hidden">
             <!-- Close button -->
-            <button onclick="closePromosFlipbook()" class="absolute top-4 right-4 z-50 bg-ctd-red hover:bg-ctd-orange text-white rounded-full w-12 h-12 flex items-center justify-center text-2xl font-bold shadow-lg transition">
+            <button onclick="closePromosFlipbook()" class="absolute top-4 right-4 z-50 bg-ctd-red hover:bg-ctd-orange text-white rounded-full w-12 h-12 flex items-center justify-center text-2xl font-bold shadow-lg transition" aria-label="Cerrar modal">
                 ×
             </button>
             
             <!-- Title -->
             <div class="absolute top-4 left-4 z-50 bg-white bg-opacity-90 px-6 py-3 rounded-lg shadow-lg">
-                <h3 class="text-xl font-bold text-ctd-red" data-lang-es="Especiales del Mes" data-lang-en="Monthly Specials">📖 Especiales del Mes</h3>
+                <h3 id="modal-title" class="text-xl font-bold text-ctd-red" data-lang-es="Especiales del Mes" data-lang-en="Monthly Specials">📖 Especiales del Mes</h3>
             </div>
             
             <!-- PDF Viewer iframe -->
@@ -2226,7 +2222,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
     </div>
     
     <script>
-        // PDF Flipbook functionality - Simplified version using iframe
+        // PDF viewer modal functionality using iframe
         function openPromosFlipbook() {
             const modal = document.getElementById('promos-flipbook-modal');
             modal.classList.remove('hidden');
