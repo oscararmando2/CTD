@@ -20,6 +20,13 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     
+    <!-- PDF.js for PDF rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
+    <!-- Turn.js for flipbook effect -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/turn.js/3/turn.min.js"></script>
+    
     <!-- CurvedLoop CSS -->
     <link rel="stylesheet" href="CurvedLoop.css">
     
@@ -1168,6 +1175,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     <a href="#inicio" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Inicio" data-lang-en="Home">Inicio</a>
                     <a href="#sobre-nosotros" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Sobre Nosotros" data-lang-en="About Us">Sobre Nosotros</a>
                     <a href="#productos" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Productos" data-lang-en="Products">Productos</a>
+                    <a href="#especiales" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Especiales" data-lang-en="Specials">Especiales</a>
                     <a href="#servicios" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Servicios" data-lang-en="Services">Servicios</a>
                     <a href="#contacto" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Contacto" data-lang-en="Contact">Contacto</a>
                     
@@ -1199,6 +1207,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     <a href="#inicio" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Inicio" data-lang-en="Home" onclick="toggleMobileMenu()">Inicio</a>
                     <a href="#sobre-nosotros" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Sobre Nosotros" data-lang-en="About Us" onclick="toggleMobileMenu()">Sobre Nosotros</a>
                     <a href="#productos" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Productos" data-lang-en="Products" onclick="toggleMobileMenu()">Productos</a>
+                    <a href="#especiales" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Especiales" data-lang-en="Specials" onclick="toggleMobileMenu()">Especiales</a>
                     <a href="#servicios" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Servicios" data-lang-en="Services" onclick="toggleMobileMenu()">Servicios</a>
                     <a href="#contacto" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Contacto" data-lang-en="Contact" onclick="toggleMobileMenu()">Contacto</a>
                     
@@ -1503,6 +1512,44 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         </div>
     </section>
 
+    <!-- Especiales Section -->
+    <section id="especiales" class="py-16 md:py-24 bg-gradient-to-br from-ctd-red via-ctd-orange to-ctd-green relative overflow-hidden">
+        <div class="container mx-auto px-4">
+            <div class="text-center mb-8 animate-fade-in relative z-10">
+                <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 drop-shadow-lg" data-lang-es="Especiales del Mes" data-lang-en="Monthly Specials">Especiales del Mes</h2>
+                <p class="text-lg md:text-xl text-white max-w-3xl mx-auto mb-8 drop-shadow" data-lang-es="¡No te pierdas nuestras increíbles ofertas y promociones!" data-lang-en="Don't miss our incredible offers and promotions!">
+                    ¡No te pierdas nuestras increíbles ofertas y promociones!
+                </p>
+            </div>
+            
+            <!-- Banner with button -->
+            <div class="max-w-4xl mx-auto relative z-10">
+                <div class="bg-white rounded-2xl shadow-2xl overflow-hidden transform hover:scale-105 transition-transform duration-300">
+                    <div class="p-8 md:p-12 text-center">
+                        <div class="mb-6">
+                            <svg class="w-20 h-20 mx-auto text-ctd-orange" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4" data-lang-es="Revisa Nuestros Especiales del Mes" data-lang-en="Check Our Monthly Specials">
+                            Revisa Nuestros Especiales del Mes
+                        </h3>
+                        <p class="text-gray-600 mb-8 text-lg" data-lang-es="Descubre ofertas exclusivas en tus productos favoritos" data-lang-en="Discover exclusive offers on your favorite products">
+                            Descubre ofertas exclusivas en tus productos favoritos
+                        </p>
+                        <button onclick="openPromosFlipbook()" class="bg-ctd-red hover:bg-ctd-orange text-white font-bold py-4 px-8 rounded-xl text-lg transition-all duration-300 transform hover:scale-110 shadow-lg" data-lang-es="Ver Especiales del Mes" data-lang-en="View Monthly Specials">
+                            📖 Ver Especiales del Mes
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Decorative elements -->
+        <div class="absolute top-0 left-0 w-64 h-64 bg-white opacity-10 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
+        <div class="absolute bottom-0 right-0 w-96 h-96 bg-white opacity-10 rounded-full translate-x-1/2 translate-y-1/2"></div>
+    </section>
+
     <!-- Marcas Destacadas Section -->
     <section id="marcas" class="py-16 md:py-24 bg-gray-50">
         <div class="container mx-auto px-4">
@@ -1742,6 +1789,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                         <li><a href="#inicio" class="text-gray-200 hover:text-white transition" data-lang-es="Inicio" data-lang-en="Home">Inicio</a></li>
                         <li><a href="#sobre-nosotros" class="text-gray-200 hover:text-white transition" data-lang-es="Sobre Nosotros" data-lang-en="About Us">Sobre Nosotros</a></li>
                         <li><a href="#productos" class="text-gray-200 hover:text-white transition" data-lang-es="Productos" data-lang-en="Products">Productos</a></li>
+                        <li><a href="#especiales" class="text-gray-200 hover:text-white transition" data-lang-es="Especiales" data-lang-en="Specials">Especiales</a></li>
                         <li><a href="#servicios" class="text-gray-200 hover:text-white transition" data-lang-es="Servicios" data-lang-en="Services">Servicios</a></li>
                         <li><a href="#contacto" class="text-gray-200 hover:text-white transition" data-lang-es="Contacto" data-lang-en="Contact">Contacto</a></li>
                     </ul>
@@ -2154,6 +2202,150 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     interactive: true,
                     className: "custom-curved-text"
                 });
+            }
+        });
+    </script>
+    
+    <!-- PDF Flipbook Modal -->
+    <div id="promos-flipbook-modal" class="fixed inset-0 bg-black bg-opacity-90 z-[100] hidden items-center justify-center p-4">
+        <div class="relative w-full max-w-7xl h-[90vh] bg-gray-900 rounded-lg shadow-2xl">
+            <!-- Close button -->
+            <button onclick="closePromosFlipbook()" class="absolute -top-4 -right-4 z-50 bg-ctd-red hover:bg-ctd-orange text-white rounded-full w-12 h-12 flex items-center justify-center text-2xl font-bold shadow-lg transition">
+                ×
+            </button>
+            
+            <!-- Flipbook container -->
+            <div class="w-full h-full flex items-center justify-center p-8">
+                <div id="flipbook-wrapper" class="relative">
+                    <div id="flipbook" class="shadow-2xl">
+                        <!-- Pages will be dynamically inserted here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Controls -->
+            <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-4 bg-white bg-opacity-10 backdrop-blur px-6 py-3 rounded-full">
+                <button onclick="previousPage()" class="text-white hover:text-ctd-orange transition text-2xl font-bold px-4">
+                    ◄
+                </button>
+                <span id="page-info" class="text-white font-semibold min-w-[100px] text-center">
+                    Cargando...
+                </span>
+                <button onclick="nextPage()" class="text-white hover:text-ctd-orange transition text-2xl font-bold px-4">
+                    ►
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // PDF Flipbook functionality
+        let flipbookInstance = null;
+        let pdfDoc = null;
+        let totalPages = 0;
+        
+        // Configure PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
+        async function openPromosFlipbook() {
+            const modal = document.getElementById('promos-flipbook-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            
+            if (!pdfDoc) {
+                try {
+                    // Load the PDF
+                    const loadingTask = pdfjsLib.getDocument('PROMOS.pdf');
+                    pdfDoc = await loadingTask.promise;
+                    totalPages = pdfDoc.numPages;
+                    
+                    // Render all pages
+                    const flipbook = document.getElementById('flipbook');
+                    flipbook.innerHTML = ''; // Clear existing content
+                    
+                    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+                        const page = await pdfDoc.getPage(pageNum);
+                        const viewport = page.getViewport({ scale: 1.5 });
+                        
+                        const canvas = document.createElement('canvas');
+                        const context = canvas.getContext('2d');
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        canvas.className = 'page-canvas';
+                        
+                        // Create a div for each page
+                        const pageDiv = document.createElement('div');
+                        pageDiv.className = 'page';
+                        pageDiv.appendChild(canvas);
+                        flipbook.appendChild(pageDiv);
+                        
+                        // Render PDF page into canvas context
+                        const renderContext = {
+                            canvasContext: context,
+                            viewport: viewport
+                        };
+                        await page.render(renderContext).promise;
+                    }
+                    
+                    // Initialize Turn.js flipbook
+                    $('#flipbook').turn({
+                        width: viewport.width * 2,
+                        height: viewport.height,
+                        autoCenter: true,
+                        duration: 1000,
+                        gradients: true,
+                        acceleration: true,
+                        elevation: 50
+                    });
+                    
+                    // Update page info
+                    $('#flipbook').bind('turned', function(event, page, view) {
+                        updatePageInfo();
+                    });
+                    
+                    updatePageInfo();
+                } catch (error) {
+                    console.error('Error loading PDF:', error);
+                    alert('Error al cargar el PDF. Por favor, intente nuevamente.');
+                }
+            }
+        }
+        
+        function closePromosFlipbook() {
+            const modal = document.getElementById('promos-flipbook-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+        
+        function nextPage() {
+            if ($('#flipbook').turn('hasPage', $('#flipbook').turn('page') + 1)) {
+                $('#flipbook').turn('next');
+            }
+        }
+        
+        function previousPage() {
+            if ($('#flipbook').turn('page') > 1) {
+                $('#flipbook').turn('previous');
+            }
+        }
+        
+        function updatePageInfo() {
+            const currentPage = $('#flipbook').turn('page');
+            const totalPagesDisplay = $('#flipbook').turn('pages');
+            document.getElementById('page-info').textContent = `Página ${currentPage} de ${totalPagesDisplay}`;
+        }
+        
+        // Close modal on ESC key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closePromosFlipbook();
+            }
+        });
+        
+        // Close modal on background click
+        document.getElementById('promos-flipbook-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closePromosFlipbook();
             }
         });
     </script>
