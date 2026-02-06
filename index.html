@@ -153,6 +153,11 @@
             min-height: 280px;
         }
         
+        .services-carousel .service-card h3,
+        .services-carousel .service-card p {
+            text-align: center;
+        }
+        
         .services-carousel .swiper-button-next,
         .services-carousel .swiper-button-prev {
             color: #db2c1a;
@@ -2148,6 +2153,11 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 loop: true,
                 slidesPerView: 1,
                 spaceBetween: 20,
+                autoplay: {
+                    delay: 5000,
+                    disableOnInteraction: false,
+                },
+                speed: 1000,
                 breakpoints: {
                     640: {
                         slidesPerView: 2,
