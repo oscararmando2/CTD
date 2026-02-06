@@ -23,6 +23,9 @@
     <!-- CurvedLoop CSS -->
     <link rel="stylesheet" href="CurvedLoop.css">
     
+    <!-- LogoLoop CSS -->
+    <link rel="stylesheet" href="LogoLoop.css">
+    
     <style>
         /* ============================
            BASE STYLES & SMOOTH SCROLL
@@ -1510,71 +1513,9 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </p>
             </div>
             
-            <!-- Swiper Carousel -->
-            <div class="marcas-carousel swiper animate-slide-up">
-                <div class="swiper-wrapper">
-                    <!-- Slide 1 - Goya -->
-                    <div class="swiper-slide">
-                        <img src="https://mma.prnewswire.com/media/143145/goya_foods_logo.jpg?p=facebook" alt="Goya" class="h-20 md:h-28 object-contain">
-                    </div>
-                    
-                    <!-- Slide 2 - La Costeña -->
-                    <div class="swiper-slide">
-                        <img src="https://images.seeklogo.com/logo-png/32/2/la-costena-logo-png_seeklogo-321631.png" alt="La Costeña" class="h-20 md:h-28 object-contain">
-                    </div>
-                    
-                    <!-- Slide 3 - Jumex -->
-                    <div class="swiper-slide">
-                        <img src="https://jumex.com/wp-content/uploads/2025/10/logo.png" alt="Jumex" class="h-20 md:h-28 object-contain">
-                    </div>
-                    
-                    <!-- Slide 4 - Jarritos -->
-                    <div class="swiper-slide">
-                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/2/21/Jarritos_Logo.svg/1200px-Jarritos_Logo.svg.png" alt="Jarritos" class="h-20 md:h-28 object-contain">
-                    </div>
-                    
-                    <!-- Slide 5 - Lala -->
-                    <div class="swiper-slide">
-                        <img src="https://www.lala.com.mx/themes/lala-theme/assets/images/logo.png" alt="Lala" class="h-20 md:h-28 object-contain">
-                    </div>
-                    
-                    <!-- Slide 6 - Sabritas -->
-                    <div class="swiper-slide">
-                        <img src="https://toppng.com/uploads/preview/sabritas-vector-logo-free-download-11574196903ax09mnhv3j.png" alt="Sabritas" class="h-20 md:h-28 object-contain">
-                    </div>
-                    
-                    <!-- Slide 7 - Herdez -->
-                    <div class="swiper-slide">
-                        <img src="https://images.seeklogo.com/logo-png/6/2/herdez-logo-png_seeklogo-66411.png" alt="Herdez" class="h-20 md:h-28 object-contain">
-                    </div>
-                    
-                    <!-- Slide 8 - Cacique -->
-                    <div class="swiper-slide">
-                        <img src="https://www.harrydavis.com/wp-content/uploads/2025/01/Cacique-Logo-Curved_-square.png" alt="Cacique" class="h-20 md:h-28 object-contain">
-                    </div>
-                    
-                    <!-- Slide 9 - Maseca -->
-                    <div class="swiper-slide">
-                        <img src="https://www.clipartmax.com/png/middle/118-1183116_maseca-masa-harina.png" alt="Maseca" class="h-20 md:h-28 object-contain">
-                    </div>
-                    
-                    <!-- Slide 10 - La Finca-->
-                    <div class="swiper-slide">
-                        <img src="https://cortesdist.com/wp-content/uploads/2024/10/logos-web-cortes_la-finca-1-e1730255629364.png" alt="La Finca" class="h-20 md:h-28 object-contain">
-                    </div>
-                    
-                    <!-- Slide 11 - Yeyas -->
-                    <div class="swiper-slide">
-                        <img src="yeyas_Mesa de trabajo 1.png" alt="Yeyas" class="h-20 md:h-28 object-contain">
-                    </div>
-                </div>
-                
-                <!-- Navigation arrows -->
-                <div class="swiper-button-next"></div>
-                <div class="swiper-button-prev"></div>
-                
-                <!-- Pagination -->
-                <div class="swiper-pagination"></div>
+            <!-- Logo Loop -->
+            <div class="logoloop-container animate-slide-up" style="height: 200px; position: relative; overflow: hidden;">
+                <div id="marcas-logoloop"></div>
             </div>
         </div>
     </section>
@@ -1824,6 +1765,9 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
 
     <!-- CurvedLoop Component Script -->
     <script src="CurvedLoop.js"></script>
+    
+    <!-- LogoLoop Component Script -->
+    <script src="LogoLoop.js"></script>
 
     <!-- JavaScript for Language Switcher, Mobile Menu, and Animations -->
     <script>
@@ -2105,48 +2049,34 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             // Initialize scroll animations
             initScrollAnimations();
             
-            // Initialize Swiper for Marcas Carousel
-            const swiperConfig = {
-                // Carousel configuration
-                loop: true,
-                // Conditionally enable autoplay based on performance
-                ...(reduceAnimations ? {} : {
-                    autoplay: {
-                        delay: 3000,
-                        disableOnInteraction: false,
-                    }
-                }),
-                slidesPerView: 2,
-                spaceBetween: 20,
-                breakpoints: {
-                    640: {
-                        slidesPerView: 3,
-                        spaceBetween: 30,
-                    },
-                    768: {
-                        slidesPerView: 4,
-                        spaceBetween: 30,
-                    },
-                    1024: {
-                        slidesPerView: 5,
-                        spaceBetween: 40,
-                    },
-                    1280: {
-                        slidesPerView: 6,
-                        spaceBetween: 40,
-                    },
-                },
-                navigation: {
-                    nextEl: '.swiper-button-next',
-                    prevEl: '.swiper-button-prev',
-                },
-                pagination: {
-                    el: '.swiper-pagination',
-                    clickable: true,
-                },
-            };
+            // Initialize LogoLoop for Brand Logos
+            const brandLogos = [
+                { src: "https://www.lala.com.mx/themes/lala-theme/assets/images/logo.png", alt: "Lala", title: "Lala" },
+                { src: "https://toppng.com/uploads/preview/sabritas-vector-logo-free-download-11574196903ax09mnhv3j.png", alt: "Sabritas", title: "Sabritas" },
+                { src: "https://images.seeklogo.com/logo-png/6/2/herdez-logo-png_seeklogo-66411.png", alt: "Herdez", title: "Herdez" },
+                { src: "https://www.harrydavis.com/wp-content/uploads/2025/01/Cacique-Logo-Curved_-square.png", alt: "Cacique", title: "Cacique" },
+                { src: "https://www.clipartmax.com/png/middle/118-1183116_maseca-masa-harina.png", alt: "Maseca", title: "Maseca" },
+                { src: "https://cortesdist.com/wp-content/uploads/2024/10/logos-web-cortes_la-finca-1-e1730255629364.png", alt: "La Finca", title: "La Finca" },
+                { src: "yeyas_Mesa de trabajo 1.png", alt: "Yeyas", title: "Yeyas" },
+                { src: "https://mma.prnewswire.com/media/143145/goya_foods_logo.jpg?p=facebook", alt: "Goya", title: "Goya" },
+                { src: "https://images.seeklogo.com/logo-png/32/2/la-costena-logo-png_seeklogo-321631.png", alt: "La Costeña", title: "La Costeña" }
+            ];
             
-            const swiper = new Swiper('.marcas-carousel', swiperConfig);
+            const marcasLogoLoopContainer = document.getElementById('marcas-logoloop');
+            if (marcasLogoLoopContainer) {
+                new LogoLoop(marcasLogoLoopContainer, {
+                    logos: brandLogos,
+                    speed: 100,
+                    direction: "left",
+                    logoHeight: 60,
+                    gap: 60,
+                    hoverSpeed: 0,
+                    scaleOnHover: true,
+                    fadeOut: true,
+                    fadeOutColor: "#f9fafb",
+                    ariaLabel: "Marcas que confían en nosotros"
+                });
+            }
             
             // Initialize Swiper for Services Carousel
             const servicesSwiper = new Swiper('.services-carousel', {
