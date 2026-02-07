@@ -21,7 +21,7 @@
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     
     <!-- PDF.js for PDF viewing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha512-2XAlG+exQeCRiJfUdFCsZMUJ1N6CvRZK6W9IILvJxvgTMZVJz8qdPGOZLwZgGNVJ5dXJ7yJ0N4gNHSzqxcQF6g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     
     <!-- CurvedLoop CSS -->
     <link rel="stylesheet" href="CurvedLoop.css">
@@ -2289,6 +2289,9 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         let scale = 1.5;
         const minScale = 0.5;
         const maxScale = 3.0;
+        const ZOOM_STEP = 0.25;
+        const MAX_MOBILE_SCALE = 1.2;
+        const SCROLL_DEBOUNCE_DELAY = 100;
         
         // Configure PDF.js worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -2321,7 +2324,11 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 renderAllPages();
             }).catch(function(error) {
                 console.error('Error loading PDF:', error);
-                alert('Error al cargar el PDF. Por favor, intenta de nuevo.');
+                const currentLang = document.documentElement.lang || 'es';
+                const errorMsg = currentLang === 'en' 
+                    ? 'Error loading PDF. Please try again.'
+                    : 'Error al cargar el PDF. Por favor, intenta de nuevo.';
+                alert(errorMsg);
             });
         }
         
@@ -2350,7 +2357,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             pdfDoc.getPage(num).then(function(page) {
                 // Adjust scale for mobile vs desktop
                 const isMobile = window.innerWidth < 768;
-                const displayScale = isMobile ? Math.min(scale, 1.2) : scale;
+                const displayScale = isMobile ? Math.min(scale, MAX_MOBILE_SCALE) : scale;
                 
                 const viewport = page.getViewport({ scale: displayScale });
                 const context = canvas.getContext('2d');
@@ -2402,13 +2409,13 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         
         function zoomIn() {
             if (scale >= maxScale) return;
-            scale += 0.25;
+            scale += ZOOM_STEP;
             renderAllPages();
         }
         
         function zoomOut() {
             if (scale <= minScale) return;
-            scale -= 0.25;
+            scale -= ZOOM_STEP;
             renderAllPages();
         }
         
@@ -2439,7 +2446,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         let scrollTimeout;
         document.getElementById('pdf-container')?.addEventListener('scroll', function() {
             clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(handleScroll, 100);
+            scrollTimeout = setTimeout(handleScroll, SCROLL_DEBOUNCE_DELAY);
         });
         
         // Close modal on ESC key
