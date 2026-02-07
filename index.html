@@ -20,6 +20,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     
+    <!-- PDF.js for PDF viewing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
     <!-- CurvedLoop CSS -->
     <link rel="stylesheet" href="CurvedLoop.css">
     
@@ -2216,40 +2219,88 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
     </script>
     
     <!-- PDF Viewer Modal -->
-    <div id="promos-flipbook-modal" class="fixed inset-0 bg-black bg-opacity-90 z-[100] hidden items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-        <div class="relative w-full max-w-7xl h-[90vh] bg-gray-900 rounded-lg shadow-2xl overflow-hidden">
-            <!-- Close button -->
-            <button onclick="closePromosFlipbook()" class="absolute top-4 right-4 z-50 bg-ctd-red hover:bg-ctd-orange text-white rounded-full w-12 h-12 flex items-center justify-center text-2xl font-bold shadow-lg transition" aria-label="Cerrar modal" data-lang-es="Cerrar modal" data-lang-en="Close modal">
-                ×
-            </button>
-            
-            <!-- Title -->
-            <div class="absolute top-4 left-4 z-50 bg-white bg-opacity-90 px-6 py-3 rounded-lg shadow-lg">
-                <h3 id="modal-title" class="text-xl font-bold text-ctd-red" data-lang-es="Especiales del Mes" data-lang-en="Monthly Specials"><span aria-hidden="true">📖</span> Especiales del Mes</h3>
+    <div id="promos-flipbook-modal" class="fixed inset-0 bg-black bg-opacity-90 z-[100] hidden items-center justify-center p-2 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="relative w-full max-w-7xl h-[95vh] sm:h-[90vh] bg-gray-900 rounded-lg shadow-2xl flex flex-col overflow-hidden">
+            <!-- Header with title and controls -->
+            <div class="flex items-center justify-between bg-gradient-to-r from-ctd-red to-ctd-orange p-3 sm:p-4 flex-shrink-0">
+                <div class="flex items-center space-x-2">
+                    <span class="text-2xl" aria-hidden="true">📖</span>
+                    <h3 id="modal-title" class="text-base sm:text-xl font-bold text-white" data-lang-es="Especiales del Mes" data-lang-en="Monthly Specials">Especiales del Mes</h3>
+                </div>
+                
+                <!-- Controls -->
+                <div class="flex items-center space-x-2">
+                    <!-- Page info -->
+                    <div class="hidden sm:flex items-center bg-white bg-opacity-20 rounded px-3 py-1 text-white text-sm">
+                        <span id="page-num" class="font-semibold">1</span>
+                        <span class="mx-1">/</span>
+                        <span id="page-count">-</span>
+                    </div>
+                    
+                    <!-- Zoom controls -->
+                    <button onclick="zoomOut()" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded p-2 transition" aria-label="Alejar" title="Alejar">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"></path>
+                        </svg>
+                    </button>
+                    <button onclick="zoomIn()" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded p-2 transition" aria-label="Acercar" title="Acercar">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"></path>
+                        </svg>
+                    </button>
+                    
+                    <!-- Close button -->
+                    <button onclick="closePromosFlipbook()" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-xl font-bold transition" aria-label="Cerrar modal" data-lang-es="Cerrar modal" data-lang-en="Close modal">
+                        ×
+                    </button>
+                </div>
             </div>
             
-            <!-- PDF Viewer iframe -->
-            <iframe 
-                id="pdf-viewer-iframe"
-                class="w-full h-full border-0"
-                title="Visor de PDF - Especiales del Mes"
-                data-lang-es="Visor de PDF - Especiales del Mes"
-                data-lang-en="PDF Viewer - Monthly Specials">
-            </iframe>
+            <!-- PDF Viewer container with scrolling -->
+            <div id="pdf-container" class="flex-1 overflow-y-auto overflow-x-auto bg-gray-800 p-2 sm:p-4" style="scroll-behavior: smooth;">
+                <div id="pdf-viewer" class="flex flex-col items-center space-y-2 sm:space-y-4">
+                    <!-- PDF pages will be rendered here -->
+                </div>
+            </div>
+            
+            <!-- Navigation controls for mobile -->
+            <div class="flex sm:hidden items-center justify-between bg-gray-800 p-3 border-t border-gray-700 flex-shrink-0">
+                <button onclick="prevPage()" id="prev-btn" class="bg-ctd-red hover:bg-ctd-orange text-white rounded-lg px-4 py-2 font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    ← Anterior
+                </button>
+                <div class="flex items-center bg-gray-700 rounded px-3 py-1 text-white text-sm">
+                    <span id="page-num-mobile" class="font-semibold">1</span>
+                    <span class="mx-1">/</span>
+                    <span id="page-count-mobile">-</span>
+                </div>
+                <button onclick="nextPage()" id="next-btn" class="bg-ctd-red hover:bg-ctd-orange text-white rounded-lg px-4 py-2 font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    Siguiente →
+                </button>
+            </div>
         </div>
     </div>
     
     <script>
-        // PDF viewer modal functionality using iframe
+        // PDF viewer modal functionality using PDF.js
+        let pdfDoc = null;
+        let pageNum = 1;
+        let pageRendering = false;
+        let pageNumPending = null;
+        let scale = 1.5;
+        const minScale = 0.5;
+        const maxScale = 3.0;
+        
+        // Configure PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        
         function openPromosFlipbook() {
             const modal = document.getElementById('promos-flipbook-modal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
             
-            // Load PDF in iframe if not already loaded
-            const iframe = document.getElementById('pdf-viewer-iframe');
-            if (!iframe.src) {
-                iframe.src = 'PROMOS.pdf';
+            // Load PDF if not already loaded
+            if (!pdfDoc) {
+                loadPDF();
             }
         }
         
@@ -2259,10 +2310,150 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             modal.classList.remove('flex');
         }
         
+        function loadPDF() {
+            const loadingTask = pdfjsLib.getDocument('PROMOS.pdf');
+            loadingTask.promise.then(function(pdf) {
+                pdfDoc = pdf;
+                document.getElementById('page-count').textContent = pdf.numPages;
+                document.getElementById('page-count-mobile').textContent = pdf.numPages;
+                
+                // Render all pages for scrolling experience
+                renderAllPages();
+            }).catch(function(error) {
+                console.error('Error loading PDF:', error);
+                alert('Error al cargar el PDF. Por favor, intenta de nuevo.');
+            });
+        }
+        
+        function renderAllPages() {
+            const container = document.getElementById('pdf-viewer');
+            container.innerHTML = ''; // Clear container
+            
+            // Render each page
+            for (let num = 1; num <= pdfDoc.numPages; num++) {
+                const pageContainer = document.createElement('div');
+                pageContainer.className = 'pdf-page-container bg-white shadow-lg';
+                pageContainer.id = `page-${num}`;
+                
+                const canvas = document.createElement('canvas');
+                canvas.className = 'pdf-page';
+                pageContainer.appendChild(canvas);
+                
+                container.appendChild(pageContainer);
+                
+                // Render the page
+                renderPage(num, canvas);
+            }
+        }
+        
+        function renderPage(num, canvas) {
+            pdfDoc.getPage(num).then(function(page) {
+                // Adjust scale for mobile vs desktop
+                const isMobile = window.innerWidth < 768;
+                const displayScale = isMobile ? Math.min(scale, 1.2) : scale;
+                
+                const viewport = page.getViewport({ scale: displayScale });
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                
+                const renderContext = {
+                    canvasContext: context,
+                    viewport: viewport
+                };
+                
+                page.render(renderContext);
+            });
+        }
+        
+        function updatePageInfo(num) {
+            document.getElementById('page-num').textContent = num;
+            document.getElementById('page-num-mobile').textContent = num;
+            
+            // Update button states
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            
+            if (prevBtn && nextBtn) {
+                prevBtn.disabled = num <= 1;
+                nextBtn.disabled = num >= pdfDoc.numPages;
+            }
+        }
+        
+        function scrollToPage(num) {
+            const pageElement = document.getElementById(`page-${num}`);
+            if (pageElement) {
+                pageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                updatePageInfo(num);
+            }
+        }
+        
+        function prevPage() {
+            if (pageNum <= 1) return;
+            pageNum--;
+            scrollToPage(pageNum);
+        }
+        
+        function nextPage() {
+            if (pageNum >= pdfDoc.numPages) return;
+            pageNum++;
+            scrollToPage(pageNum);
+        }
+        
+        function zoomIn() {
+            if (scale >= maxScale) return;
+            scale += 0.25;
+            renderAllPages();
+        }
+        
+        function zoomOut() {
+            if (scale <= minScale) return;
+            scale -= 0.25;
+            renderAllPages();
+        }
+        
+        // Detect which page is in view while scrolling
+        function handleScroll() {
+            const container = document.getElementById('pdf-container');
+            if (!container || !pdfDoc) return;
+            
+            const containerRect = container.getBoundingClientRect();
+            const centerY = containerRect.top + containerRect.height / 2;
+            
+            for (let num = 1; num <= pdfDoc.numPages; num++) {
+                const pageElement = document.getElementById(`page-${num}`);
+                if (pageElement) {
+                    const pageRect = pageElement.getBoundingClientRect();
+                    if (pageRect.top <= centerY && pageRect.bottom >= centerY) {
+                        if (pageNum !== num) {
+                            pageNum = num;
+                            updatePageInfo(num);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Add scroll listener with debounce
+        let scrollTimeout;
+        document.getElementById('pdf-container')?.addEventListener('scroll', function() {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(handleScroll, 100);
+        });
+        
         // Close modal on ESC key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 closePromosFlipbook();
+            }
+            // Arrow key navigation
+            if (document.getElementById('promos-flipbook-modal').classList.contains('flex')) {
+                if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    prevPage();
+                } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                    nextPage();
+                }
             }
         });
         
