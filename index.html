@@ -1511,39 +1511,92 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
     <!-- Especiales Section -->
     <section id="especiales" class="py-16 md:py-24 bg-gradient-to-br from-ctd-red to-ctd-orange relative overflow-hidden">
         <div class="container mx-auto px-4">
-            <div class="text-center mb-8 animate-fade-in relative z-10">
-                <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 drop-shadow-lg" data-lang-es="Especiales del Mes" data-lang-en="Monthly Specials">Especiales del Mes</h2>
-                <p class="text-lg md:text-xl text-white max-w-3xl mx-auto mb-8 drop-shadow" data-lang-es="¡No te pierdas nuestras increíbles ofertas y promociones!" data-lang-en="Don't miss our incredible offers and promotions!">
+            <div class="text-center mb-12 animate-fade-in relative z-10">
+                <div class="inline-block bg-white bg-opacity-20 backdrop-blur-sm rounded-full px-6 py-2 mb-4">
+                    <span class="text-white font-semibold text-sm uppercase tracking-wider" data-lang-es="🎉 Ofertas Especiales" data-lang-en="🎉 Special Offers">🎉 Ofertas Especiales</span>
+                </div>
+                <h2 class="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-6 drop-shadow-2xl" data-lang-es="Especiales del Mes" data-lang-en="Monthly Specials">Especiales del Mes</h2>
+                <p class="text-xl md:text-2xl text-white max-w-3xl mx-auto mb-4 drop-shadow-lg font-medium" data-lang-es="¡No te pierdas nuestras increíbles ofertas y promociones!" data-lang-en="Don't miss our incredible offers and promotions!">
                     ¡No te pierdas nuestras increíbles ofertas y promociones!
                 </p>
             </div>
             
-            <!-- Banner with button -->
-            <div class="max-w-4xl mx-auto relative z-10">
-                <div class="bg-white rounded-2xl shadow-2xl overflow-hidden transform hover:scale-105 transition-transform duration-300">
-                    <div class="p-8 md:p-12 text-center">
-                        <div class="mb-6">
-                            <svg class="w-20 h-20 mx-auto text-ctd-orange" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"></path>
-                            </svg>
+            <!-- Enhanced Banner with button -->
+            <div class="max-w-5xl mx-auto relative z-10">
+                <div class="bg-white rounded-3xl shadow-2xl overflow-hidden transform hover:scale-[1.02] transition-all duration-300 border-4 border-white border-opacity-50">
+                    <!-- Promotional Header -->
+                    <div class="bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-400 py-3 px-6 text-center">
+                        <p class="text-gray-900 font-bold text-lg md:text-xl animate-pulse" data-lang-es="✨ Nuevas Ofertas Cada Mes ✨" data-lang-en="✨ New Offers Every Month ✨">✨ Nuevas Ofertas Cada Mes ✨</p>
+                    </div>
+                    
+                    <div class="p-8 md:p-12">
+                        <div class="grid md:grid-cols-2 gap-8 items-center mb-8">
+                            <!-- Left Column: Icon and Badge -->
+                            <div class="text-center md:text-left">
+                                <div class="inline-flex items-center justify-center w-32 h-32 bg-gradient-to-br from-ctd-red to-ctd-orange rounded-3xl shadow-xl mb-6 transform hover:rotate-6 transition-transform duration-300">
+                                    <svg class="w-20 h-20 text-white" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"></path>
+                                    </svg>
+                                </div>
+                                <div class="flex flex-wrap gap-2 justify-center md:justify-start">
+                                    <span class="inline-block bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">💰 Ahorra Más</span>
+                                    <span class="inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">📦 Ofertas Exclusivas</span>
+                                    <span class="inline-block bg-purple-100 text-purple-800 text-xs font-semibold px-3 py-1 rounded-full">🔥 Promociones</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Right Column: Content -->
+                            <div class="text-center md:text-left">
+                                <h3 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4 leading-tight" data-lang-es="Revisa Nuestros Especiales del Mes" data-lang-en="Check Our Monthly Specials">
+                                    Revisa Nuestros Especiales del Mes
+                                </h3>
+                                <p class="text-gray-700 mb-6 text-lg leading-relaxed" data-lang-es="Descubre ofertas exclusivas en tus productos favoritos" data-lang-en="Discover exclusive offers on your favorite products">
+                                    Descubre ofertas exclusivas en tus productos favoritos
+                                </p>
+                                <ul class="text-left space-y-2 mb-6">
+                                    <li class="flex items-center text-gray-700">
+                                        <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        <span data-lang-es="Descuentos especiales en productos seleccionados" data-lang-en="Special discounts on selected products">Descuentos especiales en productos seleccionados</span>
+                                    </li>
+                                    <li class="flex items-center text-gray-700">
+                                        <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        <span data-lang-es="Promociones por tiempo limitado" data-lang-en="Limited time promotions">Promociones por tiempo limitado</span>
+                                    </li>
+                                    <li class="flex items-center text-gray-700">
+                                        <svg class="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                        </svg>
+                                        <span data-lang-es="Actualizado mensualmente" data-lang-en="Updated monthly">Actualizado mensualmente</span>
+                                    </li>
+                                </ul>
+                            </div>
                         </div>
-                        <h3 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4" data-lang-es="Revisa Nuestros Especiales del Mes" data-lang-en="Check Our Monthly Specials">
-                            Revisa Nuestros Especiales del Mes
-                        </h3>
-                        <p class="text-gray-600 mb-8 text-lg" data-lang-es="Descubre ofertas exclusivas en tus productos favoritos" data-lang-en="Discover exclusive offers on your favorite products">
-                            Descubre ofertas exclusivas en tus productos favoritos
-                        </p>
-                        <button onclick="openPromosFlipbook()" class="bg-ctd-red hover:bg-ctd-orange text-white font-bold py-4 px-8 rounded-xl text-lg transition-all duration-300 transform hover:scale-110 shadow-lg" data-lang-es="Ver Especiales del Mes" data-lang-en="View Monthly Specials">
-                            <span aria-hidden="true">📖</span> Ver Especiales del Mes
-                        </button>
+                        
+                        <!-- CTA Button -->
+                        <div class="text-center">
+                            <button onclick="openPromosFlipbook()" class="inline-flex items-center justify-center bg-gradient-to-r from-ctd-red to-ctd-orange hover:from-ctd-orange hover:to-ctd-red text-white font-bold py-5 px-10 rounded-2xl text-xl transition-all duration-300 transform hover:scale-110 hover:shadow-2xl shadow-xl" data-lang-es="Ver Especiales del Mes" data-lang-en="View Monthly Specials">
+                                <span class="text-2xl mr-3" aria-hidden="true">📖</span>
+                                <span data-lang-es="Ver Especiales del Mes" data-lang-en="View Monthly Specials">Ver Especiales del Mes</span>
+                                <svg class="w-6 h-6 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </button>
+                            <p class="text-gray-500 text-sm mt-4" data-lang-es="Haz clic para ver el catálogo completo de ofertas" data-lang-en="Click to view the complete catalog of offers">Haz clic para ver el catálogo completo de ofertas</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
         
-        <!-- Decorative elements -->
-        <div class="absolute top-0 left-0 w-64 h-64 bg-white opacity-10 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
-        <div class="absolute bottom-0 right-0 w-96 h-96 bg-white opacity-10 rounded-full translate-x-1/2 translate-y-1/2"></div>
+        <!-- Enhanced Decorative elements -->
+        <div class="absolute top-0 left-0 w-64 h-64 bg-white opacity-10 rounded-full -translate-x-1/2 -translate-y-1/2 animate-pulse"></div>
+        <div class="absolute bottom-0 right-0 w-96 h-96 bg-white opacity-10 rounded-full translate-x-1/2 translate-y-1/2 animate-pulse"></div>
+        <div class="absolute top-1/2 left-1/4 w-32 h-32 bg-yellow-300 opacity-10 rounded-full animate-bounce" style="animation-duration: 3s;"></div>
+        <div class="absolute top-1/3 right-1/4 w-24 h-24 bg-yellow-300 opacity-10 rounded-full animate-bounce" style="animation-duration: 4s; animation-delay: 1s;"></div>
     </section>
 
     <!-- Marcas Destacadas Section -->
@@ -2286,11 +2339,11 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         let pageNum = 1;
         let pageRendering = false;
         let pageNumPending = null;
-        let scale = 1.5;
+        let scale = 2.0; // Increased from 1.5 to 2.0 for better readability
         const minScale = 0.5;
-        const maxScale = 3.0;
+        const maxScale = 4.0; // Increased from 3.0 to 4.0 to allow more zoom
         const ZOOM_STEP = 0.25;
-        const MAX_MOBILE_SCALE = 1.2;
+        const MAX_MOBILE_SCALE = 1.8; // Increased from 1.2 to 1.8 for better mobile readability
         const SCROLL_DEBOUNCE_DELAY = 100;
         
         // Configure PDF.js worker
