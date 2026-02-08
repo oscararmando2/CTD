@@ -21,7 +21,7 @@
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     
     <!-- PDF.js for PDF viewing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha512-2XAlG+exQeCRiJfUdFCsZMUJ1N6CvRZK6W9IILvJxvgTMZVJz8qdPGOZLwZgGNVJ5dXJ7yJ0N4gNHSzqxcQF6g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha512-2XAlG+exQeCRiJfUdFCsZMUJ1N6CvRZK6W9IILvJxvgTMZVJxvgTMZVJz8qdPGOZLwZgGNVJ5dXJ7yJ0N4gNHSzqxcQF6g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     
     <!-- CurvedLoop CSS -->
     <link rel="stylesheet" href="CurvedLoop.css">
@@ -77,6 +77,119 @@
         /* Gradient for modal header */
         .gradient-header {
             background: linear-gradient(to right, #db2c1a 0%, #f89429 100%);
+        }
+
+        /* Flipbook styles with page-turning animation */
+        #flipbook {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            perspective: 2000px;
+        }
+        
+        .flipbook-pages {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        .flipbook-page {
+            position: absolute;
+            background: white;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.8s cubic-bezier(0.645, 0.045, 0.355, 1), 
+                        opacity 0.8s ease;
+            transform-origin: left center;
+            backface-visibility: hidden;
+        }
+        
+        .flipbook-page canvas {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+        }
+        
+        .flipbook-page.active {
+            z-index: 10;
+            opacity: 1;
+            transform: rotateY(0deg);
+        }
+        
+        .flipbook-page.flipping-out {
+            z-index: 15;
+            animation: flipOut 0.8s cubic-bezier(0.645, 0.045, 0.355, 1) forwards;
+        }
+        
+        .flipbook-page.flipping-in {
+            z-index: 15;
+            animation: flipIn 0.8s cubic-bezier(0.645, 0.045, 0.355, 1) forwards;
+        }
+        
+        .flipbook-page.hidden {
+            opacity: 0;
+            transform: rotateY(-180deg);
+            z-index: 1;
+            pointer-events: none;
+        }
+        
+        @keyframes flipOut {
+            0% {
+                transform: rotateY(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: rotateY(-180deg);
+                opacity: 0;
+            }
+        }
+        
+        @keyframes flipIn {
+            0% {
+                transform: rotateY(180deg);
+                opacity: 0;
+            }
+            100% {
+                transform: rotateY(0deg);
+                opacity: 1;
+            }
+        }
+        
+        .flipbook-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        /* Responsive flipbook sizing */
+        @media (max-width: 768px) {
+            .flipbook-page {
+                width: 85vw !important;
+                height: calc(85vw * 1.4) !important;
+                max-height: 70vh !important;
+            }
+        }
+        
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .flipbook-page {
+                width: 500px !important;
+                height: 700px !important;
+            }
+        }
+        
+        @media (min-width: 1025px) {
+            .flipbook-page {
+                width: 600px !important;
+                height: 800px !important;
+            }
         }
 
         /* Hero video background */
@@ -2342,23 +2455,11 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 <!-- Controls -->
                 <div class="flex items-center space-x-2">
                     <!-- Page info -->
-                    <div class="hidden sm:flex items-center bg-white bg-opacity-20 rounded px-3 py-1 text-white text-sm">
+                    <div class="flex items-center bg-white bg-opacity-20 rounded px-3 py-1 text-white text-sm">
                         <span id="page-num" class="font-semibold">1</span>
                         <span class="mx-1">/</span>
                         <span id="page-count">-</span>
                     </div>
-                    
-                    <!-- Zoom controls -->
-                    <button onclick="zoomOut()" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded p-2 transition" aria-label="Alejar" title="Alejar">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"></path>
-                        </svg>
-                    </button>
-                    <button onclick="zoomIn()" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded p-2 transition" aria-label="Acercar" title="Acercar">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"></path>
-                        </svg>
-                    </button>
                     
                     <!-- Close button -->
                     <button onclick="closePromosFlipbook()" class="bg-white bg-opacity-20 hover:bg-opacity-30 text-white rounded-full w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-xl font-bold transition" aria-label="Cerrar modal" data-lang-es="Cerrar modal" data-lang-en="Close modal">
@@ -2367,42 +2468,43 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 </div>
             </div>
             
-            <!-- PDF Viewer container with scrolling -->
-            <div id="pdf-container" class="flex-1 overflow-y-auto overflow-x-auto bg-gray-800 p-2 sm:p-4" style="scroll-behavior: smooth;">
-                <div id="pdf-viewer" class="flex flex-col items-center space-y-2 sm:space-y-4">
-                    <!-- PDF pages will be rendered here -->
+            <!-- Flipbook container -->
+            <div class="flex-1 bg-gray-800 p-2 sm:p-4 flex items-center justify-center overflow-hidden">
+                <div class="flipbook-container">
+                    <div id="flipbook">
+                        <div class="flipbook-pages">
+                            <!-- Pages will be added dynamically -->
+                        </div>
+                    </div>
                 </div>
             </div>
             
-            <!-- Navigation controls for mobile -->
-            <div class="flex sm:hidden items-center justify-between bg-gray-800 p-3 border-t border-gray-700 flex-shrink-0">
+            <!-- Navigation controls -->
+            <div class="flex items-center justify-between bg-gray-800 p-3 border-t border-gray-700 flex-shrink-0">
                 <button onclick="prevPage()" id="prev-btn" class="bg-ctd-red hover:bg-ctd-orange text-white rounded-lg px-4 py-2 font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed">
-                    ← Anterior
+                    <span data-lang-es="← Anterior" data-lang-en="← Previous">← Anterior</span>
                 </button>
-                <div class="flex items-center bg-gray-700 rounded px-3 py-1 text-white text-sm">
+                <div class="flex items-center bg-gray-700 rounded px-3 py-1 text-white text-sm sm:hidden">
                     <span id="page-num-mobile" class="font-semibold">1</span>
                     <span class="mx-1">/</span>
                     <span id="page-count-mobile">-</span>
                 </div>
                 <button onclick="nextPage()" id="next-btn" class="bg-ctd-red hover:bg-ctd-orange text-white rounded-lg px-4 py-2 font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed">
-                    Siguiente →
+                    <span data-lang-es="Siguiente →" data-lang-en="Next →">Siguiente →</span>
                 </button>
             </div>
         </div>
     </div>
     
     <script>
-        // PDF viewer modal functionality using PDF.js
+        // PDF flipbook modal functionality using PDF.js and custom flip animation
         let pdfDoc = null;
         let pageNum = 1;
-        let pageRendering = false;
-        let pageNumPending = null;
-        let scale = 2.0; // Increased from 1.5 to 2.0 for better readability
-        const minScale = 0.5;
-        const maxScale = 4.0; // Increased from 3.0 to 4.0 to allow more zoom
-        const ZOOM_STEP = 0.25;
-        const MAX_MOBILE_SCALE = 1.8; // Increased from 1.2 to 1.8 for better mobile readability
-        const SCROLL_DEBOUNCE_DELAY = 100;
+        let flipbookInitialized = false;
+        let pageCanvases = {};
+        let isFlipping = false;
+        const scale = 1.5; // Fixed scale for flipbook
+        const FLIP_ANIMATION_DURATION = 800; // milliseconds - matches CSS animation duration
         
         // Configure PDF.js worker (only if library is loaded)
         if (typeof pdfjsLib !== 'undefined') {
@@ -2446,8 +2548,8 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 document.getElementById('page-count').textContent = pdf.numPages;
                 document.getElementById('page-count-mobile').textContent = pdf.numPages;
                 
-                // Render all pages for scrolling experience
-                renderAllPages();
+                // Render all pages and initialize flipbook
+                renderAllPagesForFlipbook();
             }).catch(function(error) {
                 console.error('Error loading PDF:', error);
                 const currentLang = document.documentElement.lang || 'es';
@@ -2459,34 +2561,31 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             });
         }
         
-        function renderAllPages() {
-            const container = document.getElementById('pdf-viewer');
-            container.innerHTML = ''; // Clear container
+        function renderAllPagesForFlipbook() {
+            const flipbookContainer = document.querySelector('.flipbook-pages');
+            flipbookContainer.innerHTML = ''; // Clear container
+            
+            let pagesRendered = 0;
+            const totalPages = pdfDoc.numPages;
             
             // Render each page
-            for (let num = 1; num <= pdfDoc.numPages; num++) {
-                const pageContainer = document.createElement('div');
-                pageContainer.className = 'pdf-page-container bg-white shadow-lg';
-                pageContainer.id = `page-${num}`;
-                
-                const canvas = document.createElement('canvas');
-                canvas.className = 'pdf-page';
-                pageContainer.appendChild(canvas);
-                
-                container.appendChild(pageContainer);
-                
-                // Render the page
-                renderPage(num, canvas);
+            for (let num = 1; num <= totalPages; num++) {
+                renderPageForFlipbook(num, function(canvas, pageNumber) {
+                    pageCanvases[pageNumber] = canvas;
+                    pagesRendered++;
+                    
+                    // Once all pages are rendered, initialize the flipbook
+                    if (pagesRendered === totalPages) {
+                        initializeFlipbook();
+                    }
+                });
             }
         }
         
-        function renderPage(num, canvas) {
+        function renderPageForFlipbook(num, callback) {
             pdfDoc.getPage(num).then(function(page) {
-                // Adjust scale for mobile vs desktop
-                const isMobile = window.innerWidth < 768;
-                const displayScale = isMobile ? Math.min(scale, MAX_MOBILE_SCALE) : scale;
-                
-                const viewport = page.getViewport({ scale: displayScale });
+                const viewport = page.getViewport({ scale: scale });
+                const canvas = document.createElement('canvas');
                 const context = canvas.getContext('2d');
                 canvas.height = viewport.height;
                 canvas.width = viewport.width;
@@ -2496,8 +2595,82 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     viewport: viewport
                 };
                 
-                page.render(renderContext);
+                page.render(renderContext).promise.then(function() {
+                    callback(canvas, num);
+                });
             });
+        }
+        
+        function initializeFlipbook() {
+            if (flipbookInitialized) return;
+            
+            const flipbookContainer = document.querySelector('.flipbook-pages');
+            flipbookContainer.innerHTML = '';
+            
+            // Add pages to flipbook
+            for (let num = 1; num <= pdfDoc.numPages; num++) {
+                const pageDiv = document.createElement('div');
+                pageDiv.className = 'flipbook-page';
+                pageDiv.dataset.page = num;
+                
+                if (num === 1) {
+                    pageDiv.classList.add('active');
+                } else {
+                    pageDiv.classList.add('hidden');
+                }
+                
+                pageDiv.appendChild(pageCanvases[num]);
+                flipbookContainer.appendChild(pageDiv);
+            }
+            
+            flipbookInitialized = true;
+            updatePageInfo(1);
+        }
+        
+        function flipToPage(newPageNum) {
+            if (isFlipping || !flipbookInitialized || !pdfDoc || newPageNum < 1 || newPageNum > pdfDoc.numPages || newPageNum === pageNum) {
+                return;
+            }
+            
+            isFlipping = true;
+            const currentPage = document.querySelector(`.flipbook-page[data-page="${pageNum}"]`);
+            const nextPage = document.querySelector(`.flipbook-page[data-page="${newPageNum}"]`);
+            
+            if (newPageNum > pageNum) {
+                // Forward flip with animation
+                currentPage.classList.remove('active');
+                currentPage.classList.add('flipping-out');
+                
+                nextPage.classList.remove('hidden');
+                nextPage.classList.add('flipping-in');
+                
+                setTimeout(() => {
+                    currentPage.classList.remove('flipping-out');
+                    currentPage.classList.add('hidden');
+                    
+                    nextPage.classList.remove('flipping-in');
+                    nextPage.classList.add('active');
+                    
+                    pageNum = newPageNum;
+                    updatePageInfo(pageNum);
+                    isFlipping = false;
+                }, FLIP_ANIMATION_DURATION);
+            } else {
+                // Backward flip - instant transition for better UX
+                nextPage.classList.remove('hidden');
+                nextPage.classList.add('active');
+                
+                currentPage.classList.remove('active');
+                currentPage.classList.add('hidden');
+                
+                pageNum = newPageNum;
+                updatePageInfo(pageNum);
+                
+                // Brief delay to prevent rapid clicking
+                setTimeout(() => {
+                    isFlipping = false;
+                }, 100);
+            }
         }
         
         function updatePageInfo(num) {
@@ -2508,73 +2681,23 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             const prevBtn = document.getElementById('prev-btn');
             const nextBtn = document.getElementById('next-btn');
             
-            if (prevBtn && nextBtn) {
+            if (prevBtn && nextBtn && pdfDoc) {
                 prevBtn.disabled = num <= 1;
                 nextBtn.disabled = num >= pdfDoc.numPages;
             }
         }
         
-        function scrollToPage(num) {
-            const pageElement = document.getElementById(`page-${num}`);
-            if (pageElement) {
-                pageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                updatePageInfo(num);
-            }
-        }
-        
         function prevPage() {
-            if (pageNum <= 1) return;
-            pageNum--;
-            scrollToPage(pageNum);
+            if (pageNum > 1 && !isFlipping) {
+                flipToPage(pageNum - 1);
+            }
         }
         
         function nextPage() {
-            if (pageNum >= pdfDoc.numPages) return;
-            pageNum++;
-            scrollToPage(pageNum);
-        }
-        
-        function zoomIn() {
-            if (scale >= maxScale) return;
-            scale += ZOOM_STEP;
-            renderAllPages();
-        }
-        
-        function zoomOut() {
-            if (scale <= minScale) return;
-            scale -= ZOOM_STEP;
-            renderAllPages();
-        }
-        
-        // Detect which page is in view while scrolling
-        function handleScroll() {
-            const container = document.getElementById('pdf-container');
-            if (!container || !pdfDoc) return;
-            
-            const containerRect = container.getBoundingClientRect();
-            const centerY = containerRect.top + containerRect.height / 2;
-            
-            for (let num = 1; num <= pdfDoc.numPages; num++) {
-                const pageElement = document.getElementById(`page-${num}`);
-                if (pageElement) {
-                    const pageRect = pageElement.getBoundingClientRect();
-                    if (pageRect.top <= centerY && pageRect.bottom >= centerY) {
-                        if (pageNum !== num) {
-                            pageNum = num;
-                            updatePageInfo(num);
-                        }
-                        break;
-                    }
-                }
+            if (pageNum < pdfDoc.numPages && !isFlipping) {
+                flipToPage(pageNum + 1);
             }
         }
-        
-        // Add scroll listener with debounce
-        let scrollTimeout;
-        document.getElementById('pdf-container')?.addEventListener('scroll', function() {
-            clearTimeout(scrollTimeout);
-            scrollTimeout = setTimeout(handleScroll, SCROLL_DEBOUNCE_DELAY);
-        });
         
         // Close modal on ESC key
         document.addEventListener('keydown', function(e) {
