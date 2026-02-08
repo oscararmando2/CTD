@@ -2404,10 +2404,25 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         const MAX_MOBILE_SCALE = 1.8; // Increased from 1.2 to 1.8 for better mobile readability
         const SCROLL_DEBOUNCE_DELAY = 100;
         
-        // Configure PDF.js worker
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        // Configure PDF.js worker (only if library is loaded)
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+        
+        // Helper function to open PDF as fallback
+        function openPdfFallback() {
+            closePromosFlipbook();
+            window.open('PROMOS.pdf', '_blank');
+        }
         
         function openPromosFlipbook() {
+            // Check if PDF.js library is available
+            if (typeof pdfjsLib === 'undefined') {
+                // Fallback: Open PDF directly in new tab
+                window.open('PROMOS.pdf', '_blank');
+                return;
+            }
+            
             const modal = document.getElementById('promos-flipbook-modal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -2437,9 +2452,10 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 console.error('Error loading PDF:', error);
                 const currentLang = document.documentElement.lang || 'es';
                 const errorMsg = currentLang === 'en' 
-                    ? 'Error loading PDF. Please try again.'
-                    : 'Error al cargar el PDF. Por favor, intenta de nuevo.';
+                    ? 'Error loading PDF viewer. Opening PDF in new tab...'
+                    : 'Error al cargar el visor de PDF. Abriendo PDF en nueva pestaña...';
                 alert(errorMsg);
+                openPdfFallback();
             });
         }
         
