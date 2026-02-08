@@ -2409,6 +2409,12 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
         
+        // Helper function to open PDF as fallback
+        function openPdfFallback() {
+            closePromosFlipbook();
+            window.open('PROMOS.pdf', '_blank');
+        }
+        
         function openPromosFlipbook() {
             // Check if PDF.js library is available
             if (typeof pdfjsLib === 'undefined') {
@@ -2434,14 +2440,6 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         }
         
         function loadPDF() {
-            // Double check PDF.js is available
-            if (typeof pdfjsLib === 'undefined') {
-                console.error('PDF.js library not loaded');
-                closePromosFlipbook();
-                window.open('PROMOS.pdf', '_blank');
-                return;
-            }
-            
             const loadingTask = pdfjsLib.getDocument('PROMOS.pdf');
             loadingTask.promise.then(function(pdf) {
                 pdfDoc = pdf;
@@ -2457,8 +2455,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     ? 'Error loading PDF viewer. Opening PDF in new tab...'
                     : 'Error al cargar el visor de PDF. Abriendo PDF en nueva pestaña...';
                 alert(errorMsg);
-                closePromosFlipbook();
-                window.open('PROMOS.pdf', '_blank');
+                openPdfFallback();
             });
         }
         
