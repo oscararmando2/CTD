@@ -1212,6 +1212,7 @@
             transition-duration: 0.3s;
             box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.199);
             background-color: #25D366;
+            text-decoration: none;
         }
 
         .sign {
@@ -2806,15 +2807,13 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
     
     <!-- WhatsApp Floating Button -->
     <div class="whatsapp-float" id="whatsapp-button">
-        <a href="https://wa.me/19133688814?text=Hola%20CTD%2C%20vi%20sus%20productos%20en%20la%20web%20y%20me%20gustar%C3%ADa%20conocer%20sus%20planes%20de%20distribuci%C3%B3n" target="_blank" rel="noopener noreferrer" aria-label="Contactar asesor por WhatsApp">
-            <button class="Btn">
-                <div class="sign">
-                    <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <path d="M16 0C7.164 0 0 7.164 0 16c0 2.821.732 5.479 2.008 7.813L.688 29.875l6.188-1.625A15.941 15.941 0 0 0 16 32c8.836 0 16-7.164 16-16S24.836 0 16 0zm0 29.5c-2.563 0-4.992-.716-7.063-1.938l-.5-.313-5.188 1.375 1.375-5.063-.313-.5A13.436 13.436 0 0 1 2.5 16C2.5 8.544 8.544 2.5 16 2.5S29.5 8.544 29.5 16 23.456 29.5 16 29.5zm7.375-10.063c-.406-.203-2.375-1.172-2.75-1.313-.375-.156-.656-.219-.938.219s-1.078 1.313-1.313 1.594c-.234.281-.469.313-.875.109-2.281-1.141-3.781-2.031-5.281-4.594-.406-.688.406-.641 1.156-2.125.125-.281.063-.516-.031-.719-.094-.203-.938-2.25-1.281-3.094-.344-.813-.688-.688-.938-.688-.25 0-.531-.031-.813-.031s-.75.109-1.156.531c-.406.422-1.531 1.5-1.531 3.656s1.563 4.25 1.781 4.531c.219.281 3.063 4.688 7.438 6.563 2.75 1.188 3.844 1.281 5.219 1.063 1.375-.219 2.375-.969 2.719-1.906.344-.938.344-1.781.25-1.938-.094-.156-.375-.25-.781-.453z"/>
-                    </svg>
-                </div>
-                <div class="text">Contacta un Asesor</div>
-            </button>
+        <a href="https://wa.me/19133688814?text=Hola%20CTD%2C%20vi%20sus%20productos%20en%20la%20web%20y%20me%20gustar%C3%ADa%20conocer%20sus%20planes%20de%20distribuci%C3%B3n" target="_blank" rel="noopener noreferrer" aria-label="Contactar asesor por WhatsApp" class="Btn">
+            <div class="sign">
+                <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M16 0C7.164 0 0 7.164 0 16c0 2.821.732 5.479 2.008 7.813L.688 29.875l6.188-1.625A15.941 15.941 0 0 0 16 32c8.836 0 16-7.164 16-16S24.836 0 16 0zm0 29.5c-2.563 0-4.992-.716-7.063-1.938l-.5-.313-5.188 1.375 1.375-5.063-.313-.5A13.436 13.436 0 0 1 2.5 16C2.5 8.544 8.544 2.5 16 2.5S29.5 8.544 29.5 16 23.456 29.5 16 29.5zm7.375-10.063c-.406-.203-2.375-1.172-2.75-1.313-.375-.156-.656-.219-.938.219s-1.078 1.313-1.313 1.594c-.234.281-.469.313-.875.109-2.281-1.141-3.781-2.031-5.281-4.594-.406-.688.406-.641 1.156-2.125.125-.281.063-.516-.031-.719-.094-.203-.938-2.25-1.281-3.094-.344-.813-.688-.688-.938-.688-.25 0-.531-.031-.813-.031s-.75.109-1.156.531c-.406.422-1.531 1.5-1.531 3.656s1.563 4.25 1.781 4.531c.219.281 3.063 4.688 7.438 6.563 2.75 1.188 3.844 1.281 5.219 1.063 1.375-.219 2.375-.969 2.719-1.906.344-.938.344-1.781.25-1.938-.094-.156-.375-.25-.781-.453z"/>
+                </svg>
+            </div>
+            <div class="text">Contacta un Asesor</div>
         </a>
     </div>
     
@@ -2827,6 +2826,13 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             
             function checkScrollPosition() {
                 const scrollableHeight = document.documentElement.scrollHeight - window.innerHeight;
+                
+                // Guard against division by zero when content is shorter than viewport
+                if (scrollableHeight <= 0) {
+                    whatsappButton.classList.add('show');
+                    return;
+                }
+                
                 const scrollPercentage = (window.scrollY / scrollableHeight) * 100;
                 
                 // Show button when user has scrolled 70% of the scrollable content
