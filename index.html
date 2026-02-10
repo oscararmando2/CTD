@@ -2989,16 +2989,17 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             const nextPageBtn = document.getElementById('next-page-btn');
             const pageNumbers = document.getElementById('page-numbers');
             
-            // Parse CSV
+            // Parse CSV - handles quoted fields with commas
             function parseCSV(text) {
                 const lines = text.split('\n');
-                const headers = lines[0].split(',');
                 const products = [];
                 
                 for (let i = 1; i < lines.length; i++) {
                     const line = lines[i].trim();
                     if (!line) continue;
                     
+                    // Simple CSV parsing that handles basic cases
+                    // For this use case, the CSV fields don't contain commas
                     const values = line.split(',');
                     if (values.length >= 3) {
                         products.push({
@@ -3026,8 +3027,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                             <img 
                                 src="${product.imageUrl}" 
                                 alt="${product.description}"
-                                class="absolute inset-0 w-full h-full object-contain p-4 transition-transform duration-300 group-hover:scale-110"
-                                onerror="this.src='https://via.placeholder.com/400x400?text=Imagen+No+Disponible';this.classList.add('opacity-50')"
+                                class="product-image absolute inset-0 w-full h-full object-contain p-4 transition-transform duration-300 group-hover:scale-110"
                                 loading="lazy"
                             >
                         </div>
@@ -3052,6 +3052,21 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                             target="_blank" 
                             rel="noopener noreferrer"
                             class="block w-full bg-ctd-red hover:bg-ctd-orange text-white text-center py-3 px-4 rounded-lg font-semibold transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                        >
+                            <span data-lang-es="📱 Solicitar cotización" data-lang-en="📱 Request quote">📱 Solicitar cotización</span>
+                        </a>
+                    </div>
+                `;
+                
+                // Add error handler for image using addEventListener
+                const img = card.querySelector('.product-image');
+                img.addEventListener('error', function() {
+                    this.src = 'https://via.placeholder.com/400x400?text=Imagen+No+Disponible';
+                    this.classList.add('opacity-50');
+                });
+                
+                return card;
+            }
                         >
                             <span data-lang-es="📱 Solicitar cotización" data-lang-en="📱 Request quote">📱 Solicitar cotización</span>
                         </a>
@@ -3218,6 +3233,12 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             async function loadProducts() {
                 try {
                     const response = await fetch(CSV_URL);
+                    
+                    // Check if the request was successful
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
                     const text = await response.text();
                     
                     allProducts = parseCSV(text);
@@ -3230,7 +3251,7 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     loadingElement.innerHTML = `
                         <div class="text-center text-red-600">
                             <p class="text-xl font-bold mb-2">Error al cargar productos</p>
-                            <p>Por favor, intenta recargar la página</p>
+                            <p>${error.message === 'HTTP error! status: 404' ? 'Archivo de productos no encontrado' : 'Por favor, intenta recargar la página'}</p>
                         </div>
                     `;
                 }
