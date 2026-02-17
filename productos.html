@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- SEO Meta Tags -->
+    <title>Catálogo de Productos - Central Trade Distribution</title>
+    <meta name="description" content="Explore nuestro catálogo completo de productos latinos. Más de 120 productos disponibles para tu negocio en Kansas City, Missouri.">
+    <meta name="keywords" content="catálogo productos latinos, productos mexicanos mayoreo, distribuidora Kansas City, CTD productos">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* ============================
+           BASE STYLES & SMOOTH SCROLL
+           ============================ */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Custom brand colors configuration for Tailwind */
+        .bg-ctd-red { background-color: #db2c1a; }
+        .bg-ctd-orange { background-color: #f89429; }
+        .bg-ctd-green { background-color: #247232; }
+        .text-ctd-red { color: #db2c1a; }
+        .text-ctd-orange { color: #f89429; }
+        .text-ctd-green { color: #247232; }
+        .hover\:bg-ctd-orange:hover { background-color: #f89429; }
+        .border-ctd-red { border-color: #db2c1a; }
+        
+        /* Mobile menu styles */
+        .mobile-menu-hidden {
+            display: none;
+        }
+        
+        /* Fade-in animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        /* Line clamp utility */
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        /* Menu Toggle Animation */
+        .burger-loader {
+            --color: #db2c1a;
+            position: relative;
+            display: flex;
+            width: 30px;
+            height: 20px;
+            align-items: center;
+            justify-content: space-around;
+            flex-flow: column nowrap;
+        }
+
+        .burger-loader .dot {
+            width: 100%;
+            height: 3px;
+            background-color: var(--color);
+            border-radius: 50px;
+            transition: all 0.3s ease;
+        }
+
+        .menu-toggle.active .burger-loader .dot:nth-child(1) {
+            transform: translateY(8.5px) rotate(45deg);
+        }
+
+        .menu-toggle.active .burger-loader .dot:nth-child(2) {
+            opacity: 0;
+        }
+
+        .menu-toggle.active .burger-loader .dot:nth-child(3) {
+            transform: translateY(-8.5px) rotate(-45deg);
+        }
+
+        .menu-toggle.active .burger-loader .dot:nth-child(4) {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Fixed Navbar -->
+    <nav class="fixed top-0 left-0 right-0 bg-white shadow-md z-50">
+        <div class="container mx-auto px-4 py-3 md:py-4">
+            <div class="flex items-center justify-between">
+                <!-- Logo and Brand Name -->
+                <div class="flex items-center space-x-3">
+                    <a href="index.html" class="flex items-center space-x-3">
+                        <img src="CTDLOGO.PNG" alt="Central Trade Distribution" class="h-10 md:h-12">
+                        <span class="hidden sm:inline-block text-lg md:text-xl font-bold text-ctd-red">Central Trade Distribution</span>
+                    </a>
+                </div>
+                
+                <!-- Desktop Menu -->
+                <div class="hidden lg:flex items-center space-x-6">
+                    <a href="index.html#inicio" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Inicio" data-lang-en="Home">Inicio</a>
+                    <a href="index.html#sobre-nosotros" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Sobre Nosotros" data-lang-en="About Us">Sobre Nosotros</a>
+                    <a href="index.html#productos" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Productos" data-lang-en="Products">Productos</a>
+                    <a href="productos.html" class="text-ctd-red hover:text-ctd-red transition font-semibold" data-lang-es="Catálogo" data-lang-en="Catalog">Catálogo</a>
+                    <a href="index.html#especiales" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Especiales" data-lang-en="Specials">Especiales</a>
+                    <a href="index.html#servicios" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Servicios" data-lang-en="Services">Servicios</a>
+                    <a href="index.html#contacto" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Contacto" data-lang-en="Contact">Contacto</a>
+                    
+                    <!-- Language Switcher -->
+                    <div class="flex items-center space-x-2 border-l pl-4">
+                        <button onclick="switchLanguage('es')" id="btn-es" class="px-2 py-1 rounded font-semibold text-ctd-red border-2 border-ctd-red">ES</button>
+                        <button onclick="switchLanguage('en')" id="btn-en" class="px-2 py-1 rounded text-gray-600 border-2 border-gray-300 hover:border-ctd-red">EN</button>
+                    </div>
+                    
+                    <!-- CTA Button -->
+                    <a href="index.html#contacto" class="bg-ctd-red text-white px-4 py-2 rounded-lg hover:bg-ctd-orange transition font-semibold" data-lang-es="Solicitar Cotización" data-lang-en="Request Quote">Solicitar Cotización</a>
+                </div>
+                
+                <!-- Mobile Menu Button -->
+                <button onclick="toggleMobileMenu()" class="menu-toggle lg:hidden text-gray-700 focus:outline-none" aria-label="Toggle menu">
+                    <div class="burger-loader" aria-hidden="true">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                </button>
+            </div>
+            
+            <!-- Mobile Menu -->
+            <div id="mobile-menu" class="mobile-menu-hidden lg:hidden mt-4 pb-4">
+                <div class="flex flex-col space-y-3">
+                    <a href="index.html#inicio" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Inicio" data-lang-en="Home" onclick="toggleMobileMenu()">Inicio</a>
+                    <a href="index.html#sobre-nosotros" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Sobre Nosotros" data-lang-en="About Us" onclick="toggleMobileMenu()">Sobre Nosotros</a>
+                    <a href="index.html#productos" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Productos" data-lang-en="Products" onclick="toggleMobileMenu()">Productos</a>
+                    <a href="productos.html" class="text-ctd-red hover:text-ctd-red transition font-semibold" data-lang-es="Catálogo" data-lang-en="Catalog" onclick="toggleMobileMenu()">Catálogo</a>
+                    <a href="index.html#especiales" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Especiales" data-lang-en="Specials" onclick="toggleMobileMenu()">Especiales</a>
+                    <a href="index.html#servicios" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Servicios" data-lang-en="Services" onclick="toggleMobileMenu()">Servicios</a>
+                    <a href="index.html#contacto" class="text-gray-700 hover:text-ctd-red transition" data-lang-es="Contacto" data-lang-en="Contact" onclick="toggleMobileMenu()">Contacto</a>
+                    
+                    <div class="flex items-center space-x-2 pt-2">
+                        <button onclick="switchLanguage('es')" id="btn-es-mobile" class="px-3 py-1 rounded font-semibold text-ctd-red border-2 border-ctd-red">ES</button>
+                        <button onclick="switchLanguage('en')" id="btn-en-mobile" class="px-3 py-1 rounded text-gray-600 border-2 border-gray-300">EN</button>
+                    </div>
+                    
+                    <a href="index.html#contacto" class="bg-ctd-red text-white px-4 py-2 rounded-lg hover:bg-ctd-orange transition text-center font-semibold" data-lang-es="Solicitar Cotización" data-lang-en="Request Quote" onclick="toggleMobileMenu()">Solicitar Cotización</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Spacer for fixed navbar -->
+    <div class="h-16 md:h-20"></div>
+
+    <!-- Catálogo Productos Section -->
+    <section class="py-16 md:py-24 bg-gray-50">
+        <div class="container mx-auto px-4">
+            <!-- Section Header -->
+            <div class="text-center mb-12 animate-fade-in">
+                <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold text-ctd-red mb-4" data-lang-es="Catálogo Productos CTD" data-lang-en="CTD Products Catalog">Catálogo Productos CTD</h1>
+                <p class="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto mb-8" data-lang-es="Explora nuestro catálogo completo de productos. Más de 120 productos disponibles para tu negocio." data-lang-en="Explore our complete product catalog. Over 120 products available for your business.">
+                    Explora nuestro catálogo completo de productos. Más de 120 productos disponibles para tu negocio.
+                </p>
+                
+                <!-- Search Bar -->
+                <div class="max-w-2xl mx-auto mb-8">
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="product-search" 
+                            placeholder="Buscar productos..." 
+                            class="w-full px-6 py-4 pr-12 rounded-full border-2 border-gray-300 focus:border-ctd-red focus:outline-none text-lg shadow-md transition-all"
+                            data-lang-es-placeholder="Buscar productos..."
+                            data-lang-en-placeholder="Search products..."
+                        >
+                        <svg class="absolute right-5 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- Results Counter -->
+                <div class="text-center mb-4">
+                    <p class="text-gray-600 text-sm">
+                        <span data-lang-es="Mostrando" data-lang-en="Showing">Mostrando</span> 
+                        <span id="showing-count" class="font-bold text-ctd-red">0</span> 
+                        <span data-lang-es="de" data-lang-en="of">de</span> 
+                        <span id="total-count" class="font-bold text-ctd-red">0</span> 
+                        <span data-lang-es="productos" data-lang-en="products">productos</span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading-products" class="text-center py-12">
+                <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-ctd-red"></div>
+                <p class="mt-4 text-gray-600" data-lang-es="Cargando productos..." data-lang-en="Loading products...">Cargando productos...</p>
+            </div>
+
+            <!-- Products Grid -->
+            <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12" style="display: none;">
+                <!-- Products will be dynamically inserted here -->
+            </div>
+
+            <!-- No Results Message -->
+            <div id="no-results" class="text-center py-12 hidden">
+                <svg class="mx-auto h-24 w-24 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <p class="text-xl text-gray-600 mb-2" data-lang-es="No se encontraron productos" data-lang-en="No products found">No se encontraron productos</p>
+                <p class="text-gray-500" data-lang-es="Intenta con otra búsqueda" data-lang-en="Try another search">Intenta con otra búsqueda</p>
+            </div>
+
+            <!-- Pagination -->
+            <div id="pagination" class="flex justify-center items-center space-x-2 mt-8" style="display: none;">
+                <button id="prev-page-btn" class="px-4 py-2 bg-white border-2 border-gray-300 rounded-lg hover:border-ctd-red hover:text-ctd-red transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold" disabled>
+                    <span data-lang-es="← Anterior" data-lang-en="← Previous">← Anterior</span>
+                </button>
+                <div id="page-numbers" class="flex space-x-2">
+                    <!-- Page numbers will be inserted here -->
+                </div>
+                <button id="next-page-btn" class="px-4 py-2 bg-white border-2 border-gray-300 rounded-lg hover:border-ctd-red hover:text-ctd-red transition disabled:opacity-50 disabled:cursor-not-allowed font-semibold">
+                    <span data-lang-es="Siguiente →" data-lang-en="Next →">Siguiente →</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-ctd-green text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                <!-- Company Info -->
+                <div>
+                    <h4 class="text-xl font-bold mb-4" data-lang-es="Central Trade Distribution" data-lang-en="Central Trade Distribution">Central Trade Distribution</h4>
+                    <p class="text-gray-200" data-lang-es="Su socio mayorista de confianza en productos latinos" data-lang-en="Your trusted wholesale partner in Latino products">Su socio mayorista de confianza en productos latinos</p>
+                </div>
+                
+                <!-- Quick Links -->
+                <div>
+                    <h4 class="text-xl font-bold mb-4" data-lang-es="Enlaces Rápidos" data-lang-en="Quick Links">Enlaces Rápidos</h4>
+                    <ul class="space-y-2">
+                        <li><a href="index.html#inicio" class="text-gray-200 hover:text-white transition" data-lang-es="Inicio" data-lang-en="Home">Inicio</a></li>
+                        <li><a href="index.html#sobre-nosotros" class="text-gray-200 hover:text-white transition" data-lang-es="Sobre Nosotros" data-lang-en="About Us">Sobre Nosotros</a></li>
+                        <li><a href="index.html#productos" class="text-gray-200 hover:text-white transition" data-lang-es="Productos" data-lang-en="Products">Productos</a></li>
+                        <li><a href="productos.html" class="text-gray-200 hover:text-white transition" data-lang-es="Catálogo" data-lang-en="Catalog">Catálogo</a></li>
+                        <li><a href="index.html#especiales" class="text-gray-200 hover:text-white transition" data-lang-es="Especiales" data-lang-en="Specials">Especiales</a></li>
+                        <li><a href="index.html#servicios" class="text-gray-200 hover:text-white transition" data-lang-es="Servicios" data-lang-en="Services">Servicios</a></li>
+                        <li><a href="index.html#contacto" class="text-gray-200 hover:text-white transition" data-lang-es="Contacto" data-lang-en="Contact">Contacto</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Contact Info -->
+                <div>
+                    <h4 class="text-xl font-bold mb-4" data-lang-es="Contacto" data-lang-en="Contact">Contacto</h4>
+                    <p class="text-gray-200 mb-2">Kansas City, Missouri</p>
+                    <p class="text-gray-200 mb-2"><a href="tel:+18165551234" class="hover:text-white transition">(816) 555-1234</a></p>
+                    <p class="text-gray-200"><a href="mailto:info@ctdkansascity.com" class="hover:text-white transition">info@ctdkansascity.com</a></p>
+                </div>
+            </div>
+            
+            <!-- Copyright -->
+            <div class="border-t border-gray-400 pt-8 text-center">
+                <p class="text-gray-200" id="copyright-text">&copy; <span id="copyright-year"></span> Central Trade Distribution. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript for Language Switcher, Mobile Menu, and Product Catalog -->
+    <script>
+        // ============================
+        // LANGUAGE SWITCHER
+        // ============================
+        let currentLanguage = 'es'; // Default language
+
+        function switchLanguage(lang) {
+            currentLanguage = lang;
+            
+            // Update all elements with data-lang attributes
+            document.querySelectorAll('[data-lang-es]').forEach(element => {
+                const esText = element.getAttribute('data-lang-es');
+                const enText = element.getAttribute('data-lang-en');
+                
+                // Update text content
+                if (element.tagName !== 'INPUT') {
+                    element.textContent = lang === 'es' ? esText : enText;
+                }
+            });
+            
+            // Update input placeholders
+            document.querySelectorAll('[data-lang-es-placeholder]').forEach(element => {
+                const esPlaceholder = element.getAttribute('data-lang-es-placeholder');
+                const enPlaceholder = element.getAttribute('data-lang-en-placeholder');
+                element.placeholder = lang === 'es' ? esPlaceholder : enPlaceholder;
+            });
+            
+            // Update language buttons (desktop)
+            const btnEs = document.getElementById('btn-es');
+            const btnEn = document.getElementById('btn-en');
+            if (btnEs && btnEn) {
+                if (lang === 'es') {
+                    btnEs.className = 'px-2 py-1 rounded font-semibold text-ctd-red border-2 border-ctd-red';
+                    btnEn.className = 'px-2 py-1 rounded text-gray-600 border-2 border-gray-300 hover:border-ctd-red';
+                } else {
+                    btnEs.className = 'px-2 py-1 rounded text-gray-600 border-2 border-gray-300 hover:border-ctd-red';
+                    btnEn.className = 'px-2 py-1 rounded font-semibold text-ctd-red border-2 border-ctd-red';
+                }
+            }
+            
+            // Update language buttons (mobile)
+            const btnEsMobile = document.getElementById('btn-es-mobile');
+            const btnEnMobile = document.getElementById('btn-en-mobile');
+            if (btnEsMobile && btnEnMobile) {
+                if (lang === 'es') {
+                    btnEsMobile.className = 'px-3 py-1 rounded font-semibold text-ctd-red border-2 border-ctd-red';
+                    btnEnMobile.className = 'px-3 py-1 rounded text-gray-600 border-2 border-gray-300';
+                } else {
+                    btnEsMobile.className = 'px-3 py-1 rounded text-gray-600 border-2 border-gray-300';
+                    btnEnMobile.className = 'px-3 py-1 rounded font-semibold text-ctd-red border-2 border-ctd-red';
+                }
+            }
+            
+            // Update copyright text
+            const copyrightText = document.getElementById('copyright-text');
+            if (copyrightText) {
+                const year = new Date().getFullYear();
+                copyrightText.innerHTML = lang === 'es' 
+                    ? `&copy; <span id="copyright-year">${year}</span> Central Trade Distribution. Todos los derechos reservados.`
+                    : `&copy; <span id="copyright-year">${year}</span> Central Trade Distribution. All rights reserved.`;
+            }
+        }
+
+        // ============================
+        // MOBILE MENU TOGGLE
+        // ============================
+        function toggleMobileMenu() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            const menuToggle = document.querySelector('.menu-toggle');
+            
+            if (mobileMenu && menuToggle) {
+                mobileMenu.classList.toggle('mobile-menu-hidden');
+                menuToggle.classList.toggle('active');
+            }
+        }
+
+        // ============================
+        // COPYRIGHT YEAR
+        // ============================
+        document.addEventListener('DOMContentLoaded', function() {
+            const yearSpan = document.getElementById('copyright-year');
+            if (yearSpan) {
+                yearSpan.textContent = new Date().getFullYear();
+            }
+        });
+
+        // ============================
+        // PRODUCT CATALOG
+        // ============================
+        (function() {
+            const CSV_URL = 'productos.csv';
+            const PRODUCTS_PER_PAGE = 12;
+            
+            // State
+            let allProducts = [];
+            let filteredProducts = [];
+            let currentPage = 1;
+            
+            // DOM Elements
+            const productsGrid = document.getElementById('products-grid');
+            const loadingElement = document.getElementById('loading-products');
+            const noResultsElement = document.getElementById('no-results');
+            const searchInput = document.getElementById('product-search');
+            const showingCount = document.getElementById('showing-count');
+            const totalCount = document.getElementById('total-count');
+            const pagination = document.getElementById('pagination');
+            const prevPageBtn = document.getElementById('prev-page-btn');
+            const nextPageBtn = document.getElementById('next-page-btn');
+            const pageNumbers = document.getElementById('page-numbers');
+            
+            // Parse CSV - handles quoted fields with commas
+            function parseCSV(text) {
+                const lines = text.split('\n');
+                const products = [];
+                
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    
+                    // Simple CSV parsing that handles basic cases
+                    // For this use case, the CSV fields don't contain commas
+                    const values = line.split(',');
+                    if (values.length >= 3) {
+                        products.push({
+                            description: values[0].trim(),
+                            barcode: values[1].trim(),
+                            imageUrl: values[2].trim()
+                        });
+                    }
+                }
+                
+                return products;
+            }
+            
+            // Create product card HTML
+            function createProductCard(product) {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl shadow-lg overflow-hidden transform transition-all duration-300 hover:scale-105 hover:shadow-2xl group';
+                
+                const whatsappMessage = encodeURIComponent(`Hola, me interesa cotizar el producto: ${product.description} (UPC: ${product.barcode})`);
+                const whatsappUrl = `https://wa.me/19133688814?text=${whatsappMessage}`;
+                
+                card.innerHTML = `
+                    <div class="relative overflow-hidden bg-white">
+                        <div class="aspect-square relative">
+                            <img 
+                                src="${product.imageUrl}" 
+                                alt="${product.description}"
+                                class="product-image absolute inset-0 w-full h-full object-contain p-4 transition-transform duration-300 group-hover:scale-110"
+                                loading="lazy"
+                            >
+                        </div>
+                        <div class="absolute top-2 right-2 bg-ctd-red text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <span data-lang-es="Ver más" data-lang-en="View more">Ver más</span>
+                        </div>
+                    </div>
+                    <div class="p-5">
+                        <h3 class="text-sm font-bold text-gray-900 mb-2 line-clamp-2 min-h-[2.5rem]" title="${product.description}">
+                            ${product.description}
+                        </h3>
+                        <div class="mb-4">
+                            <p class="text-xs text-gray-500 mb-1">
+                                <span data-lang-es="UPC:" data-lang-en="UPC:">UPC:</span>
+                            </p>
+                            <p class="text-sm font-mono text-gray-700 bg-gray-50 px-2 py-1 rounded">
+                                ${product.barcode}
+                            </p>
+                        </div>
+                        <a 
+                            href="${whatsappUrl}" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            class="block w-full bg-ctd-red hover:bg-ctd-orange text-white text-center py-3 px-4 rounded-lg font-semibold transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                        >
+                            <span data-lang-es="📱 Solicitar cotización" data-lang-en="📱 Request quote">📱 Solicitar cotización</span>
+                        </a>
+                    </div>
+                `;
+                
+                // Add error handler for image using addEventListener
+                const img = card.querySelector('.product-image');
+                img.addEventListener('error', function() {
+                    this.src = 'https://via.placeholder.com/400x400?text=Imagen+No+Disponible';
+                    this.classList.add('opacity-50');
+                });
+                
+                return card;
+            }
+            
+            // Render products
+            function renderProducts() {
+                const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
+                const endIndex = startIndex + PRODUCTS_PER_PAGE;
+                const productsToShow = filteredProducts.slice(startIndex, endIndex);
+                
+                productsGrid.innerHTML = '';
+                
+                if (productsToShow.length === 0) {
+                    productsGrid.style.display = 'none';
+                    noResultsElement.classList.remove('hidden');
+                    pagination.style.display = 'none';
+                    return;
+                }
+                
+                noResultsElement.classList.add('hidden');
+                productsGrid.style.display = 'grid';
+                
+                productsToShow.forEach(product => {
+                    productsGrid.appendChild(createProductCard(product));
+                });
+                
+                // Update counters
+                showingCount.textContent = productsToShow.length;
+                totalCount.textContent = filteredProducts.length;
+                
+                // Update pagination
+                updatePagination();
+            }
+            
+            // Update pagination controls
+            function updatePagination() {
+                const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+                
+                if (totalPages <= 1) {
+                    pagination.style.display = 'none';
+                    return;
+                }
+                
+                pagination.style.display = 'flex';
+                
+                // Update buttons
+                prevPageBtn.disabled = currentPage === 1;
+                nextPageBtn.disabled = currentPage === totalPages;
+                
+                // Generate page numbers
+                pageNumbers.innerHTML = '';
+                const maxPagesToShow = 5;
+                let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+                let endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+                
+                if (endPage - startPage < maxPagesToShow - 1) {
+                    startPage = Math.max(1, endPage - maxPagesToShow + 1);
+                }
+                
+                // First page
+                if (startPage > 1) {
+                    addPageButton(1);
+                    if (startPage > 2) {
+                        pageNumbers.appendChild(createEllipsis());
+                    }
+                }
+                
+                // Page numbers
+                for (let i = startPage; i <= endPage; i++) {
+                    addPageButton(i);
+                }
+                
+                // Last page
+                if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) {
+                        pageNumbers.appendChild(createEllipsis());
+                    }
+                    addPageButton(totalPages);
+                }
+            }
+            
+            function addPageButton(pageNum) {
+                const button = document.createElement('button');
+                button.textContent = pageNum;
+                button.className = `px-4 py-2 rounded-lg font-semibold transition ${
+                    pageNum === currentPage 
+                        ? 'bg-ctd-red text-white' 
+                        : 'bg-white border-2 border-gray-300 hover:border-ctd-red hover:text-ctd-red'
+                }`;
+                button.addEventListener('click', () => {
+                    currentPage = pageNum;
+                    renderProducts();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+                pageNumbers.appendChild(button);
+            }
+            
+            function createEllipsis() {
+                const span = document.createElement('span');
+                span.textContent = '...';
+                span.className = 'px-2 text-gray-500';
+                return span;
+            }
+            
+            // Filter products
+            function filterProducts(searchTerm) {
+                const term = searchTerm.toLowerCase().trim();
+                
+                if (!term) {
+                    filteredProducts = [...allProducts];
+                } else {
+                    filteredProducts = allProducts.filter(product => 
+                        product.description.toLowerCase().includes(term) ||
+                        product.barcode.includes(term)
+                    );
+                }
+                
+                currentPage = 1;
+                renderProducts();
+            }
+            
+            // Event listeners
+            searchInput.addEventListener('input', (e) => {
+                filterProducts(e.target.value);
+            });
+            
+            prevPageBtn.addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderProducts();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+            
+            nextPageBtn.addEventListener('click', () => {
+                const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderProducts();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+            
+            // Load products from CSV
+            async function loadProducts() {
+                try {
+                    const response = await fetch(CSV_URL);
+                    
+                    // Check if the request was successful
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const text = await response.text();
+                    
+                    allProducts = parseCSV(text);
+                    filteredProducts = [...allProducts];
+                    
+                    loadingElement.style.display = 'none';
+                    renderProducts();
+                } catch (error) {
+                    console.error('Error loading products:', error);
+                    loadingElement.innerHTML = `
+                        <div class="text-center text-red-600">
+                            <p class="text-xl font-bold mb-2">Error al cargar productos</p>
+                            <p>${error.message === 'HTTP error! status: 404' ? 'Archivo de productos no encontrado' : 'Por favor, intenta recargar la página'}</p>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Initialize
+            loadProducts();
+        })();
+    </script>
+</body>
+</html>
