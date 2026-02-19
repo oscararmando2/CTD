@@ -23,8 +23,8 @@
         html { scroll-behavior: smooth; }
 
         body {
-            background-color: var(--ina-blue);
-            color: var(--ina-white);
+            background-color: #FFFFFF;
+            color: var(--ina-blue);
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
 
@@ -51,8 +51,7 @@
 
         /* ---- Hero ---- */
         .hero-section {
-            background: radial-gradient(ellipse at 70% 50%, rgba(204,45,57,0.18) 0%, transparent 65%),
-                        linear-gradient(160deg, #1e1468 0%, var(--ina-blue) 60%, #0d0935 100%);
+            background: linear-gradient(160deg, #ffffff 0%, #f0f3ff 55%, #e6ebff 100%);
             position: relative;
             overflow: hidden;
             min-height: 85vh;
@@ -62,7 +61,7 @@
             content: '';
             position: absolute;
             inset: 0;
-            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23DCA039' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23170F52' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
         }
 
         /* ---- Discount Badge ---- */
@@ -125,10 +124,10 @@
 
         /* ---- Product cards ---- */
         .product-card {
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.12);
-            backdrop-filter: blur(10px);
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
             border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(23,15,82,0.07);
             transition: transform 0.35s cubic-bezier(0.4,0,0.2,1),
                         box-shadow 0.35s cubic-bezier(0.4,0,0.2,1),
                         border-color 0.35s;
@@ -137,7 +136,7 @@
 
         .product-card:hover {
             transform: translateY(-8px);
-            box-shadow: 0 20px 50px rgba(204,45,57,0.25);
+            box-shadow: 0 20px 50px rgba(204,45,57,0.15);
             border-color: var(--ina-red);
         }
 
@@ -152,7 +151,7 @@
         }
 
         .product-card .product-img-wrap {
-            background: rgba(255,255,255,0.95);
+            background: #f8f9ff;
             border-radius: 14px;
             display: flex;
             align-items: center;
@@ -176,7 +175,7 @@
         /* Price styling */
         .price-regular {
             text-decoration: line-through;
-            color: rgba(255,255,255,0.45);
+            color: #9ca3af;
             font-size: 0.85rem;
         }
 
@@ -197,18 +196,19 @@
 
         /* ---- Urgency section ---- */
         .urgency-section {
-            background: linear-gradient(135deg, #0d0935 0%, #1e1468 50%, #0d0935 100%);
+            background: #f8f9ff;
             border-top: 3px solid var(--ina-gold);
             border-bottom: 3px solid var(--ina-gold);
         }
 
         .countdown-box {
-            background: rgba(255,255,255,0.07);
+            background: #ffffff;
             border: 2px solid var(--ina-gold);
             border-radius: 14px;
             min-width: 80px;
             text-align: center;
             padding: 12px 16px;
+            box-shadow: 0 4px 16px rgba(220,160,57,0.15);
         }
 
         .countdown-num {
@@ -222,7 +222,7 @@
             font-size: 0.65rem;
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            color: rgba(255,255,255,0.6);
+            color: #6b7280;
             margin-top: 4px;
         }
 
@@ -390,7 +390,7 @@
 
         .star {
             position: absolute;
-            background: #fff;
+            background: var(--ina-blue);
             border-radius: 50%;
             animation: twinkle var(--duration, 3s) ease-in-out infinite;
             animation-delay: var(--delay, 0s);
@@ -399,7 +399,7 @@
 
         @keyframes twinkle {
             0%, 100% { opacity: 0; transform: scale(0.5); }
-            50%       { opacity: 0.6; transform: scale(1); }
+            50%       { opacity: 0.2; transform: scale(1); }
         }
     </style>
 </head>
@@ -411,18 +411,18 @@
     </div>
 
     <!-- ==================== NAVBAR (minimal, no links to main site) ==================== -->
-    <header class="bg-ina-blue border-b border-white border-opacity-10 sticky top-0 z-50 shadow-lg">
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <!-- INA Logo text treatment -->
                 <div class="flex items-center gap-2">
-                    <span class="text-2xl font-black text-white tracking-widest">INA</span>
-                    <span class="text-xs font-semibold text-ina-gold uppercase tracking-wider border-l border-white border-opacity-30 pl-2">Pastas</span>
+                    <span class="text-2xl font-black text-ina-blue tracking-widest">INA</span>
+                    <span class="text-xs font-semibold text-ina-gold uppercase tracking-wider border-l border-gray-300 pl-2">Pastas</span>
                 </div>
             </div>
             <div class="hidden md:flex items-center gap-6 text-sm">
-                <a href="#productos" class="text-white text-opacity-80 hover:text-ina-gold transition font-medium">Productos</a>
-                <a href="#promo" class="text-white text-opacity-80 hover:text-ina-gold transition font-medium">La Promo</a>
+                <a href="#productos" class="text-gray-600 hover:text-ina-red transition font-medium">Productos</a>
+                <a href="#promo" class="text-gray-600 hover:text-ina-red transition font-medium">La Promo</a>
                 <a href="#contacto" class="cta-btn px-5 py-2 text-sm">Hacer Pedido</a>
             </div>
             <a href="#contacto" class="md:hidden cta-btn px-4 py-2 text-xs">Pedir ahora</a>
@@ -440,22 +440,22 @@
                 <!-- Left: Text content -->
                 <div class="fade-right">
                     <!-- Tag line -->
-                    <div class="inline-flex items-center gap-2 bg-white bg-opacity-10 border border-white border-opacity-20 rounded-full px-4 py-1.5 mb-6">
+                    <div class="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-full px-4 py-1.5 mb-6">
                         <span class="w-2 h-2 rounded-full bg-ina-red animate-pulse"></span>
-                        <span class="text-xs font-semibold uppercase tracking-widest text-ina-gold">Promo Exclusiva Mayorista</span>
+                        <span class="text-xs font-semibold uppercase tracking-widest text-ina-blue">Promo Exclusiva Mayorista</span>
                     </div>
 
-                    <h1 class="text-4xl md:text-5xl xl:text-6xl font-black text-white leading-tight mb-4">
+                    <h1 class="text-4xl md:text-5xl xl:text-6xl font-black text-ina-blue leading-tight mb-4">
                         Pastas<br>
                         <span class="text-ina-gold">INA</span>
-                        <span class="text-white"> · Ahorra</span><br>
+                        <span class="text-ina-blue"> · Ahorra</span><br>
                         <span class="text-ina-red">16%</span>
-                        <span class="text-white text-3xl md:text-4xl font-bold"> por caja</span>
+                        <span class="text-ina-blue text-3xl md:text-4xl font-bold"> por caja</span>
                     </h1>
 
-                    <p class="text-white text-opacity-80 text-lg mb-8 max-w-lg leading-relaxed">
+                    <p class="text-gray-600 text-lg mb-8 max-w-lg leading-relaxed">
                         La pasta favorita de sus clientes, al mejor precio de distribución.
-                        <strong class="text-ina-gold">Compra mínima 10 cajas</strong> y lleva el descuento máximo en toda la línea INA.
+                        <strong class="text-ina-red">Compra mínima 10 cajas</strong> y lleva el descuento máximo en toda la línea INA.
                     </p>
 
                     <!-- Min purchase badge -->
@@ -531,47 +531,47 @@
     </section>
 
     <!-- ==================== WAVE DIVIDER ==================== -->
-    <div class="wave-divider" style="background-color: #170F52;">
+    <div class="wave-divider" style="background-color: #e6ebff;">
         <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M0 30 Q360 60 720 30 Q1080 0 1440 30 L1440 60 L0 60 Z" fill="#0d0935"/>
+            <path d="M0 30 Q360 60 720 30 Q1080 0 1440 30 L1440 60 L0 60 Z" fill="#f8f9fa"/>
         </svg>
     </div>
 
     <!-- ==================== STATS BAR ==================== -->
-    <div style="background: #0d0935;" class="py-8 border-b border-white border-opacity-10">
+    <div style="background: #f8f9fa;" class="py-8 border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
                 <div class="fade-up" data-delay="0">
-                    <div class="text-ina-gold font-black text-4xl">16%</div>
-                    <div class="text-white text-opacity-70 text-sm mt-1">Descuento por caja</div>
+                    <div class="text-ina-red font-black text-4xl">16%</div>
+                    <div class="text-gray-600 text-sm mt-1">Descuento por caja</div>
                 </div>
                 <div class="fade-up" data-delay="100">
-                    <div class="text-ina-gold font-black text-4xl">10+</div>
-                    <div class="text-white text-opacity-70 text-sm mt-1">Cajas mínimo</div>
+                    <div class="text-ina-blue font-black text-4xl">10+</div>
+                    <div class="text-gray-600 text-sm mt-1">Cajas mínimo</div>
                 </div>
                 <div class="fade-up" data-delay="200">
                     <div class="text-ina-gold font-black text-4xl">6</div>
-                    <div class="text-white text-opacity-70 text-sm mt-1">Variedades incluidas</div>
+                    <div class="text-gray-600 text-sm mt-1">Variedades incluidas</div>
                 </div>
                 <div class="fade-up" data-delay="300">
                     <div class="text-ina-red font-black text-4xl">⚡</div>
-                    <div class="text-white text-opacity-70 text-sm mt-1">Stock limitado</div>
+                    <div class="text-gray-600 text-sm mt-1">Stock limitado</div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- ==================== PRODUCTOS GRID ==================== -->
-    <section id="productos" class="py-20" style="background: #0d0935;">
+    <section id="productos" class="py-20" style="background: #ffffff;">
         <div class="max-w-7xl mx-auto px-4">
             <div class="text-center mb-14 fade-up">
-                <div class="inline-block bg-ina-red bg-opacity-20 border border-ina-red rounded-full px-5 py-1.5 mb-4">
+                <div class="inline-block bg-red-50 border border-ina-red border-opacity-40 rounded-full px-5 py-1.5 mb-4">
                     <span class="text-ina-red font-semibold text-sm uppercase tracking-widest">Línea completa INA</span>
                 </div>
-                <h2 class="text-3xl md:text-4xl font-black text-white mb-3">
-                    Productos <span class="text-ina-gold">con 16% OFF</span>
+                <h2 class="text-3xl md:text-4xl font-black text-ina-blue mb-3">
+                    Productos <span class="text-ina-red">con 16% OFF</span>
                 </h2>
-                <p class="text-white text-opacity-60 max-w-xl mx-auto">
+                <p class="text-gray-500 max-w-xl mx-auto">
                     Precio mayorista especial al comprar mínimo 10 cajas surtidas o de un mismo producto.
                 </p>
             </div>
@@ -591,12 +591,12 @@
                     </div>
                     <div class="px-5 pb-6">
                         <span class="promo-badge">16% OFF</span>
-                        <h3 class="text-white font-bold text-lg mt-2 mb-1">Codito / Espagueti INA</h3>
-                        <p class="text-white text-opacity-55 text-sm mb-4">Pasta de trigo semolina de alta calidad. 200g por bolsa, 24 bolsas por caja.</p>
+                        <h3 class="text-ina-blue font-bold text-lg mt-2 mb-1">Codito / Espagueti INA</h3>
+                        <p class="text-gray-500 text-sm mb-4">Pasta de trigo semolina de alta calidad. 200g por bolsa, 24 bolsas por caja.</p>
                         <div class="flex items-end gap-3 mb-5">
                             <div>
                                 <div class="price-regular">$18.50 / caja</div>
-                                <div class="price-promo">$15.54<span class="text-base font-normal text-white text-opacity-60"> / caja</span></div>
+                                <div class="price-promo">$15.54<span class="text-base font-normal text-gray-500"> / caja</span></div>
                             </div>
                         </div>
                         <a href="#contacto" class="cta-btn block text-center py-3 px-4 text-sm font-bold">
@@ -617,12 +617,12 @@
                     </div>
                     <div class="px-5 pb-6">
                         <span class="promo-badge">16% OFF</span>
-                        <h3 class="text-white font-bold text-lg mt-2 mb-1">Caracolito INA 200g</h3>
-                        <p class="text-white text-opacity-55 text-sm mb-4">Caracolito de pasta INA en bolsa 3D sellada. 200g, 24 bolsas por caja.</p>
+                        <h3 class="text-ina-blue font-bold text-lg mt-2 mb-1">Caracolito INA 200g</h3>
+                        <p class="text-gray-500 text-sm mb-4">Caracolito de pasta INA en bolsa 3D sellada. 200g, 24 bolsas por caja.</p>
                         <div class="flex items-end gap-3 mb-5">
                             <div>
                                 <div class="price-regular">$17.80 / caja</div>
-                                <div class="price-promo">$14.95<span class="text-base font-normal text-white text-opacity-60"> / caja</span></div>
+                                <div class="price-promo">$14.95<span class="text-base font-normal text-gray-500"> / caja</span></div>
                             </div>
                         </div>
                         <a href="#contacto" class="cta-btn block text-center py-3 px-4 text-sm font-bold">
@@ -644,12 +644,12 @@
                     </div>
                     <div class="px-5 pb-6">
                         <span class="promo-badge">16% OFF</span>
-                        <h3 class="text-white font-bold text-lg mt-2 mb-1">Surtido INA – Variedades</h3>
-                        <p class="text-white text-opacity-55 text-sm mb-4">Caja surtida con las variedades más populares de la línea INA. 200g por bolsa.</p>
+                        <h3 class="text-ina-blue font-bold text-lg mt-2 mb-1">Surtido INA – Variedades</h3>
+                        <p class="text-gray-500 text-sm mb-4">Caja surtida con las variedades más populares de la línea INA. 200g por bolsa.</p>
                         <div class="flex items-end gap-3 mb-5">
                             <div>
                                 <div class="price-regular">$19.20 / caja</div>
-                                <div class="price-promo">$16.13<span class="text-base font-normal text-white text-opacity-60"> / caja</span></div>
+                                <div class="price-promo">$16.13<span class="text-base font-normal text-gray-500"> / caja</span></div>
                             </div>
                         </div>
                         <a href="#contacto" class="cta-btn block text-center py-3 px-4 text-sm font-bold">
@@ -670,12 +670,12 @@
                     </div>
                     <div class="px-5 pb-6">
                         <span class="promo-badge">16% OFF</span>
-                        <h3 class="text-white font-bold text-lg mt-2 mb-1">Fideo Delgado INA</h3>
-                        <p class="text-white text-opacity-55 text-sm mb-4">Fideo delgado INA ideal para sopas y guisados. 200g, 24 bolsas por caja.</p>
+                        <h3 class="text-ina-blue font-bold text-lg mt-2 mb-1">Fideo Delgado INA</h3>
+                        <p class="text-gray-500 text-sm mb-4">Fideo delgado INA ideal para sopas y guisados. 200g, 24 bolsas por caja.</p>
                         <div class="flex items-end gap-3 mb-5">
                             <div>
                                 <div class="price-regular">$17.50 / caja</div>
-                                <div class="price-promo">$14.70<span class="text-base font-normal text-white text-opacity-60"> / caja</span></div>
+                                <div class="price-promo">$14.70<span class="text-base font-normal text-gray-500"> / caja</span></div>
                             </div>
                         </div>
                         <a href="#contacto" class="cta-btn block text-center py-3 px-4 text-sm font-bold">
@@ -696,12 +696,12 @@
                     </div>
                     <div class="px-5 pb-6">
                         <span class="promo-badge">16% OFF</span>
-                        <h3 class="text-white font-bold text-lg mt-2 mb-1">Codo Mediano INA</h3>
-                        <p class="text-white text-opacity-55 text-sm mb-4">Codo mediano de calidad premium. Perfecto para macarrones y guisos. 200g/bolsa.</p>
+                        <h3 class="text-ina-blue font-bold text-lg mt-2 mb-1">Codo Mediano INA</h3>
+                        <p class="text-gray-500 text-sm mb-4">Codo mediano de calidad premium. Perfecto para macarrones y guisos. 200g/bolsa.</p>
                         <div class="flex items-end gap-3 mb-5">
                             <div>
                                 <div class="price-regular">$18.00 / caja</div>
-                                <div class="price-promo">$15.12<span class="text-base font-normal text-white text-opacity-60"> / caja</span></div>
+                                <div class="price-promo">$15.12<span class="text-base font-normal text-gray-500"> / caja</span></div>
                             </div>
                         </div>
                         <a href="#contacto" class="cta-btn block text-center py-3 px-4 text-sm font-bold">
@@ -722,12 +722,12 @@
                     </div>
                     <div class="px-5 pb-6">
                         <span class="promo-badge">16% OFF</span>
-                        <h3 class="text-white font-bold text-lg mt-2 mb-1">Espiral INA</h3>
-                        <p class="text-white text-opacity-55 text-sm mb-4">Pasta espiral INA. Ideal para ensaladas y platillos fríos. 200g por bolsa.</p>
+                        <h3 class="text-ina-blue font-bold text-lg mt-2 mb-1">Espiral INA</h3>
+                        <p class="text-gray-500 text-sm mb-4">Pasta espiral INA. Ideal para ensaladas y platillos fríos. 200g por bolsa.</p>
                         <div class="flex items-end gap-3 mb-5">
                             <div>
                                 <div class="price-regular">$18.30 / caja</div>
-                                <div class="price-promo">$15.37<span class="text-base font-normal text-white text-opacity-60"> / caja</span></div>
+                                <div class="price-promo">$15.37<span class="text-base font-normal text-gray-500"> / caja</span></div>
                             </div>
                         </div>
                         <a href="#contacto" class="cta-btn block text-center py-3 px-4 text-sm font-bold">
@@ -741,7 +741,7 @@
     </section>
 
     <!-- ==================== MIN PURCHASE BANNER ==================== -->
-    <section id="promo" class="py-16 bg-ina-blue">
+    <section id="promo" class="py-16" style="background: #f8f9fa;">
         <div class="max-w-5xl mx-auto px-4">
             <div class="min-banner p-8 md:p-12 fade-up">
                 <div class="grid md:grid-cols-2 gap-8 items-center">
@@ -773,16 +773,16 @@
                     <div class="text-center">
                         <!-- Visual boxes representation -->
                         <div class="grid grid-cols-5 gap-2 mb-6">
-                            <div class="aspect-square bg-white bg-opacity-20 border-2 border-ina-gold border-opacity-60 rounded-lg flex items-center justify-center text-2xl">📦</div>
-                            <div class="aspect-square bg-white bg-opacity-20 border-2 border-ina-gold border-opacity-60 rounded-lg flex items-center justify-center text-2xl">📦</div>
-                            <div class="aspect-square bg-white bg-opacity-20 border-2 border-ina-gold border-opacity-60 rounded-lg flex items-center justify-center text-2xl">📦</div>
-                            <div class="aspect-square bg-white bg-opacity-20 border-2 border-ina-gold border-opacity-60 rounded-lg flex items-center justify-center text-2xl">📦</div>
-                            <div class="aspect-square bg-white bg-opacity-20 border-2 border-ina-gold border-opacity-60 rounded-lg flex items-center justify-center text-2xl">📦</div>
-                            <div class="aspect-square bg-white bg-opacity-20 border-2 border-ina-gold border-opacity-60 rounded-lg flex items-center justify-center text-2xl">📦</div>
-                            <div class="aspect-square bg-white bg-opacity-20 border-2 border-ina-gold border-opacity-60 rounded-lg flex items-center justify-center text-2xl">📦</div>
-                            <div class="aspect-square bg-white bg-opacity-20 border-2 border-ina-gold border-opacity-60 rounded-lg flex items-center justify-center text-2xl">📦</div>
-                            <div class="aspect-square bg-white bg-opacity-20 border-2 border-ina-gold border-opacity-60 rounded-lg flex items-center justify-center text-2xl">📦</div>
-                            <div class="aspect-square bg-white bg-opacity-20 border-2 border-ina-gold border-opacity-60 rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
                         </div>
                         <p class="text-ina-gold font-bold text-lg">= 16% descuento activado</p>
                         <a href="#contacto" class="cta-gold inline-block mt-6 px-8 py-3 text-base font-bold">
@@ -798,16 +798,16 @@
     <section class="urgency-section py-16">
         <div class="max-w-4xl mx-auto px-4 text-center">
             <div class="fade-up">
-                <div class="inline-block bg-ina-red bg-opacity-20 border border-ina-red rounded-full px-5 py-1.5 mb-6">
+                <div class="inline-block bg-red-50 border border-ina-red rounded-full px-5 py-1.5 mb-6">
                     <span class="text-ina-red font-bold text-sm uppercase tracking-widest">⚡ Oferta por tiempo limitado</span>
                 </div>
 
-                <h2 class="text-3xl md:text-5xl font-black text-white mb-4">
+                <h2 class="text-3xl md:text-5xl font-black text-ina-blue mb-4">
                     ¡No dejes pasar esta<br>
                     <span class="text-ina-gold">oportunidad mayorista!</span>
                 </h2>
 
-                <p class="text-white text-opacity-70 text-lg mb-10 max-w-2xl mx-auto">
+                <p class="text-gray-600 text-lg mb-10 max-w-2xl mx-auto">
                     Precios sujetos a disponibilidad de inventario. Una vez agotado el stock promocional,
                     la oferta se cierra. Asegure su pedido hoy mismo.
                 </p>
@@ -829,7 +829,7 @@
                 </div>
 
                 <!-- Urgency note -->
-                <div class="max-w-sm mx-auto mb-10 bg-ina-red bg-opacity-20 border border-ina-red rounded-xl px-5 py-3 text-sm text-white text-opacity-80">
+                <div class="max-w-sm mx-auto mb-10 bg-red-50 border border-ina-red rounded-xl px-5 py-3 text-sm text-ina-blue">
                     ⚠️ <strong>Stock limitado.</strong> Consulte disponibilidad al hacer su pedido. Los precios y descuentos están sujetos a inventario vigente.
                 </div>
 
@@ -846,70 +846,70 @@
     </section>
 
     <!-- ==================== CONTACT / PEDIDO ==================== -->
-    <section id="contacto" class="py-20 bg-ina-blue">
+    <section id="contacto" class="py-20" style="background: #ffffff;">
         <div class="max-w-3xl mx-auto px-4">
             <div class="text-center mb-12 fade-up">
-                <h2 class="text-3xl md:text-4xl font-black text-white mb-3">
-                    Hacer mi pedido de <span class="text-ina-gold">Pastas INA</span>
+                <h2 class="text-3xl md:text-4xl font-black text-ina-blue mb-3">
+                    Hacer mi pedido de <span class="text-ina-red">Pastas INA</span>
                 </h2>
-                <p class="text-white text-opacity-65 text-lg">
+                <p class="text-gray-600 text-lg">
                     Envíenos sus datos y le contactamos en menos de 2 horas hábiles con su cotización personalizada.
                 </p>
             </div>
 
-            <div class="bg-white bg-opacity-5 border border-white border-opacity-10 rounded-2xl p-8 fade-up">
+            <div class="bg-white border border-gray-200 rounded-2xl shadow-lg p-8 fade-up">
                 <form id="ina-contact-form" onsubmit="handleInaSubmit(event)" class="space-y-5">
                     <div class="grid md:grid-cols-2 gap-5">
                         <div>
-                            <label class="block text-white text-opacity-80 text-sm font-semibold mb-2">Nombre completo *</label>
+                            <label class="block text-gray-700 text-sm font-semibold mb-2">Nombre completo *</label>
                             <input
                                 type="text"
                                 name="name"
                                 required
                                 placeholder="Juan Pérez"
-                                class="w-full bg-white bg-opacity-10 border border-white border-opacity-20 rounded-xl px-4 py-3 text-white placeholder-white placeholder-opacity-40 focus:outline-none focus:border-ina-gold transition"
+                                class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-ina-blue transition"
                             >
                         </div>
                         <div>
-                            <label class="block text-white text-opacity-80 text-sm font-semibold mb-2">Negocio / Tienda *</label>
+                            <label class="block text-gray-700 text-sm font-semibold mb-2">Negocio / Tienda *</label>
                             <input
                                 type="text"
                                 name="business"
                                 required
                                 placeholder="Mi Tienda Latina"
-                                class="w-full bg-white bg-opacity-10 border border-white border-opacity-20 rounded-xl px-4 py-3 text-white placeholder-white placeholder-opacity-40 focus:outline-none focus:border-ina-gold transition"
+                                class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-ina-blue transition"
                             >
                         </div>
                     </div>
 
                     <div class="grid md:grid-cols-2 gap-5">
                         <div>
-                            <label class="block text-white text-opacity-80 text-sm font-semibold mb-2">Teléfono / WhatsApp *</label>
+                            <label class="block text-gray-700 text-sm font-semibold mb-2">Teléfono / WhatsApp *</label>
                             <input
                                 type="tel"
                                 name="phone"
                                 required
                                 placeholder="(816) 555-1234"
-                                class="w-full bg-white bg-opacity-10 border border-white border-opacity-20 rounded-xl px-4 py-3 text-white placeholder-white placeholder-opacity-40 focus:outline-none focus:border-ina-gold transition"
+                                class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-ina-blue transition"
                             >
                         </div>
                         <div>
-                            <label class="block text-white text-opacity-80 text-sm font-semibold mb-2">Correo electrónico</label>
+                            <label class="block text-gray-700 text-sm font-semibold mb-2">Correo electrónico</label>
                             <input
                                 type="email"
                                 name="email"
                                 placeholder="juan@tienda.com"
-                                class="w-full bg-white bg-opacity-10 border border-white border-opacity-20 rounded-xl px-4 py-3 text-white placeholder-white placeholder-opacity-40 focus:outline-none focus:border-ina-gold transition"
+                                class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-ina-blue transition"
                             >
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-white text-opacity-80 text-sm font-semibold mb-2">¿Cuántas cajas necesita? *</label>
+                        <label class="block text-gray-700 text-sm font-semibold mb-2">¿Cuántas cajas necesita? *</label>
                         <select
                             name="quantity"
                             required
-                            class="w-full bg-ina-blue border border-white border-opacity-20 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-ina-gold transition"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:border-ina-blue transition"
                         >
                             <option value="">Seleccione cantidad</option>
                             <option value="10-20">10 – 20 cajas</option>
@@ -920,23 +920,23 @@
                     </div>
 
                     <div>
-                        <label class="block text-white text-opacity-80 text-sm font-semibold mb-2">Mensaje adicional</label>
+                        <label class="block text-gray-700 text-sm font-semibold mb-2">Mensaje adicional</label>
                         <textarea
                             name="message"
                             rows="3"
                             placeholder="Indique variedades de interés o cualquier comentario..."
-                            class="w-full bg-white bg-opacity-10 border border-white border-opacity-20 rounded-xl px-4 py-3 text-white placeholder-white placeholder-opacity-40 focus:outline-none focus:border-ina-gold transition resize-none"
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-ina-blue transition resize-none"
                         ></textarea>
                     </div>
 
-                    <button type="submit" class="cta-gold w-full py-4 text-lg font-black rounded-xl">
+                    <button type="submit" class="cta-btn w-full py-4 text-lg font-black rounded-xl">
                         ✅ Enviar solicitud de pedido
                     </button>
                 </form>
 
                 <!-- Alternative WhatsApp CTA -->
                 <div class="mt-6 text-center">
-                    <p class="text-white text-opacity-50 text-sm mb-3">– o contáctenos directamente –</p>
+                    <p class="text-gray-400 text-sm mb-3">– o contáctenos directamente –</p>
                     <a
                         href="https://wa.me/19133688814?text=Hola%2C%20quiero%20hacer%20un%20pedido%20de%20Pastas%20INA%20con%20el%2016%25%20de%20descuento"
                         target="_blank"
