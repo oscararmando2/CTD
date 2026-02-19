@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pastas INA – Promo Mayorista | Compra mínima 10 cajas</title>
+    <meta name="robots" content="noindex, nofollow">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* ============================
+           INA BRAND COLORS
+           ============================ */
+        :root {
+            --ina-blue:   #170F52;
+            --ina-white:  #FFFFFF;
+            --ina-red:    #CC2D39;
+            --ina-gold:   #DCA039;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            background-color: #FFFFFF;
+            color: var(--ina-blue);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        /* ---- Utilities ---- */
+        .bg-ina-blue   { background-color: var(--ina-blue); }
+        .bg-ina-red    { background-color: var(--ina-red); }
+        .bg-ina-gold   { background-color: var(--ina-gold); }
+        .text-ina-blue { color: var(--ina-blue); }
+        .text-ina-red  { color: var(--ina-red); }
+        .text-ina-gold { color: var(--ina-gold); }
+        .border-ina-red  { border-color: var(--ina-red); }
+        .border-ina-gold { border-color: var(--ina-gold); }
+
+        /* ---- Top Strip ---- */
+        .top-strip {
+            background: linear-gradient(90deg, var(--ina-red) 0%, #a81f2a 50%, var(--ina-red) 100%);
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { background-position: 0% 50%; }
+            50%       { background-position: 100% 50%; }
+        }
+
+        /* ---- Hero ---- */
+        .hero-section {
+            background: linear-gradient(160deg, #ffffff 0%, #f0f3ff 55%, #e6ebff 100%);
+            position: relative;
+            overflow: hidden;
+            min-height: 85vh;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23170F52' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        /* ---- Discount Badge ---- */
+        .discount-badge {
+            background: conic-gradient(from 180deg, var(--ina-gold), #f5c55a, var(--ina-gold));
+            border-radius: 50%;
+            animation: spin-slow 8s linear infinite;
+            box-shadow: 0 0 40px rgba(220,160,57,0.5);
+        }
+
+        @keyframes spin-slow {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+
+        .discount-inner {
+            animation: spin-slow-reverse 8s linear infinite;
+        }
+
+        @keyframes spin-slow-reverse {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(-360deg); }
+        }
+
+        /* ---- Floating product images ---- */
+        .float-img {
+            animation: float 4s ease-in-out infinite;
+            filter: drop-shadow(0 20px 30px rgba(0,0,0,0.4));
+        }
+
+        .float-img-delayed {
+            animation: float 4s ease-in-out infinite;
+            animation-delay: 1.5s;
+            filter: drop-shadow(0 20px 30px rgba(0,0,0,0.4));
+        }
+
+        .float-img-delayed-2 {
+            animation: float 4s ease-in-out infinite;
+            animation-delay: 3s;
+            filter: drop-shadow(0 20px 30px rgba(0,0,0,0.4));
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50%       { transform: translateY(-18px); }
+        }
+
+        /* ---- Min-box badge ---- */
+        .min-badge {
+            background: linear-gradient(135deg, var(--ina-gold), #c8882a);
+            box-shadow: 0 8px 32px rgba(220,160,57,0.4);
+            border-radius: 20px;
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 8px 32px rgba(220,160,57,0.4); }
+            50%       { box-shadow: 0 8px 48px rgba(220,160,57,0.7); }
+        }
+
+        /* ---- Product cards ---- */
+        .product-card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(23,15,82,0.07);
+            transition: transform 0.35s cubic-bezier(0.4,0,0.2,1),
+                        box-shadow 0.35s cubic-bezier(0.4,0,0.2,1),
+                        border-color 0.35s;
+            overflow: hidden;
+        }
+
+        .product-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 50px rgba(204,45,57,0.15);
+            border-color: var(--ina-red);
+        }
+
+        .product-card .promo-badge {
+            background: var(--ina-red);
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 999px;
+            letter-spacing: 0.05em;
+        }
+
+        .product-card .product-img-wrap {
+            background: #f8f9ff;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            margin: 16px;
+        }
+
+        .product-card .product-img-wrap img {
+            width: 100%;
+            height: 160px;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.15));
+            transition: transform 0.3s ease;
+        }
+
+        .product-card:hover .product-img-wrap img {
+            transform: scale(1.08);
+        }
+
+        /* Price styling */
+        .price-regular {
+            text-decoration: line-through;
+            color: #9ca3af;
+            font-size: 0.85rem;
+        }
+
+        .price-promo {
+            color: var(--ina-gold);
+            font-size: 1.6rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        /* ---- Min purchase banner ---- */
+        .min-banner {
+            background: linear-gradient(135deg, var(--ina-red) 0%, #8a1a23 100%);
+            border-left: 6px solid var(--ina-gold);
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(204,45,57,0.3);
+        }
+
+        /* ---- Urgency section ---- */
+        .urgency-section {
+            background: #f8f9ff;
+            border-top: 3px solid var(--ina-gold);
+            border-bottom: 3px solid var(--ina-gold);
+        }
+
+        .countdown-box {
+            background: #ffffff;
+            border: 2px solid var(--ina-gold);
+            border-radius: 14px;
+            min-width: 80px;
+            text-align: center;
+            padding: 12px 16px;
+            box-shadow: 0 4px 16px rgba(220,160,57,0.15);
+        }
+
+        .countdown-num {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--ina-gold);
+            line-height: 1;
+        }
+
+        .countdown-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        /* ---- CTA Button ---- */
+        .cta-btn {
+            background: linear-gradient(135deg, var(--ina-red) 0%, #a81f2a 100%);
+            color: #fff;
+            border-radius: 50px;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            box-shadow: 0 8px 32px rgba(204,45,57,0.5);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(255,255,255,0);
+            transition: background 0.3s;
+        }
+
+        .cta-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 40px rgba(204,45,57,0.65);
+        }
+
+        .cta-btn:hover::after {
+            background: rgba(255,255,255,0.07);
+        }
+
+        .cta-btn:active {
+            transform: translateY(0);
+        }
+
+        /* ---- Gold CTA ---- */
+        .cta-gold {
+            background: linear-gradient(135deg, var(--ina-gold) 0%, #c8882a 100%);
+            color: var(--ina-blue);
+            border-radius: 50px;
+            font-weight: 800;
+            box-shadow: 0 8px 32px rgba(220,160,57,0.4);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .cta-gold:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 40px rgba(220,160,57,0.6);
+        }
+
+        /* ---- Ribbon ---- */
+        .ribbon {
+            position: absolute;
+            top: 16px;
+            right: -8px;
+            background: var(--ina-gold);
+            color: var(--ina-blue);
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 4px 16px 4px 12px;
+            border-radius: 4px 0 0 4px;
+            letter-spacing: 0.08em;
+        }
+
+        .ribbon::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            right: 0;
+            border-top: 8px solid #a06010;
+            border-right: 8px solid transparent;
+        }
+
+        /* ---- Section divider ---- */
+        .wave-divider {
+            line-height: 0;
+            overflow: hidden;
+        }
+
+        /* ---- Scroll animations ---- */
+        .fade-up {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.7s cubic-bezier(0.4,0,0.2,1),
+                        transform 0.7s cubic-bezier(0.4,0,0.2,1);
+        }
+
+        .fade-up.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .fade-left {
+            opacity: 0;
+            transform: translateX(40px);
+            transition: opacity 0.7s cubic-bezier(0.4,0,0.2,1),
+                        transform 0.7s cubic-bezier(0.4,0,0.2,1);
+        }
+
+        .fade-left.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .fade-right {
+            opacity: 0;
+            transform: translateX(-40px);
+            transition: opacity 0.7s cubic-bezier(0.4,0,0.2,1),
+                        transform 0.7s cubic-bezier(0.4,0,0.2,1);
+        }
+
+        .fade-right.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* ---- Reduced motion ---- */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+            .fade-up, .fade-left, .fade-right {
+                opacity: 1 !important;
+                transform: none !important;
+            }
+        }
+
+        /* ---- Toast notification ---- */
+        .ina-toast {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: linear-gradient(135deg, #1a1260 0%, #170F52 100%);
+            border: 2px solid var(--ina-gold);
+            color: #fff;
+            padding: 14px 28px;
+            border-radius: 50px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            white-space: nowrap;
+            max-width: 90vw;
+            text-align: center;
+        }
+
+        .ina-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* ---- Stars background ---- */
+        .stars {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .star {
+            position: absolute;
+            background: var(--ina-blue);
+            border-radius: 50%;
+            animation: twinkle var(--duration, 3s) ease-in-out infinite;
+            animation-delay: var(--delay, 0s);
+            opacity: 0;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0; transform: scale(0.5); }
+            50%       { opacity: 0.2; transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ==================== TOP STRIP ==================== -->
+    <div class="top-strip text-white text-center py-2 px-4 text-sm font-bold tracking-wide">
+        🔥 &nbsp;OFERTA EXCLUSIVA MAYORISTA · SOLO PARA CLIENTES DISTRIBUIDORES&nbsp; 🔥 &nbsp;·&nbsp; 📦 COMPRA MÍNIMA 10 CAJAS &nbsp;·&nbsp; ⚡ STOCK LIMITADO
+    </div>
+
+    <!-- ==================== NAVBAR (minimal, no links to main site) ==================== -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <!-- INA Logo text treatment -->
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl font-black text-ina-blue tracking-widest">INA</span>
+                    <span class="text-xs font-semibold text-ina-gold uppercase tracking-wider border-l border-gray-300 pl-2">Pastas</span>
+                </div>
+            </div>
+            <div class="hidden md:flex items-center gap-6 text-sm">
+                <a href="#productos" class="text-gray-600 hover:text-ina-red transition font-medium">Productos</a>
+                <a href="#promo" class="text-gray-600 hover:text-ina-red transition font-medium">La Promo</a>
+                <a href="#contacto" class="cta-btn px-5 py-2 text-sm">Hacer Pedido</a>
+            </div>
+            <a href="#contacto" class="md:hidden cta-btn px-4 py-2 text-xs">Pedir ahora</a>
+        </div>
+    </header>
+
+    <!-- ==================== HERO ==================== -->
+    <section class="hero-section flex items-center relative py-16 md:py-24">
+        <!-- Twinkling stars -->
+        <div class="stars" id="stars-container" aria-hidden="true"></div>
+
+        <div class="max-w-7xl mx-auto px-4 w-full relative z-10">
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+
+                <!-- Left: Text content -->
+                <div class="fade-right">
+                    <!-- Tag line -->
+                    <div class="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-full px-4 py-1.5 mb-6">
+                        <span class="w-2 h-2 rounded-full bg-ina-red animate-pulse"></span>
+                        <span class="text-xs font-semibold uppercase tracking-widest text-ina-blue">Promo Exclusiva Mayorista</span>
+                    </div>
+
+                    <h1 class="text-4xl md:text-5xl xl:text-6xl font-black text-ina-blue leading-tight mb-4">
+                        Pastas<br>
+                        <span class="text-ina-gold">INA</span>
+                        <span class="text-ina-blue"> · Ahorra</span><br>
+                        <span class="text-ina-red">16%</span>
+                        <span class="text-ina-blue text-3xl md:text-4xl font-bold"> por caja</span>
+                    </h1>
+
+                    <p class="text-gray-600 text-lg mb-8 max-w-lg leading-relaxed">
+                        La pasta favorita de sus clientes, al mejor precio de distribución.
+                        <strong class="text-ina-red">Compra mínima 10 cajas</strong> y lleva el descuento máximo en toda la línea INA.
+                    </p>
+
+                    <!-- Min purchase badge -->
+                    <div class="min-badge inline-flex items-center gap-3 px-6 py-4 mb-8">
+                        <span class="text-3xl">📦</span>
+                        <div>
+                            <div class="text-ina-blue font-black text-lg leading-tight">Compra Mínima</div>
+                            <div class="text-ina-blue font-black text-3xl leading-tight">10 Cajas</div>
+                            <div class="text-ina-blue text-opacity-80 text-sm font-semibold">para activar el descuento del 16%</div>
+                        </div>
+                    </div>
+
+                    <!-- CTAs -->
+                    <div class="flex flex-wrap gap-4">
+                        <a href="#contacto" class="cta-btn px-8 py-4 text-base">
+                            ✅ Hacer mi pedido ahora
+                        </a>
+                        <a href="#productos" class="cta-gold px-8 py-4 text-base">
+                            Ver productos →
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Right: Product images -->
+                <div class="relative h-80 md:h-[480px] fade-left" aria-hidden="true">
+                    <!-- Discount badge (center) -->
+                    <div class="discount-badge absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 flex items-center justify-center z-20">
+                        <div class="discount-inner text-center">
+                            <div class="text-ina-blue font-black text-3xl leading-none">16%</div>
+                            <div class="text-ina-blue font-bold text-xs leading-tight">DESCUENTO</div>
+                        </div>
+                    </div>
+
+                    <!-- Product image 1 – Codito Small -->
+                    <div class="float-img absolute top-0 left-0 w-44 md:w-52 z-10">
+                        <img
+                            src="https://cocinaconina.com/wp-content/uploads/2021/08/Codito-Small.png"
+                            alt="Pastas INA Codito Small"
+                            class="w-full h-auto"
+                            loading="lazy"
+                            onerror="this.style.display='none'"
+                        >
+                    </div>
+
+                    <!-- Product image 2 – Caracolito -->
+                    <div class="float-img-delayed absolute top-6 right-0 w-40 md:w-48 z-10">
+                        <img
+                            src="https://cropafresh.com/wp-content/uploads/2023/04/MM-Ina-Caracolito-200g-Bolsa-3D-OK-300x300.png"
+                            alt="Pastas INA Caracolito 200g"
+                            class="w-full h-auto"
+                            loading="lazy"
+                            onerror="this.style.display='none'"
+                        >
+                    </div>
+
+                    <!-- Product image 3 – Surtido -->
+                    <div class="float-img-delayed-2 absolute bottom-0 left-1/2 -translate-x-1/2 w-40 md:w-48 z-10">
+                        <img
+                            src="https://comprabien.net/wp-content/uploads/Diseno-sin-titulo-33-300x300.png"
+                            alt="Pastas INA surtido"
+                            class="w-full h-auto"
+                            loading="lazy"
+                            onerror="this.style.display='none'"
+                        >
+                    </div>
+
+                    <!-- Glow effects -->
+                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full" style="background: radial-gradient(circle, rgba(220,160,57,0.15) 0%, transparent 70%);"></div>
+                    <div class="absolute bottom-10 right-10 w-40 h-40 rounded-full" style="background: radial-gradient(circle, rgba(204,45,57,0.12) 0%, transparent 70%);"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== WAVE DIVIDER ==================== -->
+    <div class="wave-divider" style="background-color: #e6ebff;">
+        <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0 30 Q360 60 720 30 Q1080 0 1440 30 L1440 60 L0 60 Z" fill="#f8f9fa"/>
+        </svg>
+    </div>
+
+    <!-- ==================== STATS BAR ==================== -->
+    <div style="background: #f8f9fa;" class="py-8 border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                <div class="fade-up" data-delay="0">
+                    <div class="text-ina-red font-black text-4xl">16%</div>
+                    <div class="text-gray-600 text-sm mt-1">Descuento por caja</div>
+                </div>
+                <div class="fade-up" data-delay="100">
+                    <div class="text-ina-blue font-black text-4xl">10+</div>
+                    <div class="text-gray-600 text-sm mt-1">Cajas mínimo</div>
+                </div>
+                <div class="fade-up" data-delay="200">
+                    <div class="text-ina-gold font-black text-4xl">6</div>
+                    <div class="text-gray-600 text-sm mt-1">Variedades incluidas</div>
+                </div>
+                <div class="fade-up" data-delay="300">
+                    <div class="text-ina-red font-black text-4xl">⚡</div>
+                    <div class="text-gray-600 text-sm mt-1">Stock limitado</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== PRODUCTOS GRID ==================== -->
+    <section id="productos" class="py-20" style="background: #ffffff;">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="text-center mb-14 fade-up">
+                <div class="inline-block bg-red-50 border border-ina-red border-opacity-40 rounded-full px-5 py-1.5 mb-4">
+                    <span class="text-ina-red font-semibold text-sm uppercase tracking-widest">Línea completa INA</span>
+                </div>
+                <h2 class="text-3xl md:text-4xl font-black text-ina-blue mb-3">
+                    Productos <span class="text-ina-red">con 16% OFF</span>
+                </h2>
+                <p class="text-gray-500 max-w-xl mx-auto">
+                    Precio mayorista especial al comprar mínimo 10 cajas surtidas o de un mismo producto.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+
+                <!-- Card 1 – Espagueti -->
+                <div class="product-card relative fade-up" data-delay="0">
+                    <div class="ribbon">MÁS VENDIDO</div>
+                    <div class="product-img-wrap">
+                        <img
+                            src="https://cocinaconina.com/wp-content/uploads/2021/08/Codito-Small.png"
+                            alt="Pastas INA Espagueti"
+                            loading="lazy"
+                            onerror="this.src='https://via.placeholder.com/200x200?text=INA'"
+                        >
+                    </div>
+                    <div class="px-5 pb-6">
+                        <span class="promo-badge">16% OFF</span>
+                        <h3 class="text-ina-blue font-bold text-lg mt-2 mb-1">Codito / Espagueti INA</h3>
+                        <p class="text-gray-500 text-sm mb-4">Pasta de trigo semolina de alta calidad. 200g por bolsa, 24 bolsas por caja.</p>
+                        <div class="flex items-end gap-3 mb-5">
+                            <div>
+                                <div class="price-regular">$18.50 / caja</div>
+                                <div class="price-promo">$15.54<span class="text-base font-normal text-gray-500"> / caja</span></div>
+                            </div>
+                        </div>
+                        <a href="#contacto" class="cta-btn block text-center py-3 px-4 text-sm font-bold">
+                            📱 Solicitar cotización
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Card 2 – Caracolito -->
+                <div class="product-card relative fade-up" data-delay="150">
+                    <div class="product-img-wrap">
+                        <img
+                            src="https://cropafresh.com/wp-content/uploads/2023/04/MM-Ina-Caracolito-200g-Bolsa-3D-OK-300x300.png"
+                            alt="Pastas INA Caracolito 200g"
+                            loading="lazy"
+                            onerror="this.src='https://via.placeholder.com/200x200?text=INA'"
+                        >
+                    </div>
+                    <div class="px-5 pb-6">
+                        <span class="promo-badge">16% OFF</span>
+                        <h3 class="text-ina-blue font-bold text-lg mt-2 mb-1">Caracolito INA 200g</h3>
+                        <p class="text-gray-500 text-sm mb-4">Caracolito de pasta INA en bolsa 3D sellada. 200g, 24 bolsas por caja.</p>
+                        <div class="flex items-end gap-3 mb-5">
+                            <div>
+                                <div class="price-regular">$17.80 / caja</div>
+                                <div class="price-promo">$14.95<span class="text-base font-normal text-gray-500"> / caja</span></div>
+                            </div>
+                        </div>
+                        <a href="#contacto" class="cta-btn block text-center py-3 px-4 text-sm font-bold">
+                            📱 Solicitar cotización
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Card 3 – Surtido -->
+                <div class="product-card relative fade-up" data-delay="300">
+                    <div class="ribbon" style="background: var(--ina-red);">SURTIDO</div>
+                    <div class="product-img-wrap">
+                        <img
+                            src="https://comprabien.net/wp-content/uploads/Diseno-sin-titulo-33-300x300.png"
+                            alt="Pastas INA surtido"
+                            loading="lazy"
+                            onerror="this.src='https://via.placeholder.com/200x200?text=INA'"
+                        >
+                    </div>
+                    <div class="px-5 pb-6">
+                        <span class="promo-badge">16% OFF</span>
+                        <h3 class="text-ina-blue font-bold text-lg mt-2 mb-1">Surtido INA – Variedades</h3>
+                        <p class="text-gray-500 text-sm mb-4">Caja surtida con las variedades más populares de la línea INA. 200g por bolsa.</p>
+                        <div class="flex items-end gap-3 mb-5">
+                            <div>
+                                <div class="price-regular">$19.20 / caja</div>
+                                <div class="price-promo">$16.13<span class="text-base font-normal text-gray-500"> / caja</span></div>
+                            </div>
+                        </div>
+                        <a href="#contacto" class="cta-btn block text-center py-3 px-4 text-sm font-bold">
+                            📱 Solicitar cotización
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Card 4 – Fideo Delgado -->
+                <div class="product-card relative fade-up" data-delay="100">
+                    <div class="product-img-wrap">
+                        <img
+                            src="https://cocinaconina.com/wp-content/uploads/2021/08/Codito-Small.png"
+                            alt="Pastas INA Fideo"
+                            loading="lazy"
+                            onerror="this.src='https://via.placeholder.com/200x200?text=INA'"
+                        >
+                    </div>
+                    <div class="px-5 pb-6">
+                        <span class="promo-badge">16% OFF</span>
+                        <h3 class="text-ina-blue font-bold text-lg mt-2 mb-1">Fideo Delgado INA</h3>
+                        <p class="text-gray-500 text-sm mb-4">Fideo delgado INA ideal para sopas y guisados. 200g, 24 bolsas por caja.</p>
+                        <div class="flex items-end gap-3 mb-5">
+                            <div>
+                                <div class="price-regular">$17.50 / caja</div>
+                                <div class="price-promo">$14.70<span class="text-base font-normal text-gray-500"> / caja</span></div>
+                            </div>
+                        </div>
+                        <a href="#contacto" class="cta-btn block text-center py-3 px-4 text-sm font-bold">
+                            📱 Solicitar cotización
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Card 5 – Codo Mediano -->
+                <div class="product-card relative fade-up" data-delay="250">
+                    <div class="product-img-wrap">
+                        <img
+                            src="https://cropafresh.com/wp-content/uploads/2023/04/MM-Ina-Caracolito-200g-Bolsa-3D-OK-300x300.png"
+                            alt="Pastas INA Codo Mediano"
+                            loading="lazy"
+                            onerror="this.src='https://via.placeholder.com/200x200?text=INA'"
+                        >
+                    </div>
+                    <div class="px-5 pb-6">
+                        <span class="promo-badge">16% OFF</span>
+                        <h3 class="text-ina-blue font-bold text-lg mt-2 mb-1">Codo Mediano INA</h3>
+                        <p class="text-gray-500 text-sm mb-4">Codo mediano de calidad premium. Perfecto para macarrones y guisos. 200g/bolsa.</p>
+                        <div class="flex items-end gap-3 mb-5">
+                            <div>
+                                <div class="price-regular">$18.00 / caja</div>
+                                <div class="price-promo">$15.12<span class="text-base font-normal text-gray-500"> / caja</span></div>
+                            </div>
+                        </div>
+                        <a href="#contacto" class="cta-btn block text-center py-3 px-4 text-sm font-bold">
+                            📱 Solicitar cotización
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Card 6 – Espiral -->
+                <div class="product-card relative fade-up" data-delay="400">
+                    <div class="product-img-wrap">
+                        <img
+                            src="https://comprabien.net/wp-content/uploads/Diseno-sin-titulo-33-300x300.png"
+                            alt="Pastas INA Espiral"
+                            loading="lazy"
+                            onerror="this.src='https://via.placeholder.com/200x200?text=INA'"
+                        >
+                    </div>
+                    <div class="px-5 pb-6">
+                        <span class="promo-badge">16% OFF</span>
+                        <h3 class="text-ina-blue font-bold text-lg mt-2 mb-1">Espiral INA</h3>
+                        <p class="text-gray-500 text-sm mb-4">Pasta espiral INA. Ideal para ensaladas y platillos fríos. 200g por bolsa.</p>
+                        <div class="flex items-end gap-3 mb-5">
+                            <div>
+                                <div class="price-regular">$18.30 / caja</div>
+                                <div class="price-promo">$15.37<span class="text-base font-normal text-gray-500"> / caja</span></div>
+                            </div>
+                        </div>
+                        <a href="#contacto" class="cta-btn block text-center py-3 px-4 text-sm font-bold">
+                            📱 Solicitar cotización
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== MIN PURCHASE BANNER ==================== -->
+    <section id="promo" class="py-16" style="background: #f8f9fa;">
+        <div class="max-w-5xl mx-auto px-4">
+            <div class="min-banner p-8 md:p-12 fade-up">
+                <div class="grid md:grid-cols-2 gap-8 items-center">
+                    <div>
+                        <div class="text-ina-gold font-black text-5xl md:text-7xl leading-none mb-2">10</div>
+                        <div class="text-white font-black text-2xl md:text-3xl leading-tight mb-4">
+                            Cajas mínimo<br>para el descuento del <span class="text-ina-gold">16%</span>
+                        </div>
+                        <p class="text-white text-opacity-75 leading-relaxed mb-6">
+                            Compra cualquier combinación de cajas de la línea INA y activa automáticamente
+                            el 16% de descuento sobre el precio de lista. Puedes surtir el pedido con
+                            distintas variedades.
+                        </p>
+                        <div class="flex flex-wrap gap-3">
+                            <div class="flex items-center gap-2 bg-white bg-opacity-10 rounded-full px-4 py-2">
+                                <span class="text-ina-gold text-lg">✔</span>
+                                <span class="text-white text-sm font-semibold">Surtido libre de variedades</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-white bg-opacity-10 rounded-full px-4 py-2">
+                                <span class="text-ina-gold text-lg">✔</span>
+                                <span class="text-white text-sm font-semibold">Descuento aplicado por caja</span>
+                            </div>
+                            <div class="flex items-center gap-2 bg-white bg-opacity-10 rounded-full px-4 py-2">
+                                <span class="text-ina-gold text-lg">✔</span>
+                                <span class="text-white text-sm font-semibold">Entrega directa a su tienda</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <!-- Visual boxes representation -->
+                        <div class="grid grid-cols-5 gap-2 mb-6">
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                        </div>
+                        <p class="text-ina-gold font-bold text-lg">= 16% descuento activado</p>
+                        <a href="#contacto" class="cta-gold inline-block mt-6 px-8 py-3 text-base font-bold">
+                            Iniciar pedido →
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== URGENCY SECTION ==================== -->
+    <section class="urgency-section py-16">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <div class="fade-up">
+                <div class="inline-block bg-red-50 border border-ina-red rounded-full px-5 py-1.5 mb-6">
+                    <span class="text-ina-red font-bold text-sm uppercase tracking-widest">⚡ Oferta por tiempo limitado</span>
+                </div>
+
+                <h2 class="text-3xl md:text-5xl font-black text-ina-blue mb-4">
+                    ¡No dejes pasar esta<br>
+                    <span class="text-ina-gold">oportunidad mayorista!</span>
+                </h2>
+
+                <p class="text-gray-600 text-lg mb-10 max-w-2xl mx-auto">
+                    Precios sujetos a disponibilidad de inventario. Una vez agotado el stock promocional,
+                    la oferta se cierra. Asegure su pedido hoy mismo.
+                </p>
+
+                <!-- Countdown timer -->
+                <div class="flex justify-center gap-4 mb-10" id="countdown-area">
+                    <div class="countdown-box">
+                        <div class="countdown-num" id="cd-hours">23</div>
+                        <div class="countdown-label">Horas</div>
+                    </div>
+                    <div class="countdown-box">
+                        <div class="countdown-num" id="cd-minutes">59</div>
+                        <div class="countdown-label">Minutos</div>
+                    </div>
+                    <div class="countdown-box">
+                        <div class="countdown-num" id="cd-seconds">59</div>
+                        <div class="countdown-label">Segundos</div>
+                    </div>
+                </div>
+
+                <!-- Urgency note -->
+                <div class="max-w-sm mx-auto mb-10 bg-red-50 border border-ina-red rounded-xl px-5 py-3 text-sm text-ina-blue">
+                    ⚠️ <strong>Stock limitado.</strong> Consulte disponibilidad al hacer su pedido. Los precios y descuentos están sujetos a inventario vigente.
+                </div>
+
+                <div class="flex flex-wrap justify-center gap-4">
+                    <a href="#contacto" class="cta-btn px-10 py-4 text-base font-black">
+                        🔥 Asegurar mi descuento del 16%
+                    </a>
+                    <a href="https://wa.me/19133688814?text=Hola%2C%20me%20interesa%20la%20promo%20de%20Pastas%20INA%2016%25%20de%20descuento%20-%20compra%20m%C3%ADnima%2010%20cajas" target="_blank" rel="noopener noreferrer" class="cta-gold px-10 py-4 text-base font-black">
+                        💬 WhatsApp directo
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== CONTACT / PEDIDO ==================== -->
+    <section id="contacto" class="py-20" style="background: #ffffff;">
+        <div class="max-w-3xl mx-auto px-4">
+            <div class="text-center mb-12 fade-up">
+                <h2 class="text-3xl md:text-4xl font-black text-ina-blue mb-3">
+                    Hacer mi pedido de <span class="text-ina-red">Pastas INA</span>
+                </h2>
+                <p class="text-gray-600 text-lg">
+                    Envíenos sus datos y le contactamos en menos de 2 horas hábiles con su cotización personalizada.
+                </p>
+            </div>
+
+            <div class="bg-white border border-gray-200 rounded-2xl shadow-lg p-8 fade-up">
+                <form id="ina-contact-form" onsubmit="handleInaSubmit(event)" class="space-y-5">
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-semibold mb-2">Nombre completo *</label>
+                            <input
+                                type="text"
+                                name="name"
+                                required
+                                placeholder="Juan Pérez"
+                                class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-ina-blue transition"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 text-sm font-semibold mb-2">Negocio / Tienda *</label>
+                            <input
+                                type="text"
+                                name="business"
+                                required
+                                placeholder="Mi Tienda Latina"
+                                class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-ina-blue transition"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-semibold mb-2">Teléfono / WhatsApp *</label>
+                            <input
+                                type="tel"
+                                name="phone"
+                                required
+                                placeholder="(816) 555-1234"
+                                class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-ina-blue transition"
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-gray-700 text-sm font-semibold mb-2">Correo electrónico</label>
+                            <input
+                                type="email"
+                                name="email"
+                                placeholder="juan@tienda.com"
+                                class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-ina-blue transition"
+                            >
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-700 text-sm font-semibold mb-2">¿Cuántas cajas necesita? *</label>
+                        <select
+                            name="quantity"
+                            required
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:border-ina-blue transition"
+                        >
+                            <option value="">Seleccione cantidad</option>
+                            <option value="10-20">10 – 20 cajas</option>
+                            <option value="21-50">21 – 50 cajas</option>
+                            <option value="51-100">51 – 100 cajas</option>
+                            <option value="100+">Más de 100 cajas</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-gray-700 text-sm font-semibold mb-2">Mensaje adicional</label>
+                        <textarea
+                            name="message"
+                            rows="3"
+                            placeholder="Indique variedades de interés o cualquier comentario..."
+                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-ina-blue transition resize-none"
+                        ></textarea>
+                    </div>
+
+                    <button type="submit" class="cta-btn w-full py-4 text-lg font-black rounded-xl">
+                        ✅ Enviar solicitud de pedido
+                    </button>
+                </form>
+
+                <!-- Alternative WhatsApp CTA -->
+                <div class="mt-6 text-center">
+                    <p class="text-gray-400 text-sm mb-3">– o contáctenos directamente –</p>
+                    <a
+                        href="https://wa.me/19133688814?text=Hola%2C%20quiero%20hacer%20un%20pedido%20de%20Pastas%20INA%20con%20el%2016%25%20de%20descuento"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition shadow-lg"
+                    >
+                        <svg viewBox="0 0 32 32" fill="currentColor" class="w-5 h-5" aria-hidden="true">
+                            <path d="M16 0C7.164 0 0 7.164 0 16c0 2.821.732 5.479 2.008 7.813L.688 29.875l6.188-1.625A15.941 15.941 0 0 0 16 32c8.836 0 16-7.164 16-16S24.836 0 16 0zm0 29.5c-2.563 0-4.992-.716-7.063-1.938l-.5-.313-5.188 1.375 1.375-5.063-.313-.5A13.436 13.436 0 0 1 2.5 16C2.5 8.544 8.544 2.5 16 2.5S29.5 8.544 29.5 16 23.456 29.5 16 29.5zm7.375-10.063c-.406-.203-2.375-1.172-2.75-1.313-.375-.156-.656-.219-.938.219s-1.078 1.313-1.313 1.594c-.234.281-.469.313-.875.109-2.281-1.141-3.781-2.031-5.281-4.594-.406-.688.406-.641 1.156-2.125.125-.281.063-.516-.031-.719-.094-.203-.938-2.25-1.281-3.094-.344-.813-.688-.688-.938-.688-.25 0-.531-.031-.813-.031s-.75.109-1.156.531c-.406.422-1.531 1.5-1.531 3.656s1.563 4.25 1.781 4.531c.219.281 3.063 4.688 7.438 6.563 2.75 1.188 3.844 1.281 5.219 1.063 1.375-.219 2.375-.969 2.719-1.906.344-.938.344-1.781.25-1.938-.094-.156-.375-.25-.781-.453z"/>
+                        </svg>
+                        Escribir por WhatsApp
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==================== FOOTER INA ==================== -->
+    <footer style="background: #0a0828; border-top: 3px solid var(--ina-red);" class="py-10">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                <div>
+                    <div class="flex items-baseline gap-2 mb-3">
+                        <span class="text-white font-black text-2xl tracking-widest">INA</span>
+                        <span class="text-ina-gold text-sm font-semibold">Pastas</span>
+                    </div>
+                    <p class="text-white text-opacity-55 text-sm leading-relaxed">
+                        Distribución mayorista de la línea completa Pastas INA.<br>
+                        Calidad certificada, precios competitivos.
+                    </p>
+                </div>
+
+                <div>
+                    <h4 class="text-ina-gold font-bold mb-3 uppercase tracking-wider text-sm">La Promo</h4>
+                    <ul class="space-y-2 text-sm text-white text-opacity-60">
+                        <li>• 16% de descuento sobre precio de lista</li>
+                        <li>• Compra mínima: 10 cajas</li>
+                        <li>• Surtido libre de variedades</li>
+                        <li>• Entrega directa a su negocio</li>
+                        <li>• Stock limitado – precio sujeto a disponibilidad</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-ina-gold font-bold mb-3 uppercase tracking-wider text-sm">Contacto</h4>
+                    <ul class="space-y-2 text-sm text-white text-opacity-60">
+                        <li>
+                            <a href="https://wa.me/19133688814" class="hover:text-ina-gold transition">
+                                💬 WhatsApp: (913) 368-8814
+                            </a>
+                        </li>
+                        <li>
+                            <a href="tel:+19133688814" class="hover:text-ina-gold transition">
+                                📞 Tel: (913) 368-8814
+                            </a>
+                        </li>
+                        <li>Kansas City, Missouri</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="border-t border-white border-opacity-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-white text-opacity-40">
+                <span>&copy; <span id="ina-year"></span> Pastas INA – Distribución Mayorista. Todos los derechos reservados.</span>
+                <span>Precios sujetos a cambio sin previo aviso · Stock limitado</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // ============================
+        // STARS BACKGROUND
+        // ============================
+        (function () {
+            const container = document.getElementById('stars-container');
+            if (!container) return;
+            const count = 60;
+            for (let i = 0; i < count; i++) {
+                const s = document.createElement('div');
+                s.className = 'star';
+                const size = Math.random() * 2 + 1;
+                s.style.cssText = [
+                    `width:${size}px`,
+                    `height:${size}px`,
+                    `left:${Math.random() * 100}%`,
+                    `top:${Math.random() * 100}%`,
+                    `--duration:${(Math.random() * 4 + 2).toFixed(1)}s`,
+                    `--delay:${(Math.random() * 5).toFixed(1)}s`
+                ].join(';');
+                container.appendChild(s);
+            }
+        })();
+
+        // ============================
+        // SCROLL ANIMATIONS
+        // ============================
+        (function () {
+            const observer = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting) {
+                        const delay = parseInt(entry.target.getAttribute('data-delay') || 0, 10);
+                        setTimeout(function () {
+                            entry.target.classList.add('visible');
+                        }, delay);
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { rootMargin: '0px 0px -60px 0px', threshold: 0.1 });
+
+            document.querySelectorAll('.fade-up, .fade-left, .fade-right').forEach(function (el) {
+                observer.observe(el);
+            });
+        })();
+
+        // ============================
+        // COUNTDOWN TIMER
+        // ============================
+        (function () {
+            // Set deadline to midnight of tomorrow (local time)
+            var now = new Date();
+            var deadline = new Date(now);
+            deadline.setDate(deadline.getDate() + 1);
+            deadline.setHours(0, 0, 0, 0);
+
+            function update() {
+                var diff = deadline - new Date();
+                if (diff <= 0) { diff = 0; }
+                var h = Math.floor(diff / 3600000);
+                var m = Math.floor((diff % 3600000) / 60000);
+                var s = Math.floor((diff % 60000) / 1000);
+                var pad = function (n) { return String(n).padStart(2, '0'); };
+                var hEl = document.getElementById('cd-hours');
+                var mEl = document.getElementById('cd-minutes');
+                var sEl = document.getElementById('cd-seconds');
+                if (hEl) hEl.textContent = pad(h);
+                if (mEl) mEl.textContent = pad(m);
+                if (sEl) sEl.textContent = pad(s);
+            }
+
+            update();
+            setInterval(update, 1000);
+        })();
+
+        // ============================
+        // COPYRIGHT YEAR
+        // ============================
+        (function () {
+            var el = document.getElementById('ina-year');
+            if (el) el.textContent = new Date().getFullYear();
+        })();
+
+        // ============================
+        // CONTACT FORM HANDLER
+        // ============================
+        function handleInaSubmit(e) {
+            e.preventDefault();
+            var form = e.target;
+            var name = form.name.value;
+            var business = form.business.value;
+            var phone = form.phone.value;
+            var quantity = form.quantity.value;
+            var message = form.message ? form.message.value : '';
+
+            // Build WhatsApp message
+            var text = [
+                '¡Hola! Me interesa la PROMO Pastas INA 16% de descuento.',
+                'Nombre: ' + name,
+                'Negocio: ' + business,
+                'Teléfono: ' + phone,
+                'Cajas requeridas: ' + quantity,
+                message ? 'Mensaje: ' + message : ''
+            ].filter(Boolean).join('%0A');
+
+            window.open('https://wa.me/19133688814?text=' + text, '_blank');
+            form.reset();
+            showToast('¡Gracias, ' + name + '! Lo redirigimos a WhatsApp para confirmar su pedido.');
+        }
+
+        // ============================
+        // TOAST NOTIFICATION
+        // ============================
+        function showToast(message) {
+            var existing = document.getElementById('ina-toast');
+            if (existing) existing.remove();
+            var toast = document.createElement('div');
+            toast.id = 'ina-toast';
+            toast.className = 'ina-toast';
+            toast.textContent = '✅ ' + message;
+            document.body.appendChild(toast);
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    toast.classList.add('show');
+                });
+            });
+            setTimeout(function () {
+                toast.classList.remove('show');
+                setTimeout(function () { toast.remove(); }, 400);
+            }, 4000);
+        }
+
+        // ============================
+        // SMOOTH SCROLL FOR ANCHOR LINKS
+        // ============================
+        document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
+            anchor.addEventListener('click', function (e) {
+                var target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    e.preventDefault();
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
