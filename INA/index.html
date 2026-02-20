@@ -563,179 +563,99 @@
 
     <!-- ==================== PRODUCTOS GRID ==================== -->
     <section id="productos" class="py-20" style="background: #ffffff;">
-        <div class="max-w-7xl mx-auto px-4">
+        <div class="max-w-5xl mx-auto px-4">
             <div class="text-center mb-14 fade-up">
                 <div class="inline-block bg-red-50 border border-ina-red border-opacity-40 rounded-full px-5 py-1.5 mb-4">
                     <span class="text-ina-red font-semibold text-sm uppercase tracking-widest">Línea completa INA</span>
                 </div>
                 <h2 class="text-3xl md:text-4xl font-black text-ina-blue mb-3">
-                    Productos <span class="text-ina-red">con 16% OFF</span>
+                    Lista de Precios <span class="text-ina-red">Promo</span>
                 </h2>
                 <p class="text-gray-500 max-w-xl mx-auto">
                     Precio mayorista especial al comprar mínimo 10 cajas surtidas o de un mismo producto.
                 </p>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Price list table -->
+            <div class="fade-up overflow-x-auto">
+                <table class="w-full border-collapse text-left">
+                    <thead>
+                        <tr style="background: var(--ina-blue);">
+                            <th class="text-white font-bold text-sm uppercase tracking-wider px-6 py-4 rounded-tl-xl">#</th>
+                            <th class="text-white font-bold text-sm uppercase tracking-wider px-6 py-4">Producto</th>
+                            <th class="text-white font-bold text-sm uppercase tracking-wider px-6 py-4">Presentación</th>
+                            <th class="text-ina-gold font-bold text-sm uppercase tracking-wider px-6 py-4 text-right rounded-tr-xl">Precio promo / caja</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b border-gray-100 hover:bg-red-50 transition">
+                            <td class="px-6 py-4 text-gray-400 text-sm font-semibold">1</td>
+                            <td class="px-6 py-4 font-bold text-ina-blue">Pasta Caracol</td>
+                            <td class="px-6 py-4 text-gray-500 text-sm">20×200 gr</td>
+                            <td class="px-6 py-4 text-right"><span class="price-promo inline-block">$11.27</span></td>
+                        </tr>
+                        <tr class="border-b border-gray-100 hover:bg-red-50 transition" style="background: #fafafa;">
+                            <td class="px-6 py-4 text-gray-400 text-sm font-semibold">2</td>
+                            <td class="px-6 py-4 font-bold text-ina-blue">Pasta Caracolito</td>
+                            <td class="px-6 py-4 text-gray-500 text-sm">20×200 gr</td>
+                            <td class="px-6 py-4 text-right"><span class="price-promo inline-block">$11.26</span></td>
+                        </tr>
+                        <tr class="border-b border-gray-100 hover:bg-red-50 transition">
+                            <td class="px-6 py-4 text-gray-400 text-sm font-semibold">3</td>
+                            <td class="px-6 py-4 font-bold text-ina-blue">Pasta Codo</td>
+                            <td class="px-6 py-4 text-gray-500 text-sm">20×200 gr</td>
+                            <td class="px-6 py-4 text-right"><span class="price-promo inline-block">$11.26</span></td>
+                        </tr>
+                        <tr class="border-b border-gray-100 hover:bg-red-50 transition" style="background: #fafafa;">
+                            <td class="px-6 py-4 text-gray-400 text-sm font-semibold">4</td>
+                            <td class="px-6 py-4 font-bold text-ina-blue">Pasta Codito</td>
+                            <td class="px-6 py-4 text-gray-500 text-sm">20×200 gr</td>
+                            <td class="px-6 py-4 text-right"><span class="price-promo inline-block">$11.28</span></td>
+                        </tr>
+                        <tr class="border-b border-gray-100 hover:bg-red-50 transition">
+                            <td class="px-6 py-4 text-gray-400 text-sm font-semibold">5</td>
+                            <td class="px-6 py-4 font-bold text-ina-blue">Pasta Corbatón</td>
+                            <td class="px-6 py-4 text-gray-500 text-sm">20×150 gr</td>
+                            <td class="px-6 py-4 text-right"><span class="price-promo inline-block">$11.31</span></td>
+                        </tr>
+                        <tr class="border-b border-gray-100 hover:bg-red-50 transition" style="background: #fafafa;">
+                            <td class="px-6 py-4 text-gray-400 text-sm font-semibold">6</td>
+                            <td class="px-6 py-4 font-bold text-ina-blue">Pasta Espaguetti</td>
+                            <td class="px-6 py-4 text-gray-500 text-sm">20×200 gr</td>
+                            <td class="px-6 py-4 text-right"><span class="price-promo inline-block">$11.37</span></td>
+                        </tr>
+                        <tr class="border-b border-gray-100 hover:bg-red-50 transition">
+                            <td class="px-6 py-4 text-gray-400 text-sm font-semibold">7</td>
+                            <td class="px-6 py-4 font-bold text-ina-blue">Pasta Linguini</td>
+                            <td class="px-6 py-4 text-gray-500 text-sm">20×200 gr</td>
+                            <td class="px-6 py-4 text-right"><span class="price-promo inline-block">$11.32</span></td>
+                        </tr>
+                        <tr class="border-b border-gray-100 hover:bg-red-50 transition" style="background: #fafafa;">
+                            <td class="px-6 py-4 text-gray-400 text-sm font-semibold">8</td>
+                            <td class="px-6 py-4 font-bold text-ina-blue">Pasta Cabello de Ángel</td>
+                            <td class="px-6 py-4 text-gray-500 text-sm">30×150 gr</td>
+                            <td class="px-6 py-4 text-right"><span class="price-promo inline-block">$14.90</span></td>
+                        </tr>
+                        <tr class="border-b border-gray-100 hover:bg-red-50 transition">
+                            <td class="px-6 py-4 text-gray-400 text-sm font-semibold">9</td>
+                            <td class="px-6 py-4 font-bold text-ina-blue">Chao Mein</td>
+                            <td class="px-6 py-4 text-gray-500 text-sm">20/6.34 oz</td>
+                            <td class="px-6 py-4 text-right"><span class="price-promo inline-block">$15.78</span></td>
+                        </tr>
+                        <tr class="hover:bg-red-50 transition" style="background: #fafafa;">
+                            <td class="px-6 py-4 text-gray-400 text-sm font-semibold rounded-bl-xl">10</td>
+                            <td class="px-6 py-4 font-bold text-ina-blue">Chao Mein Sin Soya</td>
+                            <td class="px-6 py-4 text-gray-500 text-sm">20/6.34 oz</td>
+                            <td class="px-6 py-4 text-right rounded-br-xl"><span class="price-promo inline-block">$16.11</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-                <!-- Card 1 – Espagueti -->
-                <div class="product-card relative fade-up" data-delay="0">
-                    <div class="ribbon">MÁS VENDIDO</div>
-                    <div class="product-img-wrap">
-                        <img
-                            src="https://cocinaconina.com/wp-content/uploads/2021/08/Codito-Small.png"
-                            alt="Pastas INA Espagueti"
-                            loading="lazy"
-                            onerror="this.src='https://via.placeholder.com/200x200?text=INA'"
-                        >
-                    </div>
-                    <div class="px-5 pb-6">
-                        <span class="promo-badge">16% OFF</span>
-                        <h3 class="text-ina-blue font-bold text-lg mt-2 mb-1">Codito / Espagueti INA</h3>
-                        <p class="text-gray-500 text-sm mb-4">Pasta de trigo semolina de alta calidad. 200g por bolsa, 24 bolsas por caja.</p>
-                        <div class="flex items-end gap-3 mb-5">
-                            <div>
-                                <div class="price-regular">$18.50 / caja</div>
-                                <div class="price-promo">$15.54<span class="text-base font-normal text-gray-500"> / caja</span></div>
-                            </div>
-                        </div>
-                        <a href="#contacto" class="cta-btn block text-center py-3 px-4 text-sm font-bold">
-                            📱 Solicitar cotización
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Card 2 – Caracolito -->
-                <div class="product-card relative fade-up" data-delay="150">
-                    <div class="product-img-wrap">
-                        <img
-                            src="https://cropafresh.com/wp-content/uploads/2023/04/MM-Ina-Caracolito-200g-Bolsa-3D-OK-300x300.png"
-                            alt="Pastas INA Caracolito 200g"
-                            loading="lazy"
-                            onerror="this.src='https://via.placeholder.com/200x200?text=INA'"
-                        >
-                    </div>
-                    <div class="px-5 pb-6">
-                        <span class="promo-badge">16% OFF</span>
-                        <h3 class="text-ina-blue font-bold text-lg mt-2 mb-1">Caracolito INA 200g</h3>
-                        <p class="text-gray-500 text-sm mb-4">Caracolito de pasta INA en bolsa 3D sellada. 200g, 24 bolsas por caja.</p>
-                        <div class="flex items-end gap-3 mb-5">
-                            <div>
-                                <div class="price-regular">$17.80 / caja</div>
-                                <div class="price-promo">$14.95<span class="text-base font-normal text-gray-500"> / caja</span></div>
-                            </div>
-                        </div>
-                        <a href="#contacto" class="cta-btn block text-center py-3 px-4 text-sm font-bold">
-                            📱 Solicitar cotización
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Card 3 – Surtido -->
-                <div class="product-card relative fade-up" data-delay="300">
-                    <div class="ribbon" style="background: var(--ina-red);">SURTIDO</div>
-                    <div class="product-img-wrap">
-                        <img
-                            src="https://comprabien.net/wp-content/uploads/Diseno-sin-titulo-33-300x300.png"
-                            alt="Pastas INA surtido"
-                            loading="lazy"
-                            onerror="this.src='https://via.placeholder.com/200x200?text=INA'"
-                        >
-                    </div>
-                    <div class="px-5 pb-6">
-                        <span class="promo-badge">16% OFF</span>
-                        <h3 class="text-ina-blue font-bold text-lg mt-2 mb-1">Surtido INA – Variedades</h3>
-                        <p class="text-gray-500 text-sm mb-4">Caja surtida con las variedades más populares de la línea INA. 200g por bolsa.</p>
-                        <div class="flex items-end gap-3 mb-5">
-                            <div>
-                                <div class="price-regular">$19.20 / caja</div>
-                                <div class="price-promo">$16.13<span class="text-base font-normal text-gray-500"> / caja</span></div>
-                            </div>
-                        </div>
-                        <a href="#contacto" class="cta-btn block text-center py-3 px-4 text-sm font-bold">
-                            📱 Solicitar cotización
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Card 4 – Fideo Delgado -->
-                <div class="product-card relative fade-up" data-delay="100">
-                    <div class="product-img-wrap">
-                        <img
-                            src="https://cocinaconina.com/wp-content/uploads/2021/08/Codito-Small.png"
-                            alt="Pastas INA Fideo"
-                            loading="lazy"
-                            onerror="this.src='https://via.placeholder.com/200x200?text=INA'"
-                        >
-                    </div>
-                    <div class="px-5 pb-6">
-                        <span class="promo-badge">16% OFF</span>
-                        <h3 class="text-ina-blue font-bold text-lg mt-2 mb-1">Fideo Delgado INA</h3>
-                        <p class="text-gray-500 text-sm mb-4">Fideo delgado INA ideal para sopas y guisados. 200g, 24 bolsas por caja.</p>
-                        <div class="flex items-end gap-3 mb-5">
-                            <div>
-                                <div class="price-regular">$17.50 / caja</div>
-                                <div class="price-promo">$14.70<span class="text-base font-normal text-gray-500"> / caja</span></div>
-                            </div>
-                        </div>
-                        <a href="#contacto" class="cta-btn block text-center py-3 px-4 text-sm font-bold">
-                            📱 Solicitar cotización
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Card 5 – Codo Mediano -->
-                <div class="product-card relative fade-up" data-delay="250">
-                    <div class="product-img-wrap">
-                        <img
-                            src="https://cropafresh.com/wp-content/uploads/2023/04/MM-Ina-Caracolito-200g-Bolsa-3D-OK-300x300.png"
-                            alt="Pastas INA Codo Mediano"
-                            loading="lazy"
-                            onerror="this.src='https://via.placeholder.com/200x200?text=INA'"
-                        >
-                    </div>
-                    <div class="px-5 pb-6">
-                        <span class="promo-badge">16% OFF</span>
-                        <h3 class="text-ina-blue font-bold text-lg mt-2 mb-1">Codo Mediano INA</h3>
-                        <p class="text-gray-500 text-sm mb-4">Codo mediano de calidad premium. Perfecto para macarrones y guisos. 200g/bolsa.</p>
-                        <div class="flex items-end gap-3 mb-5">
-                            <div>
-                                <div class="price-regular">$18.00 / caja</div>
-                                <div class="price-promo">$15.12<span class="text-base font-normal text-gray-500"> / caja</span></div>
-                            </div>
-                        </div>
-                        <a href="#contacto" class="cta-btn block text-center py-3 px-4 text-sm font-bold">
-                            📱 Solicitar cotización
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Card 6 – Espiral -->
-                <div class="product-card relative fade-up" data-delay="400">
-                    <div class="product-img-wrap">
-                        <img
-                            src="https://comprabien.net/wp-content/uploads/Diseno-sin-titulo-33-300x300.png"
-                            alt="Pastas INA Espiral"
-                            loading="lazy"
-                            onerror="this.src='https://via.placeholder.com/200x200?text=INA'"
-                        >
-                    </div>
-                    <div class="px-5 pb-6">
-                        <span class="promo-badge">16% OFF</span>
-                        <h3 class="text-ina-blue font-bold text-lg mt-2 mb-1">Espiral INA</h3>
-                        <p class="text-gray-500 text-sm mb-4">Pasta espiral INA. Ideal para ensaladas y platillos fríos. 200g por bolsa.</p>
-                        <div class="flex items-end gap-3 mb-5">
-                            <div>
-                                <div class="price-regular">$18.30 / caja</div>
-                                <div class="price-promo">$15.37<span class="text-base font-normal text-gray-500"> / caja</span></div>
-                            </div>
-                        </div>
-                        <a href="#contacto" class="cta-btn block text-center py-3 px-4 text-sm font-bold">
-                            📱 Solicitar cotización
-                        </a>
-                    </div>
-                </div>
-
+            <div class="text-center mt-10 fade-up">
+                <a href="#contacto" class="cta-btn inline-block px-10 py-4 text-base font-black">
+                    📱 Solicitar cotización
+                </a>
             </div>
         </div>
     </section>
