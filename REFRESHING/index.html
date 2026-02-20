@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Refreshing Fruit – Promoción Mayorista Exclusiva</title>
+    <meta name="robots" content="noindex, nofollow">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* ============================
+           REFRESHING BRAND COLORS
+           ============================ */
+        :root {
+            --rf-green:  #00A651;
+            --rf-blue:   #00B3E6;
+            --rf-yellow: #F4C430;
+            --rf-white:  #FFFFFF;
+            --rf-dark:   #1a3a2a;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            background-color: #f0faf4;
+            color: var(--rf-dark);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        /* ---- Utilities ---- */
+        .bg-rf-green  { background-color: var(--rf-green); }
+        .bg-rf-blue   { background-color: var(--rf-blue); }
+        .bg-rf-yellow { background-color: var(--rf-yellow); }
+        .text-rf-green  { color: var(--rf-green); }
+        .text-rf-blue   { color: var(--rf-blue); }
+        .text-rf-yellow { color: var(--rf-yellow); }
+
+        /* ---- Top Strip ---- */
+        .top-strip {
+            background: linear-gradient(90deg, var(--rf-green) 0%, #007a3d 50%, var(--rf-green) 100%);
+            background-size: 200% 200%;
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { background-position: 0% 50%; }
+            50%       { background-position: 100% 50%; }
+        }
+
+        /* ---- Hero ---- */
+        .hero-section {
+            background: linear-gradient(160deg, #ffffff 0%, #e8fff3 55%, #d0f0e0 100%);
+            position: relative;
+            overflow: hidden;
+            min-height: 85vh;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2300A651' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+
+        /* ---- Promo Badge ---- */
+        .promo-badge-wrap {
+            background: conic-gradient(from 180deg, var(--rf-yellow), #f9d96a, var(--rf-yellow));
+            border-radius: 50%;
+            animation: spin-slow 10s linear infinite;
+            box-shadow: 0 0 40px rgba(244,196,48,0.5);
+        }
+
+        @keyframes spin-slow {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+
+        .promo-badge-inner {
+            animation: spin-slow-reverse 10s linear infinite;
+        }
+
+        @keyframes spin-slow-reverse {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(-360deg); }
+        }
+
+        /* ---- Min-box badge ---- */
+        .min-badge {
+            background: linear-gradient(135deg, var(--rf-green), #006a33);
+            box-shadow: 0 8px 32px rgba(0,166,81,0.4);
+            border-radius: 20px;
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 8px 32px rgba(0,166,81,0.4); }
+            50%       { box-shadow: 0 8px 48px rgba(0,166,81,0.7); }
+        }
+
+        /* ---- Countdown ---- */
+        .urgency-section {
+            background: #f0faf4;
+            border-top: 3px solid var(--rf-green);
+            border-bottom: 3px solid var(--rf-green);
+        }
+
+        .countdown-box {
+            background: #ffffff;
+            border: 2px solid var(--rf-green);
+            border-radius: 14px;
+            min-width: 80px;
+            text-align: center;
+            padding: 12px 16px;
+            box-shadow: 0 4px 16px rgba(0,166,81,0.15);
+        }
+
+        .countdown-num {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--rf-green);
+            line-height: 1;
+        }
+
+        .countdown-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        /* ---- Product cards ---- */
+        .product-card {
+            background: #ffffff;
+            border: 1px solid #d1fae5;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,166,81,0.07);
+            transition: transform 0.35s cubic-bezier(0.4,0,0.2,1),
+                        box-shadow 0.35s cubic-bezier(0.4,0,0.2,1),
+                        border-color 0.35s;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .product-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 50px rgba(0,166,81,0.2);
+            border-color: var(--rf-green);
+        }
+
+        .product-card .promo-badge {
+            background: var(--rf-green);
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 999px;
+            letter-spacing: 0.05em;
+        }
+
+        .product-card .product-img-wrap {
+            background: #f0faf4;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            margin: 16px;
+        }
+
+        .product-card .product-img-wrap img {
+            width: 100%;
+            height: 160px;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.12));
+            transition: transform 0.3s ease;
+        }
+
+        .product-card:hover .product-img-wrap img {
+            transform: scale(1.08);
+        }
+
+        .price-regular {
+            text-decoration: line-through;
+            color: #9ca3af;
+            font-size: 0.85rem;
+        }
+
+        .price-promo {
+            color: var(--rf-green);
+            font-size: 1.6rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        /* ---- CTA Button ---- */
+        .cta-btn {
+            background: linear-gradient(135deg, #128c7e 0%, #25d366 100%);
+            color: #fff;
+            border-radius: 50px;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+            box-shadow: 0 8px 32px rgba(18,140,126,0.45);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 40px rgba(18,140,126,0.65);
+        }
+
+        .cta-btn:active { transform: translateY(0); }
+
+        /* ---- Green CTA ---- */
+        .cta-green {
+            background: linear-gradient(135deg, var(--rf-green) 0%, #006a33 100%);
+            color: #fff;
+            border-radius: 50px;
+            font-weight: 800;
+            box-shadow: 0 8px 32px rgba(0,166,81,0.4);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .cta-green:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 40px rgba(0,166,81,0.6);
+        }
+
+        /* ---- Bono Section ---- */
+        .bono-section {
+            background: linear-gradient(135deg, var(--rf-green) 0%, #006a33 100%);
+            border-radius: 24px;
+            box-shadow: 0 10px 40px rgba(0,166,81,0.3);
+        }
+
+        /* ---- Promo explain ---- */
+        .promo-explain {
+            background: linear-gradient(135deg, var(--rf-blue) 0%, #0090bb 100%);
+            border-radius: 24px;
+        }
+
+        /* ---- Float button ---- */
+        .float-btn {
+            position: fixed;
+            bottom: 88px;
+            right: 20px;
+            z-index: 999;
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--rf-yellow) 0%, #e0a800 100%);
+            color: var(--rf-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 0.6rem;
+            font-weight: 900;
+            line-height: 1.2;
+            letter-spacing: 0.03em;
+            box-shadow: 0 6px 24px rgba(244,196,48,0.6);
+            animation: float-pulse 2.5s ease-in-out infinite;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        @keyframes float-pulse {
+            0%, 100% { transform: translateY(0) scale(1); box-shadow: 0 6px 24px rgba(244,196,48,0.6); }
+            50%       { transform: translateY(-6px) scale(1.05); box-shadow: 0 12px 32px rgba(244,196,48,0.8); }
+        }
+
+        /* ---- WhatsApp sticky mobile ---- */
+        .wa-sticky {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .wa-sticky {
+                display: flex;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 1000;
+                background: linear-gradient(135deg, #128c7e 0%, #25d366 100%);
+                color: #fff;
+                padding: 14px 20px;
+                font-weight: 800;
+                font-size: 1.1rem;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                box-shadow: 0 -4px 20px rgba(18,140,126,0.4);
+                text-decoration: none;
+            }
+
+            .float-btn {
+                bottom: 60px;
+            }
+        }
+
+        /* ---- Savings highlight ---- */
+        .savings-highlight {
+            background: linear-gradient(135deg, #fff9e6 0%, #fffde0 100%);
+            border: 2px solid var(--rf-yellow);
+            border-radius: 10px;
+            padding: 6px 10px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #7a5c00;
+        }
+
+        /* ---- Ribbon ---- */
+        .ribbon {
+            position: absolute;
+            top: 16px;
+            right: -8px;
+            background: var(--rf-yellow);
+            color: #1a3a2a;
+            font-size: 0.68rem;
+            font-weight: 800;
+            padding: 4px 16px 4px 12px;
+            border-radius: 4px 0 0 4px;
+            letter-spacing: 0.06em;
+        }
+
+        .ribbon::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            right: 0;
+            border-top: 8px solid #a07c00;
+            border-right: 8px solid transparent;
+        }
+
+        /* ---- Tropical leaf decoration ---- */
+        .leaf-bg {
+            position: absolute;
+            opacity: 0.06;
+            pointer-events: none;
+            font-size: 8rem;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ============================================================
+     TOP STRIP
+     ============================================================ -->
+<div class="top-strip py-2 px-4 text-center text-white text-sm font-bold tracking-widest">
+    🌴 PROMOCIÓN MAYORISTA EXCLUSIVA · REFRESHING FRUIT · VIGENCIA LIMITADA 🌴
+</div>
+
+<!-- ============================================================
+     HERO SECTION
+     ============================================================ -->
+<section class="hero-section flex items-center justify-center px-4 py-16">
+    <!-- Leaf decorations -->
+    <span class="leaf-bg" style="top:5%;left:-2%;transform:rotate(-20deg);">🍃</span>
+    <span class="leaf-bg" style="bottom:8%;right:-1%;transform:rotate(15deg);">🌿</span>
+
+    <div class="relative z-10 max-w-4xl w-full mx-auto text-center">
+
+        <!-- Brand name -->
+        <div class="inline-flex items-center gap-2 mb-4 px-5 py-2 rounded-full text-white font-bold text-sm uppercase tracking-widest bg-rf-green shadow-lg">
+            🌴 Refreshing Fruit
+        </div>
+
+        <!-- Main title -->
+        <h1 class="text-5xl md:text-7xl font-black text-rf-dark leading-tight mb-2">
+            REFRESHING<br>
+            <span class="text-rf-green">FRUIT</span>
+        </h1>
+        <p class="text-xl md:text-2xl font-bold text-rf-blue mb-6">
+            Promoción Mayorista Exclusiva
+        </p>
+
+        <!-- Subtitle -->
+        <p class="text-lg md:text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            Compra <strong class="text-rf-green">10 cajas</strong> y recibe <strong class="text-rf-green">1 GRATIS</strong>
+            + <strong class="text-rf-blue">$1 menos por caja</strong>
+        </p>
+
+        <!-- Promo badge -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-6 mb-10">
+            <!-- Badge 1 -->
+            <div class="promo-badge-wrap w-44 h-44 flex items-center justify-center">
+                <div class="promo-badge-inner w-40 h-40 rounded-full bg-white flex flex-col items-center justify-center shadow-inner">
+                    <span class="text-4xl">🎁</span>
+                    <span class="text-rf-dark font-black text-lg leading-tight mt-1">1 CAJA<br>GRATIS</span>
+                </div>
+            </div>
+
+            <div class="text-4xl font-black text-rf-green">+</div>
+
+            <!-- Badge 2 -->
+            <div class="flex flex-col items-center justify-center w-44 h-44 rounded-full bg-rf-blue text-white shadow-2xl" style="box-shadow:0 0 40px rgba(0,179,230,0.5);">
+                <span class="text-5xl font-black leading-none">-$1</span>
+                <span class="text-sm font-bold tracking-widest mt-1">POR CAJA</span>
+            </div>
+        </div>
+
+        <!-- WhatsApp CTA -->
+        <a href="https://wa.me/18160000000?text=Hola%20quiero%20informaci%C3%B3n%20sobre%20la%20promo%20Refreshing"
+           target="_blank"
+           class="cta-btn inline-flex items-center gap-3 px-10 py-5 text-xl font-black rounded-full shadow-2xl">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 shrink-0" viewBox="0 0 448 512" fill="currentColor">
+                <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+            </svg>
+            👉 PEDIR POR WHATSAPP
+        </a>
+
+        <!-- Min purchase label -->
+        <div class="min-badge inline-block mt-8 px-6 py-3 text-white font-bold text-base rounded-2xl">
+            📦 COMPRA MÍNIMA: 10 CAJAS &nbsp;·&nbsp; PRECIO MAYORISTA ESPECIAL
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================
+     COUNTDOWN TIMER
+     ============================================================ -->
+<section class="urgency-section py-10 px-4">
+    <div class="max-w-3xl mx-auto text-center">
+        <p class="text-rf-dark font-black text-xl mb-2 uppercase tracking-widest">⏳ OFERTA VÁLIDA POR TIEMPO LIMITADO</p>
+        <p class="text-gray-500 text-sm mb-6">Esta promoción vence en:</p>
+        <div class="flex items-center justify-center gap-4 flex-wrap">
+            <div class="countdown-box">
+                <div class="countdown-num" id="cd-days">07</div>
+                <div class="countdown-label">Días</div>
+            </div>
+            <div class="text-3xl font-black text-rf-green">:</div>
+            <div class="countdown-box">
+                <div class="countdown-num" id="cd-hours">00</div>
+                <div class="countdown-label">Horas</div>
+            </div>
+            <div class="text-3xl font-black text-rf-green">:</div>
+            <div class="countdown-box">
+                <div class="countdown-num" id="cd-minutes">00</div>
+                <div class="countdown-label">Minutos</div>
+            </div>
+            <div class="text-3xl font-black text-rf-green">:</div>
+            <div class="countdown-box">
+                <div class="countdown-num" id="cd-seconds">00</div>
+                <div class="countdown-label">Segundos</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================
+     BONO DE VOLUMEN SECTION
+     ============================================================ -->
+<section class="py-12 px-4">
+    <div class="max-w-4xl mx-auto">
+        <div class="bono-section p-8 md:p-12 text-white text-center">
+            <h2 class="text-3xl md:text-4xl font-black uppercase tracking-wider mb-8">
+                🔥 ACTIVA TU BONO DE VOLUMEN
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                <div class="bg-white bg-opacity-15 rounded-2xl p-5">
+                    <div class="text-4xl mb-3">📦</div>
+                    <div class="font-black text-lg">10 CAJAS =<br>1 GRATIS</div>
+                </div>
+                <div class="bg-white bg-opacity-15 rounded-2xl p-5">
+                    <div class="text-4xl mb-3">💰</div>
+                    <div class="font-black text-lg">MÁS MARGEN<br>PARA TU TIENDA</div>
+                </div>
+                <div class="bg-white bg-opacity-15 rounded-2xl p-5">
+                    <div class="text-4xl mb-3">🚀</div>
+                    <div class="font-black text-lg">MÁS ROTACIÓN<br>EN ANAQUEL</div>
+                </div>
+                <div class="bg-white bg-opacity-15 rounded-2xl p-5">
+                    <div class="text-4xl mb-3">⭐</div>
+                    <div class="font-black text-lg">PRECIO<br>MAYORISTA ESPECIAL</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================
+     PROMO EXPLANATION SECTION
+     ============================================================ -->
+<section class="py-12 px-4 bg-white">
+    <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl md:text-4xl font-black text-center text-rf-dark mb-2">
+            ¿Cómo funciona la promo?
+        </h2>
+        <p class="text-center text-gray-500 mb-10">Simple, directo, sin complicaciones</p>
+
+        <div class="promo-explain p-8 md:p-12 text-white">
+            <div class="flex flex-col md:flex-row items-center justify-center gap-6 mb-8">
+                <!-- 10 boxes -->
+                <div class="flex flex-col items-center">
+                    <div class="flex gap-2 flex-wrap justify-center max-w-xs">
+                        <span class="text-4xl" title="caja">📦</span>
+                        <span class="text-4xl">📦</span>
+                        <span class="text-4xl">📦</span>
+                        <span class="text-4xl">📦</span>
+                        <span class="text-4xl">📦</span>
+                        <span class="text-4xl">📦</span>
+                        <span class="text-4xl">📦</span>
+                        <span class="text-4xl">📦</span>
+                        <span class="text-4xl">📦</span>
+                        <span class="text-4xl">📦</span>
+                    </div>
+                    <span class="mt-3 font-black text-xl">× 10 CAJAS</span>
+                </div>
+
+                <div class="text-5xl font-black text-rf-yellow">+</div>
+
+                <!-- Free box -->
+                <div class="flex flex-col items-center">
+                    <div class="relative">
+                        <span class="text-6xl">📦</span>
+                        <span class="absolute -top-2 -right-4 bg-rf-yellow text-rf-dark font-black text-xs px-2 py-1 rounded-full">GRATIS</span>
+                    </div>
+                    <span class="mt-3 font-black text-xl text-rf-yellow">1 CAJA GRATIS</span>
+                </div>
+            </div>
+
+            <!-- Bullets -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl mx-auto">
+                <div class="flex items-center gap-3 bg-white bg-opacity-15 rounded-xl p-3">
+                    <span class="text-rf-yellow font-black text-xl">✔</span>
+                    <span class="font-semibold">Puedes combinar sabores</span>
+                </div>
+                <div class="flex items-center gap-3 bg-white bg-opacity-15 rounded-xl p-3">
+                    <span class="text-rf-yellow font-black text-xl">✔</span>
+                    <span class="font-semibold">Aplica en toda la línea Refreshing</span>
+                </div>
+                <div class="flex items-center gap-3 bg-white bg-opacity-15 rounded-xl p-3">
+                    <span class="text-rf-yellow font-black text-xl">✔</span>
+                    <span class="font-semibold">Descuento automático</span>
+                </div>
+                <div class="flex items-center gap-3 bg-white bg-opacity-15 rounded-xl p-3">
+                    <span class="text-rf-yellow font-black text-xl">✔</span>
+                    <span class="font-semibold">Mayor margen para tu negocio</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================
+     PRODUCTS GRID
+     ============================================================ -->
+<section class="py-14 px-4" style="background:#f0faf4;">
+    <div class="max-w-7xl mx-auto">
+        <h2 class="text-3xl md:text-4xl font-black text-center text-rf-dark mb-2">
+            🛒 Catálogo Refreshing Fruit
+        </h2>
+        <p class="text-center text-gray-500 mb-10">Precio mayorista especial · 1 caja gratis al comprar 10</p>
+
+        <div id="products-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <!-- Rendered by JS -->
+        </div>
+    </div>
+</section>
+
+<!-- ============================================================
+     FINAL CTA
+     ============================================================ -->
+<section class="py-14 px-4 bg-white text-center">
+    <div class="max-w-xl mx-auto">
+        <h2 class="text-3xl md:text-4xl font-black text-rf-dark mb-4">
+            ¿Listo para activar tu<br><span class="text-rf-green">Bono de Volumen?</span>
+        </h2>
+        <p class="text-gray-500 mb-8">Escríbenos ahora y recibe atención personalizada</p>
+        <a href="https://wa.me/18160000000?text=Hola%20quiero%20informaci%C3%B3n%20sobre%20la%20promo%20Refreshing"
+           target="_blank"
+           class="cta-btn inline-flex items-center gap-3 px-10 py-5 text-xl font-black rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 shrink-0" viewBox="0 0 448 512" fill="currentColor">
+                <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+            </svg>
+            👉 PEDIR POR WHATSAPP
+        </a>
+    </div>
+</section>
+
+<!-- ============================================================
+     FLOATING BUTTON
+     ============================================================ -->
+<a href="https://wa.me/18160000000?text=Hola%20quiero%20informaci%C3%B3n%20sobre%20la%20promo%20Refreshing"
+   target="_blank"
+   class="float-btn"
+   title="Activar promo">
+    +1<br>CAJA<br>GRATIS
+</a>
+
+<!-- ============================================================
+     WHATSAPP STICKY (MOBILE)
+     ============================================================ -->
+<a href="https://wa.me/18160000000?text=Hola%20quiero%20informaci%C3%B3n%20sobre%20la%20promo%20Refreshing"
+   target="_blank"
+   class="wa-sticky">
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 shrink-0" viewBox="0 0 448 512" fill="currentColor">
+        <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+    </svg>
+    👉 PEDIR POR WHATSAPP
+</a>
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+/* ---- Product data ---- */
+const products = [
+    { name: "REFRESHING FRUIT LATA HORCHATA DE MORRO 24/500ML",       img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/130_1126", regular: 39.99, promo: 38.99, savings: 49.99 },
+    { name: "REFRESHING FRUIT LATA HORCHATA CANELA 24/500ML",         img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/129_1125", regular: 39.99, promo: 38.99, savings: 49.99 },
+    { name: "REFRESHING FRUIT ORANGE JUICE 24/450ML",                  img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/16_1110",   regular: 35.95, promo: 34.95, savings: 45.95 },
+    { name: "REFRESHING FRUIT LATA AGUA DE COCO CON PULPA 24/ 500 ML.", img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/131_1189", regular: 30.48, promo: 29.48, savings: 40.48 },
+    { name: "REFRESHING FRUIT LATA GUANABANA 24/500ML",                img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/127_1101", regular: 30.00, promo: 29.00, savings: 40.00 },
+    { name: "REFRESHING FRUIT LATA PINA 24/500ML",                     img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/128_1105", regular: 30.00, promo: 29.00, savings: 40.00 },
+    { name: "REFRESHING FRUIT LATA DRAGON FRUIT 24/500ML",             img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/13_1107",  regular: 29.99, promo: 28.99, savings: 39.99 },
+    { name: "REFRESHING FRUIT LATA APPLE 24/ 500 ML.",                 img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/5_1097",   regular: 29.88, promo: 28.88, savings: 39.88 },
+    { name: "REFRESHING FRUIT LATA GUAYABA 24/500ML",                  img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/9_1102",   regular: 28.99, promo: 27.99, savings: 38.99 },
+    { name: "REFRESHING FRUIT LATA TROPICAL PUNCH 24/ 500 ML.",        img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/6_1098",   regular: 28.99, promo: 27.99, savings: 38.99 },
+    { name: "REFRESHING FRUIT LATA PEACH 24/ 500 ML.",                 img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/8_1100",   regular: 28.99, promo: 27.99, savings: 38.99 },
+    { name: "REFRESHING FRUIT LATA TAMARIND JUICE 24/450ML",           img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/15_1109",  regular: 28.99, promo: 27.99, savings: 38.99 },
+    { name: "REFRESHING FRUIT LATA MANGO 24/500ML",                    img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/10_1103",  regular: 28.99, promo: 27.99, savings: 38.99 },
+    { name: "REFRESHING FRUIT LATA MARACUYA 24/500ML",                 img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/11_1104",  regular: 28.99, promo: 27.99, savings: 38.99 },
+    { name: "REFRESHING FRUIT LATA LYCHEE 24/500ML",                   img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/14_1108",  regular: 28.99, promo: 27.99, savings: 38.99 },
+    { name: "REFRESHING FRUIT LATA PAPAYA 24/500ML",                   img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/12_1106",  regular: 28.99, promo: 27.99, savings: 38.99 },
+    { name: "REFRESHING FRUIT CHIA MANGO 24/9.8OZ",                    img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/22_1117",  regular: 28.99, promo: 27.99, savings: 38.99 },
+    { name: "REFRESHING FRUIT CHIA PEACH 24/9.8OZ",                    img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/19_1114",  regular: 28.99, promo: 27.99, savings: 38.99 },
+    { name: "REFRESHING FRUIT CHIA PINA 24/ 9.8 OZ",                   img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/18_1113",  regular: 28.99, promo: 27.99, savings: 38.99 },
+    { name: "REFRESHING FRUIT CHIA STRAWBERRY 24/9.8OZ",               img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/20_1115",  regular: 28.99, promo: 27.99, savings: 38.99 },
+    { name: "REFRESHING FRUIT CHIA KIWI 24/9.8OZ",                     img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/21_1116",  regular: 28.99, promo: 27.99, savings: 38.99 },
+    { name: "REFRESHING FRUIT CHIA COCKTAIL DE FRUTAS 24/ 9.8 OZ",     img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/17_1112",  regular: 28.99, promo: 27.99, savings: 38.99 },
+    { name: "REFRESHING FRUIT LATA ZAPOTE/MAMEY 24/ 500 ML.",          img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/7_1099",   regular: 28.99, promo: 27.99, savings: 38.99 },
+    { name: "REFRESHING FRUIT NATA STRAWBERRY 12/ 490 ML.",            img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/34_1177",  regular: 28.00, promo: 27.00, savings: 38.00 },
+    { name: "REFRESHING FRUIT NATA PINA 12/ 490 ML.",                  img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/26_1168",  regular: 28.00, promo: 27.00, savings: 38.00 },
+    { name: "REFRESHING FRUIT NATA STRAWBERRY 12/ 290 ML.",            img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/31_1173",  regular: 28.00, promo: 27.00, savings: 38.00 },
+    { name: "REFRESHING FRUIT NATA GUANABANA 12/ 490 ML.",             img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/28_1170",  regular: 28.00, promo: 27.00, savings: 38.00 },
+    { name: "REFRESHING FRUIT NATA BANANA 12/ 490 ML.",                img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/29_1171",  regular: 28.00, promo: 27.00, savings: 38.00 },
+    { name: "REFRESHING FRUIT NATA ORIGINAL 12/ 490 ML.",              img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/33_1176",  regular: 28.00, promo: 27.00, savings: 38.00 },
+    { name: "REFRESHING FRUIT NATA MANGO 12/ 490 ML.",                 img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/35_1178",  regular: 28.00, promo: 27.00, savings: 38.00 },
+    { name: "REFRESHING FRUIT NATA PAPAYA 12/ 490 ML.",                img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/27_1169",  regular: 28.00, promo: 27.00, savings: 38.00 },
+    { name: "REFRESHING FRUIT ALOE VERA COCONUT 12/ 1.5 LTS",         img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/39_1193",  regular: 27.58, promo: 26.58, savings: 37.58 },
+    { name: "REFRESHING FRUIT ALOE VERA MANGO 12/ 1.5 LTS",           img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/40_1194",  regular: 27.58, promo: 26.58, savings: 37.58 },
+    { name: "REFRESHING FRUIT ALOE VERA ORIGINAL 12/ 1.5 LTS",        img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/41_1195",  regular: 27.58, promo: 26.58, savings: 37.58 },
+    { name: "REFRESHING FRUIT ALOE VERA PINEAPPLE 12/ 1.5 LTS",       img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/42_1196",  regular: 27.58, promo: 26.58, savings: 37.58 },
+    { name: "REFRESHING FRUIT ALOE VERA COCONUT 24/ 500 ML.",          img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/43_1197",  regular: 24.99, promo: 23.99, savings: 34.99 },
+    { name: "REFRESHING FRUIT ALOE VERA MANGO 24/ 500 ML.",            img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/44_1198",  regular: 24.99, promo: 23.99, savings: 34.99 },
+    { name: "REFRESHING FRUIT ALOE VERA WATERMELON 24/ 500 ML.",       img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/38_1192",  regular: 24.99, promo: 23.99, savings: 34.99 },
+    { name: "REFRESHING FRUIT ALOE VERA PINEAPPLE 24/ 500 ML.",        img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/46_1200",  regular: 24.99, promo: 23.99, savings: 34.99 },
+    { name: "REFRESHING FRUIT ALOE VERA ORIGINAL 24/ 500 ML.",         img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/45_1199",  regular: 24.00, promo: 23.00, savings: 34.00 },
+    { name: "REFRESHING FRUIT KIDS FRUIT PUNCH 24 /320 ML.",           img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/54_1211",  regular: 19.99, promo: 18.99, savings: 29.99 },
+    { name: "REFRESHING FRUIT KIDS RED GRAPE 24 /320 ML.",             img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/55_1212",  regular: 19.99, promo: 18.99, savings: 29.99 },
+    { name: "REFRESHING FRUIT KIDS BLUE BERRY 24 /320 ML.",            img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/53_1210",  regular: 19.99, promo: 18.99, savings: 29.99 },
+    { name: "REFRESHING FRUIT COCONUT WATER WITH PULP BOTTLE 12/ 485ML (16.4 OZ)", img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/37_1190", regular: 18.00, promo: 17.00, savings: 28.00 },
+    { name: "REFRESHING FRUIT NATA MANGO 12/ 290 ML.",                 img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/32_1174",  regular: 17.72, promo: 16.72, savings: 27.72 },
+    { name: "REFRESHING FRUIT NATA ORIGINAL 12/ 290 ML.",              img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/30_1172",  regular: 17.72, promo: 16.72, savings: 27.72 },
+    { name: "REFRESHING FRUIT BUBBLE MILK TEA STRAWBERRY 12/ 490 ML", img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/23_1148",  regular: 17.52, promo: 16.52, savings: 27.52 },
+    { name: "REFRESHING FRUIT BOTELLA COCONUTWATER / PULP 24/ 290 ML.", img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/36_1188", regular: 17.52, promo: 16.52, savings: 27.52 },
+    { name: "REFRESHING FRUIT BUBBLE MILK TEA PEACH 12/ 490 ML",      img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/24_1149",  regular: 17.52, promo: 16.52, savings: 27.52 },
+    { name: "REFRESHING FRUIT BUBBLE MILK TEA MANGO 12/ 490 ML",      img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/25_1150",  regular: 17.52, promo: 16.52, savings: 27.52 },
+    { name: "REFRESHING FRUIT GREEN MULTIVITAMIN JUICE 8/25.4 OZ.",   img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/51_1205",  regular: 13.95, promo: 12.95, savings: 23.95 },
+    { name: "REFRESHING FRUIT APPLE/CARROT JUICE 8/25.4 OZ",          img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/50_1204",  regular: 13.95, promo: 12.95, savings: 23.95 },
+    { name: "REFRESHING FRUIT MANGO/CARROT JUICE 8/25.4 OZ",          img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/47_1201",  regular: 13.95, promo: 12.95, savings: 23.95 },
+    { name: "REFRESHING FRUIT ORANGE/CARROT JUICE 8/25.4 OZ",         img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/48_1202",  regular: 13.95, promo: 12.95, savings: 23.95 },
+    { name: "REFRESHING FRUIT PEACH/CARROT JUICE 8/25.4 OZ.",         img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/52_1206",  regular: 13.95, promo: 12.95, savings: 23.95 },
+    { name: "REFRESHING FRUIT PINEAPPLE/CARROT JUICE 8/25.4 OZ",      img: "https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/49_1203",  regular: 13.95, promo: 12.95, savings: 23.95 }
+];
+
+/* ---- Render product cards ---- */
+function renderProducts() {
+    const grid = document.getElementById('products-grid');
+    grid.innerHTML = products.map(p => {
+        // Savings = (regular × 11) − (promo × 10)
+        const gain = ((p.regular * 11) - (p.promo * 10)).toFixed(2);
+        return `
+        <div class="product-card">
+            <div class="ribbon">- $1 POR CAJA</div>
+            <div class="product-img-wrap">
+                <img src="${p.img}" alt="${p.name}" loading="lazy"
+                     onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'160\\' height=\\'160\\' viewBox=\\'0 0 160 160\\'%3E%3Crect width=\\'160\\' height=\\'160\\' fill=\\'%23e8f5e9\\'/%3E%3Ctext x=\\'50%25\\' y=\\'50%25\\' dominant-baseline=\\'middle\\' text-anchor=\\'middle\\' font-size=\\'40\\'%3E🍃%3C/text%3E%3C/svg%3E'">
+            </div>
+            <div class="px-4 pb-5">
+                <span class="promo-badge block w-fit mb-2">🎁 BONO DE VOLUMEN ACTIVADO</span>
+                <h3 class="text-sm font-bold text-rf-dark leading-snug mb-3" style="min-height:2.8rem;">${p.name}</h3>
+                <div class="flex items-end gap-3 mb-1">
+                    <span class="price-regular">$${p.regular.toFixed(2)}</span>
+                    <span class="price-promo">$${p.promo.toFixed(2)}</span>
+                </div>
+                <div class="savings-highlight mt-2">
+                    💰 Ganas $${gain} adicionales al activar promo
+                </div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+/* ---- Countdown (7 days from first visit, stored in localStorage) ---- */
+function initCountdown() {
+    const KEY = 'rf_promo_end';
+    let end = localStorage.getItem(KEY);
+    if (!end) {
+        end = Date.now() + 7 * 24 * 60 * 60 * 1000;
+        localStorage.setItem(KEY, end);
+    }
+    end = parseInt(end, 10);
+
+    function pad(n) { return String(Math.max(0, n)).padStart(2, '0'); }
+
+    function tick() {
+        const diff = end - Date.now();
+        if (diff <= 0) {
+            document.getElementById('cd-days').textContent    = '00';
+            document.getElementById('cd-hours').textContent   = '00';
+            document.getElementById('cd-minutes').textContent = '00';
+            document.getElementById('cd-seconds').textContent = '00';
+            return;
+        }
+        const d = Math.floor(diff / 86400000);
+        const h = Math.floor((diff % 86400000) / 3600000);
+        const m = Math.floor((diff % 3600000)  / 60000);
+        const s = Math.floor((diff % 60000)    / 1000);
+        document.getElementById('cd-days').textContent    = pad(d);
+        document.getElementById('cd-hours').textContent   = pad(h);
+        document.getElementById('cd-minutes').textContent = pad(m);
+        document.getElementById('cd-seconds').textContent = pad(s);
+        setTimeout(tick, 1000);
+    }
+    tick();
+}
+
+/* ---- Init ---- */
+renderProducts();
+initCountdown();
+</script>
+</body>
+</html>
