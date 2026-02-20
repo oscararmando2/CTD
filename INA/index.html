@@ -380,6 +380,52 @@
             transform: translateX(-50%) translateY(0);
         }
 
+        /* ---- WhatsApp CTA Button ---- */
+        .whatsapp-cta-btn {
+            background-color: #CC2D39;
+            box-shadow: 0 8px 24px rgba(204,45,57,0.4);
+            transition: background-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .whatsapp-cta-btn:hover {
+            background-color: #170F52;
+            transform: translateY(-3px);
+            box-shadow: 0 14px 36px rgba(23,15,82,0.4);
+        }
+
+        /* ---- Floating 16% badge ---- */
+        .float-badge-16 {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 50;
+            background: conic-gradient(from 180deg, var(--ina-gold), #f5c55a, var(--ina-gold));
+            border-radius: 50%;
+            width: 64px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(220,160,57,0.5);
+            cursor: pointer;
+            text-decoration: none;
+            animation: spin-slow 8s linear infinite;
+        }
+
+        .float-badge-16-inner {
+            text-align: center;
+            animation: spin-slow-reverse 8s linear infinite;
+        }
+
+        @media (max-width: 640px) {
+            .float-badge-16 {
+                bottom: 16px;
+                right: 16px;
+                width: 56px;
+                height: 56px;
+            }
+        }
+
         /* ---- Stars background ---- */
         .stars {
             position: absolute;
@@ -691,23 +737,20 @@
                         </div>
                     </div>
                     <div class="text-center">
-                        <!-- Visual boxes representation -->
+                        <!-- Visual representation using real INA pasta images -->
                         <div class="grid grid-cols-5 gap-2 mb-6">
-                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
-                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
-                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
-                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
-                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
-                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
-                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
-                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
-                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
-                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg flex items-center justify-center text-2xl">📦</div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg overflow-hidden flex items-center justify-center p-1"><img src="https://cocinaconina.com/wp-content/uploads/2021/08/Codito-Small.png" alt="Pasta INA" class="w-full h-full object-contain" loading="lazy" onerror="this.parentElement.textContent='&#x1F4E6;'"></div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg overflow-hidden flex items-center justify-center p-1"><img src="https://cropafresh.com/wp-content/uploads/2023/04/MM-Ina-Caracolito-200g-Bolsa-3D-OK-300x300.png" alt="Pasta INA" class="w-full h-full object-contain" loading="lazy" onerror="this.parentElement.textContent='&#x1F4E6;'"></div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg overflow-hidden flex items-center justify-center p-1"><img src="https://comprabien.net/wp-content/uploads/Diseno-sin-titulo-33-300x300.png" alt="Pasta INA" class="w-full h-full object-contain" loading="lazy" onerror="this.parentElement.textContent='&#x1F4E6;'"></div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg overflow-hidden flex items-center justify-center p-1"><img src="https://cocinaconina.com/wp-content/uploads/2021/08/Codito-Small.png" alt="Pasta INA" class="w-full h-full object-contain" loading="lazy" onerror="this.parentElement.textContent='&#x1F4E6;'"></div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg overflow-hidden flex items-center justify-center p-1"><img src="https://cropafresh.com/wp-content/uploads/2023/04/MM-Ina-Caracolito-200g-Bolsa-3D-OK-300x300.png" alt="Pasta INA" class="w-full h-full object-contain" loading="lazy" onerror="this.parentElement.textContent='&#x1F4E6;'"></div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg overflow-hidden flex items-center justify-center p-1"><img src="https://comprabien.net/wp-content/uploads/Diseno-sin-titulo-33-300x300.png" alt="Pasta INA" class="w-full h-full object-contain" loading="lazy" onerror="this.parentElement.textContent='&#x1F4E6;'"></div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg overflow-hidden flex items-center justify-center p-1"><img src="https://cocinaconina.com/wp-content/uploads/2021/08/Codito-Small.png" alt="Pasta INA" class="w-full h-full object-contain" loading="lazy" onerror="this.parentElement.textContent='&#x1F4E6;'"></div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg overflow-hidden flex items-center justify-center p-1"><img src="https://cropafresh.com/wp-content/uploads/2023/04/MM-Ina-Caracolito-200g-Bolsa-3D-OK-300x300.png" alt="Pasta INA" class="w-full h-full object-contain" loading="lazy" onerror="this.parentElement.textContent='&#x1F4E6;'"></div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg overflow-hidden flex items-center justify-center p-1"><img src="https://comprabien.net/wp-content/uploads/Diseno-sin-titulo-33-300x300.png" alt="Pasta INA" class="w-full h-full object-contain" loading="lazy" onerror="this.parentElement.textContent='&#x1F4E6;'"></div>
+                            <div class="aspect-square bg-white border-2 border-ina-gold rounded-lg overflow-hidden flex items-center justify-center p-1"><img src="https://cocinaconina.com/wp-content/uploads/2021/08/Codito-Small.png" alt="Pasta INA" class="w-full h-full object-contain" loading="lazy" onerror="this.parentElement.textContent='&#x1F4E6;'"></div>
                         </div>
                         <p class="text-ina-gold font-bold text-lg">= 16% descuento activado</p>
-                        <a href="#contacto" class="cta-gold inline-block mt-6 px-8 py-3 text-base font-bold">
-                            Iniciar pedido →
-                        </a>
                     </div>
                 </div>
             </div>
@@ -734,6 +777,10 @@
 
                 <!-- Countdown timer -->
                 <div class="flex justify-center gap-4 mb-10" id="countdown-area">
+                    <div class="countdown-box">
+                        <div class="countdown-num" id="cd-days">06</div>
+                        <div class="countdown-label">Días</div>
+                    </div>
                     <div class="countdown-box">
                         <div class="countdown-num" id="cd-hours">23</div>
                         <div class="countdown-label">Horas</div>
@@ -773,102 +820,19 @@
                     Hacer mi pedido de <span class="text-ina-red">Pastas INA</span>
                 </h2>
                 <p class="text-gray-600 text-lg">
-                    Envíenos sus datos y le contactamos en menos de 2 horas hábiles con su cotización personalizada.
+                    Contáctenos directo por WhatsApp y le enviamos su cotización personalizada.
                 </p>
             </div>
 
-            <div class="bg-white border border-gray-200 rounded-2xl shadow-lg p-8 fade-up">
-                <form id="ina-contact-form" onsubmit="handleInaSubmit(event)" class="space-y-5">
-                    <div class="grid md:grid-cols-2 gap-5">
-                        <div>
-                            <label class="block text-gray-700 text-sm font-semibold mb-2">Nombre completo *</label>
-                            <input
-                                type="text"
-                                name="name"
-                                required
-                                placeholder="Juan Pérez"
-                                class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-ina-blue transition"
-                            >
-                        </div>
-                        <div>
-                            <label class="block text-gray-700 text-sm font-semibold mb-2">Negocio / Tienda *</label>
-                            <input
-                                type="text"
-                                name="business"
-                                required
-                                placeholder="Mi Tienda Latina"
-                                class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-ina-blue transition"
-                            >
-                        </div>
-                    </div>
-
-                    <div class="grid md:grid-cols-2 gap-5">
-                        <div>
-                            <label class="block text-gray-700 text-sm font-semibold mb-2">Teléfono / WhatsApp *</label>
-                            <input
-                                type="tel"
-                                name="phone"
-                                required
-                                placeholder="(816) 555-1234"
-                                class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-ina-blue transition"
-                            >
-                        </div>
-                        <div>
-                            <label class="block text-gray-700 text-sm font-semibold mb-2">Correo electrónico</label>
-                            <input
-                                type="email"
-                                name="email"
-                                placeholder="juan@tienda.com"
-                                class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-ina-blue transition"
-                            >
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-gray-700 text-sm font-semibold mb-2">¿Cuántas cajas necesita? *</label>
-                        <select
-                            name="quantity"
-                            required
-                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:border-ina-blue transition"
-                        >
-                            <option value="">Seleccione cantidad</option>
-                            <option value="10-20">10 – 20 cajas</option>
-                            <option value="21-50">21 – 50 cajas</option>
-                            <option value="51-100">51 – 100 cajas</option>
-                            <option value="100+">Más de 100 cajas</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-gray-700 text-sm font-semibold mb-2">Mensaje adicional</label>
-                        <textarea
-                            name="message"
-                            rows="3"
-                            placeholder="Indique variedades de interés o cualquier comentario..."
-                            class="w-full bg-gray-50 border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-ina-blue transition resize-none"
-                        ></textarea>
-                    </div>
-
-                    <button type="submit" class="cta-btn w-full py-4 text-lg font-black rounded-xl">
-                        ✅ Enviar solicitud de pedido
-                    </button>
-                </form>
-
-                <!-- Alternative WhatsApp CTA -->
-                <div class="mt-6 text-center">
-                    <p class="text-gray-400 text-sm mb-3">– o contáctenos directamente –</p>
-                    <a
-                        href="https://wa.me/19133688814?text=Hola%2C%20quiero%20hacer%20un%20pedido%20de%20Pastas%20INA%20con%20el%2016%25%20de%20descuento"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition shadow-lg"
-                    >
-                        <svg viewBox="0 0 32 32" fill="currentColor" class="w-5 h-5" aria-hidden="true">
-                            <path d="M16 0C7.164 0 0 7.164 0 16c0 2.821.732 5.479 2.008 7.813L.688 29.875l6.188-1.625A15.941 15.941 0 0 0 16 32c8.836 0 16-7.164 16-16S24.836 0 16 0zm0 29.5c-2.563 0-4.992-.716-7.063-1.938l-.5-.313-5.188 1.375 1.375-5.063-.313-.5A13.436 13.436 0 0 1 2.5 16C2.5 8.544 8.544 2.5 16 2.5S29.5 8.544 29.5 16 23.456 29.5 16 29.5zm7.375-10.063c-.406-.203-2.375-1.172-2.75-1.313-.375-.156-.656-.219-.938.219s-1.078 1.313-1.313 1.594c-.234.281-.469.313-.875.109-2.281-1.141-3.781-2.031-5.281-4.594-.406-.688.406-.641 1.156-2.125.125-.281.063-.516-.031-.719-.094-.203-.938-2.25-1.281-3.094-.344-.813-.688-.688-.938-.688-.25 0-.531-.031-.813-.031s-.75.109-1.156.531c-.406.422-1.531 1.5-1.531 3.656s1.563 4.25 1.781 4.531c.219.281 3.063 4.688 7.438 6.563 2.75 1.188 3.844 1.281 5.219 1.063 1.375-.219 2.375-.969 2.719-1.906.344-.938.344-1.781.25-1.938-.094-.156-.375-.25-.781-.453z"/>
-                        </svg>
-                        Escribir por WhatsApp
-                    </a>
-                </div>
+            <div class="text-center fade-up">
+                <a
+                    href="https://wa.me/19133688814?text=Hola%2C%20quiero%20cotizar%20la%20promoci%C3%B3n%20de%20Pastas%20INA%20con%20el%2016%25%20de%20descuento."
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="whatsapp-cta-btn inline-block px-10 py-5 text-xl font-black rounded-2xl text-white"
+                >
+                    📲 Cotizar por WhatsApp
+                </a>
             </div>
         </div>
     </section>
@@ -924,6 +888,18 @@
         </div>
     </footer>
 
+    <!-- ==================== FLOATING 16% BADGE ==================== -->
+    <a
+        href="#contacto"
+        class="float-badge-16"
+        aria-label="16% de descuento activado"
+    >
+        <div class="float-badge-16-inner">
+            <div class="text-ina-blue font-black text-lg leading-none">16%</div>
+            <div class="text-ina-blue font-bold text-xs leading-tight">DESC.</div>
+        </div>
+    </a>
+
     <script>
         // ============================
         // STARS BACKGROUND
@@ -970,25 +946,35 @@
         })();
 
         // ============================
-        // COUNTDOWN TIMER
+        // COUNTDOWN TIMER (7 days, auto-restart)
         // ============================
         (function () {
-            // Set deadline to midnight of tomorrow (local time)
-            var now = new Date();
-            var deadline = new Date(now);
-            deadline.setDate(deadline.getDate() + 1);
-            deadline.setHours(0, 0, 0, 0);
+            var SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+            var KEY = 'ina_countdown_deadline';
+            var stored = localStorage.getItem(KEY);
+            var deadline = stored ? parseInt(stored, 10) : 0;
+            if (!deadline || deadline - Date.now() > SEVEN_DAYS || deadline <= Date.now()) {
+                deadline = Date.now() + SEVEN_DAYS;
+                localStorage.setItem(KEY, deadline);
+            }
 
             function update() {
-                var diff = deadline - new Date();
-                if (diff <= 0) { diff = 0; }
-                var h = Math.floor(diff / 3600000);
+                var diff = deadline - Date.now();
+                if (diff <= 0) {
+                    deadline = Date.now() + SEVEN_DAYS;
+                    localStorage.setItem(KEY, deadline);
+                    diff = SEVEN_DAYS;
+                }
+                var pad = function (n) { return String(n).padStart(2, '0'); };
+                var d = Math.floor(diff / 86400000);
+                var h = Math.floor((diff % 86400000) / 3600000);
                 var m = Math.floor((diff % 3600000) / 60000);
                 var s = Math.floor((diff % 60000) / 1000);
-                var pad = function (n) { return String(n).padStart(2, '0'); };
+                var dEl = document.getElementById('cd-days');
                 var hEl = document.getElementById('cd-hours');
                 var mEl = document.getElementById('cd-minutes');
                 var sEl = document.getElementById('cd-seconds');
+                if (dEl) dEl.textContent = pad(d);
                 if (hEl) hEl.textContent = pad(h);
                 if (mEl) mEl.textContent = pad(m);
                 if (sEl) sEl.textContent = pad(s);
@@ -1006,54 +992,7 @@
             if (el) el.textContent = new Date().getFullYear();
         })();
 
-        // ============================
-        // CONTACT FORM HANDLER
-        // ============================
-        function handleInaSubmit(e) {
-            e.preventDefault();
-            var form = e.target;
-            var name = form.name.value;
-            var business = form.business.value;
-            var phone = form.phone.value;
-            var quantity = form.quantity.value;
-            var message = form.message ? form.message.value : '';
 
-            // Build WhatsApp message
-            var text = [
-                '¡Hola! Me interesa la PROMO Pastas INA 16% de descuento.',
-                'Nombre: ' + name,
-                'Negocio: ' + business,
-                'Teléfono: ' + phone,
-                'Cajas requeridas: ' + quantity,
-                message ? 'Mensaje: ' + message : ''
-            ].filter(Boolean).join('%0A');
-
-            window.open('https://wa.me/19133688814?text=' + text, '_blank');
-            form.reset();
-            showToast('¡Gracias, ' + name + '! Lo redirigimos a WhatsApp para confirmar su pedido.');
-        }
-
-        // ============================
-        // TOAST NOTIFICATION
-        // ============================
-        function showToast(message) {
-            var existing = document.getElementById('ina-toast');
-            if (existing) existing.remove();
-            var toast = document.createElement('div');
-            toast.id = 'ina-toast';
-            toast.className = 'ina-toast';
-            toast.textContent = '✅ ' + message;
-            document.body.appendChild(toast);
-            requestAnimationFrame(function () {
-                requestAnimationFrame(function () {
-                    toast.classList.add('show');
-                });
-            });
-            setTimeout(function () {
-                toast.classList.remove('show');
-                setTimeout(function () { toast.remove(); }, 400);
-            }, 4000);
-        }
 
         // ============================
         // SMOOTH SCROLL FOR ANCHOR LINKS
