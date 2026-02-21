@@ -162,13 +162,14 @@
         }
 
         .product-card .product-img-wrap {
-            background: #f0faf4;
+            background: #ffffff;
             border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 12px;
             margin: 16px;
+            position: relative;
         }
 
         .product-card .product-img-wrap img {
@@ -318,24 +319,16 @@
         /* ---- Ribbon ---- */
         .ribbon {
             position: absolute;
-            top: 16px;
-            right: -8px;
+            top: 8px;
+            right: 8px;
             background: var(--rf-yellow);
             color: #1a3a2a;
             font-size: 0.68rem;
             font-weight: 800;
-            padding: 4px 16px 4px 12px;
-            border-radius: 4px 0 0 4px;
+            padding: 4px 10px;
+            border-radius: 4px;
             letter-spacing: 0.06em;
-        }
-
-        .ribbon::after {
-            content: '';
-            position: absolute;
-            bottom: -8px;
-            right: 0;
-            border-top: 8px solid #a07c00;
-            border-right: 8px solid transparent;
+            z-index: 10;
         }
 
         /* ---- Tropical leaf decoration ---- */
@@ -552,7 +545,7 @@
 <!-- ============================================================
      PRODUCTS GRID
      ============================================================ -->
-<section class="py-14 px-4" style="background:#f0faf4;">
+<section class="py-14 px-4" style="background:#ffffff;">
     <div class="max-w-7xl mx-auto">
         <h2 class="text-3xl md:text-4xl font-black text-center text-rf-dark mb-2">
             🛒 Catálogo Refreshing Fruit
@@ -679,8 +672,8 @@ function renderProducts() {
         const gain = ((p.regular * 11) - (p.promo * 10)).toFixed(2);
         return `
         <div class="product-card">
-            <div class="ribbon">- $1 POR CAJA</div>
             <div class="product-img-wrap">
+                <div class="ribbon">-$1 POR CAJA</div>
                 <img src="${p.img}" alt="${p.name}" loading="lazy"
                      onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'160\\' height=\\'160\\' viewBox=\\'0 0 160 160\\'%3E%3Crect width=\\'160\\' height=\\'160\\' fill=\\'%23e8f5e9\\'/%3E%3Ctext x=\\'50%25\\' y=\\'50%25\\' dominant-baseline=\\'middle\\' text-anchor=\\'middle\\' font-size=\\'40\\'%3E🍃%3C/text%3E%3C/svg%3E'">
             </div>
