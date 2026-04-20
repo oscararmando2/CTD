@@ -86,14 +86,14 @@
   }
 
   .badge {
-    background: white; border-radius: 16px;
+    border-radius: 16px; border: 3px solid white;
     padding: 14px 22px; text-align: center;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.22);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.35);
     min-width: 148px;
   }
-  .badge-eyebrow { font-size: 9px; font-weight: 800; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 3px; }
-  .badge-main    { font-family: 'Bebas Neue', sans-serif; font-size: 32px; line-height: 1; }
-  .badge-line    { font-size: 11px; font-weight: 800; letter-spacing: 0.5px; margin-top: 1px; opacity: 0.75; }
+  .badge-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 4px; color: white; }
+  .badge-main    { font-family: 'Bebas Neue', sans-serif; font-size: 38px; line-height: 1; color: white; }
+  .badge-line    { font-size: 14px; font-weight: 800; letter-spacing: 0.5px; margin-top: 3px; color: white; }
 
   .flyer-body { padding: 24px 32px 32px; background: var(--light); }
 
@@ -142,11 +142,12 @@
   .price-promo { font-family: 'Bebas Neue', sans-serif; font-size: 26px; line-height: 1; }
 
   .saving-chip {
-    display: block; margin-top: 8px;
-    font-size: 10px; font-weight: 800; letter-spacing: 0.4px;
-    padding: 4px 10px; border-radius: 20px;
-    text-align: center; text-transform: uppercase;
-    width: fit-content;
+    display: none;
+  }
+
+  .discount-text {
+    display: block; margin-top: 6px;
+    font-size: 10px; font-weight: 600; color: #555;
   }
 
   .flyer-footer {
@@ -158,27 +159,18 @@
 
   /* Themes */
   .t-purple .flyer-header  { background: linear-gradient(135deg,#4a0072,#7B1FA2,#ba68c8); }
-  .t-purple .badge-eyebrow,
-  .t-purple .badge-main,
-  .t-purple .badge-line    { color: var(--purple); }
+  .t-purple .badge         { background: rgba(123,31,162,0.9); }
   .t-purple .price-promo   { color: var(--purple); }
-  .t-purple .saving-chip   { background: #f3e5f5; color: var(--purple); }
   .t-purple .sku-pill      { background: var(--purple); }
 
   .t-green .flyer-header   { background: linear-gradient(135deg,#0a2e18,#1B6B3A,#4caf50); }
-  .t-green .badge-eyebrow,
-  .t-green .badge-main,
-  .t-green .badge-line     { color: var(--green); }
+  .t-green .badge          { background: rgba(27,107,58,0.9); }
   .t-green .price-promo    { color: var(--green); }
-  .t-green .saving-chip    { background: #e8f5e9; color: var(--green); }
   .t-green .sku-pill       { background: var(--green); }
 
   .t-amber .flyer-header   { background: linear-gradient(135deg,#5a3a00,#B8860B,#ffc107); }
-  .t-amber .badge-eyebrow,
-  .t-amber .badge-main,
-  .t-amber .badge-line     { color: var(--amber); }
+  .t-amber .badge          { background: rgba(184,134,11,0.9); }
   .t-amber .price-promo    { color: var(--amber); }
-  .t-amber .saving-chip    { background: #fff8e1; color: var(--amber); }
   .t-amber .sku-pill       { background: var(--amber); }
 
   /* Mobile */
@@ -193,8 +185,7 @@
     /* 2. Price block: regular price above, promo below */
     .price-block { flex-direction: column; align-items: flex-start; gap: 2px; }
 
-    /* 3. Saving chip: smaller font, single line */
-    .saving-chip { font-size: 9px; white-space: nowrap; }
+    /* 3. Saving chip override not needed (chip removed) */
 
     /* 4. Grid: max 2 columns */
     .cols-3,
@@ -207,11 +198,15 @@
 
   /* Print */
   @media print {
-    @page { size: A4 landscape; margin: 10mm; }
+    @page { size: A4 landscape; margin: 8mm; }
     body { background: white; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .topbar { display: none !important; }
     .flyer-wrapper { gap: 0; max-width: 100%; }
-    .flyer { border-radius: 0; box-shadow: none; break-after: page; page-break-after: always; }
+    .flyer {
+      border-radius: 0; box-shadow: none;
+      break-inside: avoid; break-after: page;
+      page-break-inside: avoid; page-break-after: always;
+    }
     .card:hover { transform: none; }
   }
 </style>
@@ -223,13 +218,13 @@
     <span class="topbar-brand">CTD <span>|</span> PROMOS</span>
     <span class="topbar-sub">Refreshing Fruit — 10 lineas promocionales</span>
   </div>
-  <button class="btn-save" onclick="window.print()">
+  <button class="btn-save" onclick="savePDF()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
       <polyline points="7 10 12 15 17 10"/>
       <line x1="12" y1="15" x2="12" y2="3"/>
     </svg>
-    Guardar PDF
+    ⬇️ Descargar PDF
   </button>
 </div>
 
@@ -379,7 +374,7 @@ function buildFlyer(d) {
           <span class="price-reg">$${p.price.toFixed(2)}</span>
           <span class="price-promo">$${pp.toFixed(2)}</span>
         </div>
-        <span class="saving-chip">Ahorro $${save} &nbsp;·&nbsp; ${pct}% OFF</span>
+        <span class="discount-text">${pct}% de descuento</span>
       </div>
     </div>`;
   }).join('');
@@ -414,6 +409,17 @@ function buildFlyer(d) {
 
 const wrapper = document.getElementById('flyers');
 PROMOS.forEach(d => { wrapper.innerHTML += buildFlyer(d); });
+
+function savePDF() {
+  const printWindow = window.open('', '_blank');
+  printWindow.document.write(document.documentElement.outerHTML);
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => {
+    printWindow.print();
+    printWindow.close();
+  }, 800);
+}
 </script>
 </body>
 </html>
