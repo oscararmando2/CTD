@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CTD — Flyers Promocionales Refreshing Fruit</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --dark:    #0d1117;
+    --navy:    #1A1A2E;
+    --blue:    #1565C0;
+    --green:   #1B6B3A;
+    --gold:    #E6A817;
+    --purple:  #7B1FA2;
+    --red:     #C0392B;
+    --white:   #ffffff;
+    --light:   #f4f7fb;
+  }
+
+  body {
+    background: #e8ecf1;
+    font-family: 'Nunito', sans-serif;
+    padding: 40px 20px;
+  }
+
+  /* ── Print nav bar ── */
+  .print-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 999;
+    background: var(--navy);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  }
+  .print-bar span { color: #aaa; font-size: 13px; font-family: 'Nunito', sans-serif; }
+  .print-bar strong { color: white; }
+  .btn-print {
+    background: var(--gold); color: var(--dark);
+    border: none; padding: 8px 22px; border-radius: 6px;
+    font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 14px;
+    cursor: pointer; letter-spacing: 0.5px;
+    transition: background 0.2s;
+  }
+  .btn-print:hover { background: #f5c842; }
+
+  .flyer-wrapper {
+    margin-top: 60px;
+    display: flex; flex-direction: column; gap: 60px;
+    max-width: 1100px; margin-left: auto; margin-right: auto;
+  }
+
+  /* ── FLYER CARD ── */
+  .flyer {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+    page-break-after: always;
+  }
+
+  /* Header */
+  .flyer-header {
+    position: relative;
+    padding: 32px 40px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    overflow: hidden;
+  }
+  .flyer-header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: inherit;
+    z-index: 0;
+  }
+  .header-left { position: relative; z-index: 1; }
+  .header-right { position: relative; z-index: 1; text-align: right; }
+
+  .ctd-label {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 13px; letter-spacing: 3px;
+    color: rgba(255,255,255,0.65);
+    margin-bottom: 4px;
+  }
+  .flyer-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 42px; line-height: 1;
+    color: white;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+  .flyer-subtitle {
+    font-size: 13px; color: rgba(255,255,255,0.75);
+    margin-top: 6px; font-weight: 600; letter-spacing: 0.5px;
+  }
+
+  .promo-badge {
+    background: white;
+    border-radius: 14px;
+    padding: 12px 20px;
+    text-align: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    min-width: 160px;
+  }
+  .promo-badge .badge-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase; margin-bottom: 4px;
+  }
+  .promo-badge .badge-main {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px; line-height: 1;
+  }
+  .promo-badge .badge-sub {
+    font-size: 11px; font-weight: 600; margin-top: 2px;
+    opacity: 0.7;
+  }
+
+  /* decorative circles */
+  .deco-circle {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    pointer-events: none;
+  }
+
+  /* Products grid */
+  .flyer-body { padding: 28px 36px 36px; background: var(--light); }
+
+  .products-grid {
+    display: grid;
+    gap: 16px;
+  }
+  .products-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .products-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .products-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+  .products-grid.cols-5 { grid-template-columns: repeat(5, 1fr); }
+  .products-grid.cols-6 { grid-template-columns: repeat(6, 1fr); }
+
+  .product-card {
+    background: white;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    display: flex; flex-direction: column;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .product-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.13);
+  }
+
+  .product-img-wrap {
+    position: relative;
+    background: #f8f9fa;
+    display: flex; align-items: center; justify-content: center;
+    height: 160px; overflow: hidden;
+  }
+  .product-img-wrap img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    padding: 12px;
+    transition: transform 0.3s;
+  }
+  .product-card:hover .product-img-wrap img { transform: scale(1.05); }
+
+  .img-fallback {
+    display: none;
+    flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; width: 100%;
+    color: #aaa; font-size: 11px; text-align: center;
+    padding: 10px;
+  }
+  .img-fallback svg { margin-bottom: 6px; opacity: 0.4; }
+
+  .sku-tag {
+    position: absolute; top: 8px; left: 8px;
+    background: var(--navy);
+    color: white; font-size: 9px; font-weight: 700;
+    padding: 2px 7px; border-radius: 4px;
+    letter-spacing: 0.5px;
+  }
+
+  .product-info {
+    padding: 10px 12px 12px;
+    flex: 1; display: flex; flex-direction: column; gap: 6px;
+  }
+  .product-name {
+    font-size: 10.5px; font-weight: 700; color: var(--dark);
+    line-height: 1.3;
+  }
+  .price-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: auto;
+  }
+  .price-regular {
+    font-size: 10px; color: #999; text-decoration: line-through;
+    font-weight: 600;
+  }
+  .price-promo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+  }
+  .savings-tag {
+    display: inline-block;
+    font-size: 9px; font-weight: 800; letter-spacing: 0.5px;
+    padding: 2px 7px; border-radius: 20px;
+    text-transform: uppercase;
+  }
+
+  /* Footer strip */
+  .flyer-footer {
+    padding: 14px 36px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--navy);
+  }
+  .footer-ctd {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px; color: white; letter-spacing: 2px;
+  }
+  .footer-contact {
+    font-size: 11px; color: rgba(255,255,255,0.5);
+    font-weight: 600;
+  }
+  .footer-note {
+    font-size: 10px; color: rgba(255,255,255,0.4);
+    font-style: italic;
+  }
+
+  /* Color themes per promo type */
+  .theme-especial .flyer-header { background: linear-gradient(135deg, #6a0dad 0%, #9c27b0 60%, #ce93d8 100%); }
+  .theme-especial .badge-label  { color: var(--purple); }
+  .theme-especial .badge-main   { color: var(--purple); }
+  .theme-especial .price-promo  { color: var(--purple); }
+  .theme-especial .savings-tag  { background: #f3e5f5; color: var(--purple); }
+  .theme-especial .sku-tag      { background: var(--purple); }
+
+  .theme-high .flyer-header { background: linear-gradient(135deg, #0d3b1e 0%, #1B6B3A 60%, #43a047 100%); }
+  .theme-high .badge-label  { color: var(--green); }
+  .theme-high .badge-main   { color: var(--green); }
+  .theme-high .price-promo  { color: var(--green); }
+  .theme-high .savings-tag  { background: #e8f5e9; color: var(--green); }
+  .theme-high .sku-tag      { background: var(--green); }
+
+  .theme-good .flyer-header { background: linear-gradient(135deg, #7a5000 0%, #B8860B 60%, #ffc107 100%); }
+  .theme-good .badge-label  { color: #B8860B; }
+  .theme-good .badge-main   { color: #B8860B; }
+  .theme-good .price-promo  { color: #B8860B; }
+  .theme-good .savings-tag  { background: #fff8e1; color: #B8860B; }
+  .theme-good .sku-tag      { background: #B8860B; }
+
+  @media print {
+    body { background: white; padding: 0; }
+    .print-bar { display: none !important; }
+    .flyer-wrapper { margin-top: 0; gap: 0; }
+    .flyer {
+      border-radius: 0;
+      box-shadow: none;
+      page-break-after: always;
+      break-after: page;
+    }
+    .product-card:hover { transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <span><strong>CTD</strong> — Flyers Promocionales Refreshing Fruit | 10 líneas</span>
+  <button class="btn-print" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+</div>
+
+<div class="flyer-wrapper" id="flyers"></div>
+
+<script>
+const PROMOS = {
+  "RF — Chia": {
+    title: "CHIA",
+    subtitle: "Refreshing Fruit Chia Series • 24/9.8 OZ",
+    promo: { label: "Promo Especial", main: "PIDE 5", sub: "RECIBE 1 GRATIS" },
+    theme: "theme-especial",
+    calc: p => +(p * 5 / 6).toFixed(2),
+    desc: p => ((p - +(p*5/6).toFixed(2))/p*100).toFixed(0),
+    cols: 3,
+    products: [
+      { sku:17, name:"Chia Cocktail de Frutas", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/17_1112", price:28.99 },
+      { sku:21, name:"Chia Kiwi", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/21_1116", price:28.99 },
+      { sku:22, name:"Chia Mango", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/22_1117", price:28.99 },
+      { sku:19, name:"Chia Peach", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/19_1114", price:28.99 },
+      { sku:18, name:"Chia Pina", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/18_1113", price:28.99 },
+      { sku:20, name:"Chia Strawberry", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/20_1115", price:28.99 },
+    ]
+  },
+  "RF — Aloe Vera 500 ML": {
+    title: "ALOE VERA 500 ML",
+    subtitle: "Refreshing Fruit Aloe Vera • 24/500 ML",
+    promo: { label: "Promo Good", main: "LLEVA 12", sub: "PAGA 10" },
+    theme: "theme-good",
+    calc: p => +(p * 10 / 12).toFixed(2),
+    desc: p => ((p - +(p*10/12).toFixed(2))/p*100).toFixed(0),
+    cols: 3,
+    products: [
+      { sku:43, name:"Aloe Vera Coconut 500 ML", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/43_1197", price:24.99 },
+      { sku:44, name:"Aloe Vera Mango 500 ML", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/44_1198", price:24.99 },
+      { sku:45, name:"Aloe Vera Original 500 ML", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/45_1199", price:24.99 },
+      { sku:46, name:"Aloe Vera Pineapple 500 ML", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/46_1200", price:24.99 },
+      { sku:38, name:"Aloe Vera Watermelon 500 ML", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/38_1192", price:24.99 },
+    ]
+  },
+  "RF — Aloe Vera 1.5 LTS": {
+    title: "ALOE VERA 1.5 LTS",
+    subtitle: "Refreshing Fruit Aloe Vera • 12/1.5 LTS",
+    promo: { label: "Promo Good", main: "LLEVA 12", sub: "PAGA 10" },
+    theme: "theme-good",
+    calc: p => +(p * 10 / 12).toFixed(2),
+    desc: p => ((p - +(p*10/12).toFixed(2))/p*100).toFixed(0),
+    cols: 2,
+    products: [
+      { sku:39, name:"Aloe Vera Coconut 1.5 LTS", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/39_1193", price:27.58 },
+      { sku:40, name:"Aloe Vera Mango 1.5 LTS", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/40_1194", price:27.58 },
+      { sku:41, name:"Aloe Vera Original 1.5 LTS", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/41_1195", price:27.58 },
+      { sku:42, name:"Aloe Vera Pineapple 1.5 LTS", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/42_1196", price:27.58 },
+    ]
+  },
+  "RF — Kids": {
+    title: "KIDS",
+    subtitle: "Refreshing Fruit Kids Series • 24/320 ML",
+    promo: { label: "Promo High", main: "BUY 2", sub: "GET 1 FREE" },
+    theme: "theme-high",
+    calc: p => +(p * 2 / 3).toFixed(2),
+    desc: p => ((p - +(p*2/3).toFixed(2))/p*100).toFixed(0),
+    cols: 3,
+    products: [
+      { sku:53, name:"Kids Blue Berry", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/53_1210", price:19.99 },
+      { sku:54, name:"Kids Fruit Punch", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/54_1211", price:19.99 },
+      { sku:55, name:"Kids Red Grape", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/55_1212", price:19.99 },
+    ]
+  },
+  "RF — Bubble Milk Tea": {
+    title: "BUBBLE MILK TEA",
+    subtitle: "Refreshing Fruit Bubble Milk Tea • 12/490 ML",
+    promo: { label: "Promo High", main: "BUY 2", sub: "GET 1 FREE" },
+    theme: "theme-high",
+    calc: p => +(p * 2 / 3).toFixed(2),
+    desc: p => ((p - +(p*2/3).toFixed(2))/p*100).toFixed(0),
+    cols: 3,
+    products: [
+      { sku:25, name:"Bubble Milk Tea Mango", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/25_1150", price:17.52 },
+      { sku:24, name:"Bubble Milk Tea Peach", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/24_1149", price:17.52 },
+      { sku:23, name:"Bubble Milk Tea Strawberry", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/23_1148", price:17.52 },
+    ]
+  },
+  "RF — Lata Coco": {
+    title: "LATA COCO",
+    subtitle: "Refreshing Fruit Agua de Coco • 24/500 ML",
+    promo: { label: "Promo Especial", main: "PIDE 5", sub: "RECIBE 1 GRATIS" },
+    theme: "theme-especial",
+    calc: p => +(p * 5 / 6).toFixed(2),
+    desc: p => ((p - +(p*5/6).toFixed(2))/p*100).toFixed(0),
+    cols: 2,
+    products: [
+      { sku:131, name:"Lata Agua de Coco con Pulpa 24/500 ML", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/131_1189", price:30.48 },
+    ]
+  },
+  "RF — Lata Horchata": {
+    title: "LATA HORCHATA",
+    subtitle: "Refreshing Fruit Horchata • 24/500 ML",
+    promo: { label: "Promo Especial", main: "PIDE 5", sub: "RECIBE 1 GRATIS" },
+    theme: "theme-especial",
+    calc: p => +(p * 5 / 6).toFixed(2),
+    desc: p => ((p - +(p*5/6).toFixed(2))/p*100).toFixed(0),
+    cols: 2,
+    products: [
+      { sku:129, name:"Horchata Canela 24/500 ML", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/129_1125", price:39.99 },
+      { sku:130, name:"Horchata de Morro 24/500 ML", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/130_1126", price:39.99 },
+    ]
+  },
+  "RF — Latas (Jugos)": {
+    title: "LATAS JUGOS",
+    subtitle: "Refreshing Fruit Latas • 24/500 ML",
+    promo: { label: "Promo Good", main: "LLEVA 12", sub: "PAGA 10" },
+    theme: "theme-good",
+    calc: p => +(p * 10 / 12).toFixed(2),
+    desc: p => ((p - +(p*10/12).toFixed(2))/p*100).toFixed(0),
+    cols: 5,
+    products: [
+      { sku:5,   name:"Lata Apple",         url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/5_1097",   price:28.99 },
+      { sku:13,  name:"Lata Dragon Fruit",  url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/13_1107",  price:28.99 },
+      { sku:127, name:"Lata Guanabana",     url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/127_1101", price:28.99 },
+      { sku:9,   name:"Lata Guayaba",       url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/9_1102",   price:28.99 },
+      { sku:14,  name:"Lata Lychee",        url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/14_1108",  price:28.99 },
+      { sku:10,  name:"Lata Mango",         url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/10_1103",  price:28.99 },
+      { sku:11,  name:"Lata Maracuya",      url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/11_1104",  price:28.99 },
+      { sku:12,  name:"Lata Papaya",        url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/12_1106",  price:28.99 },
+      { sku:8,   name:"Lata Peach",         url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/8_1100",   price:28.99 },
+      { sku:128, name:"Lata Pina",          url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/128_1105", price:28.99 },
+      { sku:15,  name:"Lata Tamarind Juice",url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/15_1109",  price:28.99 },
+      { sku:6,   name:"Lata Tropical Punch",url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/6_1098",   price:28.99 },
+      { sku:7,   name:"Lata Zapote/Mamey",  url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/7_1099",   price:28.99 },
+    ]
+  },
+  "RF — Teas": {
+    title: "ICED TEAS",
+    subtitle: "Refreshing Fruit Teas • 12/470 ML",
+    promo: { label: "Promo Especial", main: "PIDE 5", sub: "RECIBE 1 GRATIS" },
+    theme: "theme-especial",
+    calc: p => +(p * 5 / 6).toFixed(2),
+    desc: p => ((p - +(p*5/6).toFixed(2))/p*100).toFixed(0),
+    cols: 3,
+    products: [
+      { sku:266, name:"Hibiscus Tea Mixberries", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/266_1155.jpg", price:24.29 },
+      { sku:265, name:"Hibiscus Tea Original",   url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/265_1154.jpg", price:24.29 },
+      { sku:263, name:"Lychee Iced Tea",         url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/263_1152.jpg", price:24.29 },
+      { sku:264, name:"Mango Iced Tea",          url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/264_1153.jpg", price:24.29 },
+      { sku:262, name:"Peach Iced Tea",          url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/262_1151.jpg", price:24.29 },
+    ]
+  },
+  "RF — Coconut Water": {
+    title: "COCONUT WATER",
+    subtitle: "Refreshing Fruit Coconut Water • 12/485 ML",
+    promo: { label: "Promo Especial", main: "LLEVA 10", sub: "PAGA 12" },
+    theme: "theme-especial",
+    calc: p => +(p * 10 / 12).toFixed(2),
+    desc: p => ((p - +(p*10/12).toFixed(2))/p*100).toFixed(0),
+    cols: 2,
+    products: [
+      { sku:37, name:"Coconut Water with Pulp Bottle 12/485 ML", url:"https://insitusales.s3.us-east-1.amazonaws.com/web-app/data/12025/images/products/37_1190", price:18.00 },
+    ]
+  },
+};
+
+function buildFlyer(key, data) {
+  const promoPrice = data.calc(data.products[0].price);
+  const discPct    = data.desc(data.products[0].price);
+
+  const cards = data.products.map(p => {
+    const pp = data.calc(p.price);
+    return `
+      <div class="product-card">
+        <div class="product-img-wrap">
+          <span class="sku-tag">SKU ${p.sku}</span>
+          <img
+            src="${p.url}"
+            alt="${p.name}"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+          />
+          <div class="img-fallback">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            SKU ${p.sku}
+          </div>
+        </div>
+        <div class="product-info">
+          <div class="product-name">${p.name}</div>
+          <div class="price-row">
+            <span class="price-regular">$${p.price.toFixed(2)}</span>
+            <span class="price-promo">$${pp.toFixed(2)}</span>
+          </div>
+          <span class="savings-tag">Ahorro $${(p.price - pp).toFixed(2)} (${discPct}% OFF)</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  return `
+  <div class="flyer ${data.theme}">
+    <div class="flyer-header">
+      <div class="deco-circle" style="width:300px;height:300px;top:-120px;right:-60px;"></div>
+      <div class="deco-circle" style="width:150px;height:150px;bottom:-60px;left:40px;"></div>
+      <div class="header-left">
+        <div class="ctd-label">CENTRAL TRADE DISTRIBUTION — CTD</div>
+        <div class="flyer-title">REFRESHING FRUIT<br>${data.title}</div>
+        <div class="flyer-subtitle">${data.subtitle}</div>
+      </div>
+      <div class="header-right">
+        <div class="promo-badge">
+          <div class="badge-label">${data.promo.label}</div>
+          <div class="badge-main">${data.promo.main}</div>
+          <div class="badge-sub">${data.promo.sub}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flyer-body">
+      <div class="products-grid cols-${data.cols}">
+        ${cards}
+      </div>
+    </div>
+
+    <div class="flyer-footer">
+      <div class="footer-ctd">CTD — Central Trade Distribution</div>
+      <div class="footer-note">Promocion por tiempo limitado • Solo para cuentas activas</div>
+      <div class="footer-contact">Kansas City Distribution</div>
+    </div>
+  </div>`;
+}
+
+const wrapper = document.getElementById('flyers');
+for (const [key, data] of Object.entries(PROMOS)) {
+  wrapper.innerHTML += buildFlyer(key, data);
+}
+</script>
+</body>
+</html>
