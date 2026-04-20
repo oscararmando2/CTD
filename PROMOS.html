@@ -411,23 +411,40 @@ function buildFlyer(d) {
 const wrapper = document.getElementById('flyers');
 PROMOS.forEach(d => { wrapper.innerHTML += buildFlyer(d); });
 
-function savePDF() {
+async function savePDF() {
   const btn = document.getElementById('btnSave');
   btn.disabled = true;
   btn.innerHTML = '⏳ Descargando…';
-  const element = document.getElementById('flyers');
-  const opt = {
-    margin:      8,
-    filename:    'CTD-Promos-Refreshing-Fruit.pdf',
-    image:       { type: 'jpeg', quality: 1 },
-    html2canvas: { scale: 2, useCORS: true },
-    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'landscape' },
-    pagebreak:   { mode: 'css', before: '.flyer' }
-  };
-  html2pdf().set(opt).from(element).save().then(() => {
+  try {
+    const flyers = Array.from(document.querySelectorAll('.flyer'));
+    const PW = 297, PH = 210;
+    const opt = {
+      margin:      0,
+      filename:    'CTD-Promos-Refreshing-Fruit.pdf',
+      image:       { type: 'jpeg', quality: 1 },
+      html2canvas: { scale: 2, useCORS: true, dpi: 300, logging: false },
+      jsPDF:       { unit: 'mm', format: 'a4', orientation: 'landscape' },
+    };
+
+    // Bootstrap a jsPDF instance through html2pdf's bundled jsPDF
+    const pdf = await html2pdf().set(opt).from(flyers[0]).toPdf().get('pdf');
+    // Remove all pages created during bootstrap (html2pdf may split the flyer across pages)
+    for (let pageNum = pdf.internal.getNumberOfPages(); pageNum >= 1; pageNum--) pdf.deletePage(pageNum);
+
+    // Process each flyer individually: render to a single canvas, add as one full A4 page
+    for (const flyer of flyers) {
+      const w = html2pdf().set(opt).from(flyer);
+      await w.toCanvas();
+      const imgData = w.prop.canvas.toDataURL('image/jpeg', 1.0);
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, 0, PW, PH);
+    }
+
+    pdf.save('CTD-Promos-Refreshing-Fruit.pdf');
+  } finally {
     btn.disabled = false;
     btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ⬇️ Descargar PDF`;
-  });
+  }
 }
 </script>
 </body>
