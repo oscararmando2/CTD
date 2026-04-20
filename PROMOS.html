@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CTD — Promos Refreshing Fruit</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -218,7 +219,7 @@
     <span class="topbar-brand">CTD <span>|</span> PROMOS</span>
     <span class="topbar-sub">Refreshing Fruit — 10 lineas promocionales</span>
   </div>
-  <button class="btn-save" onclick="savePDF()">
+  <button class="btn-save" id="btnSave" onclick="savePDF()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
       <polyline points="7 10 12 15 17 10"/>
@@ -411,14 +412,22 @@ const wrapper = document.getElementById('flyers');
 PROMOS.forEach(d => { wrapper.innerHTML += buildFlyer(d); });
 
 function savePDF() {
-  const printWindow = window.open('', '_blank');
-  printWindow.document.write(document.documentElement.outerHTML);
-  printWindow.document.close();
-  printWindow.focus();
-  setTimeout(() => {
-    printWindow.print();
-    printWindow.close();
-  }, 800);
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Descargando…';
+  const element = document.getElementById('flyers');
+  const opt = {
+    margin:      8,
+    filename:    'CTD-Promos-Refreshing-Fruit.pdf',
+    image:       { type: 'jpeg', quality: 1 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'landscape' },
+    pagebreak:   { mode: 'css', before: '.flyer' }
+  };
+  html2pdf().set(opt).from(element).save().then(() => {
+    btn.disabled = false;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> ⬇️ Descargar PDF`;
+  });
 }
 </script>
 </body>
