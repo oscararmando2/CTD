@@ -411,6 +411,51 @@
       opacity: 1;
     }
 
+    /* ─── Contact CTA ─── */
+    .contact-cta {
+      margin: 3rem auto 0;
+      max-width: 600px;
+      text-align: center;
+      padding: 0 1rem;
+    }
+
+    .contact-cta-link {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+      color: #0a0a0f;
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 1rem;
+      letter-spacing: 0.03em;
+      padding: 1.25rem 2.5rem;
+      border-radius: 14px;
+      text-decoration: none;
+      transition: filter var(--transition), transform var(--transition), box-shadow var(--transition);
+      box-shadow: 0 4px 24px rgba(200,169,110,0.25);
+      line-height: 1.4;
+    }
+
+    .contact-cta-link:hover {
+      filter: brightness(1.1);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(200,169,110,0.4);
+      color: #0a0a0f;
+    }
+
+    .contact-cta-label {
+      display: block;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .contact-cta-phone {
+      display: block;
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      margin-top: 0.3rem;
+    }
+
     /* ─── Footer ─── */
     .footer {
       background: var(--bg2);
@@ -675,9 +720,15 @@
         </div>
       </div>
     </div>
-  </section>
 
-  <!-- ══ FOOTER ══ -->
+    <!-- Contact CTA -->
+    <div class="contact-cta">
+      <a href="https://wa.me/13146095131" target="_blank" rel="noopener noreferrer" class="contact-cta-link">
+        <span class="contact-cta-label">¿Interesado en distribuir con nosotros? Contáctanos</span>
+        <span class="contact-cta-phone">+1 (314) 609-5131</span>
+      </a>
+    </div>
+  </section>
   <footer class="footer">
     <div class="footer-logo">
       <img src="CTDLOGO.PNG" alt="CTD Logo" />
