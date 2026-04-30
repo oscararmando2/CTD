@@ -358,45 +358,57 @@
       line-height: 1.65;
     }
 
-    /* ─── Categories ─── */
-    .categories-section { background: var(--bg); }
+    /* ─── Brands Carousel ─── */
+    .brands-section { background: var(--bg); }
 
-    .categories-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 1rem;
+    .brands-track-wrapper {
+      overflow: hidden;
+      width: 100%;
+      padding: 1.5rem 0;
+      mask-image: linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 8%, #000 92%, transparent 100%);
     }
 
-    @media (max-width: 900px) {
-      .categories-grid { grid-template-columns: repeat(3, 1fr); }
+    .brands-track {
+      display: flex;
+      width: max-content;
+      animation: scrollLeft 30s linear infinite;
     }
 
-    @media (max-width: 500px) {
-      .categories-grid { grid-template-columns: repeat(2, 1fr); }
+    @keyframes scrollLeft {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
     }
 
-    .cat-card {
-      background: var(--bg3);
-      border: 1px solid rgba(200,169,110,0.08);
-      border-radius: var(--radius);
-      padding: 1.5rem 1rem;
-      text-align: center;
-      transition: border-color var(--transition), background var(--transition), transform var(--transition);
+    @media (prefers-reduced-motion: reduce) {
+      .brands-track { animation-play-state: paused; }
     }
 
-    .cat-card:hover {
-      border-color: rgba(200,169,110,0.3);
-      background: rgba(200,169,110,0.05);
-      transform: translateY(-3px);
+    .brands-track-group {
+      display: flex;
+      align-items: center;
+      gap: 3.5rem;
+      padding: 0 1.75rem;
     }
 
-    .cat-emoji { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
+    .brand-logo-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
 
-    .cat-label {
-      font-size: 0.82rem;
-      font-weight: 500;
-      color: var(--smoke);
-      letter-spacing: 0.03em;
+    .brand-logo-item img {
+      height: 55px;
+      width: auto;
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+      opacity: 0.7;
+      transition: opacity var(--transition);
+    }
+
+    .brand-logo-item img:hover {
+      opacity: 1;
     }
 
     /* ─── Footer ─── */
@@ -617,52 +629,49 @@
     </div>
   </section>
 
-  <!-- ══ CATEGORIES ══ -->
-  <section class="section categories-section">
+  <!-- ══ BRANDS CAROUSEL ══ -->
+  <section class="section brands-section">
     <div class="section-inner">
-      <span class="section-tag reveal">Portafolio</span>
-      <h2 class="section-title reveal">Categorías que Manejamos</h2>
+      <span class="section-tag reveal">Marcas que Confían en Nosotros / Brands That Trust Us</span>
+      <h2 class="section-title reveal">Nuestras Marcas</h2>
       <div class="gold-line reveal"></div>
-      <div class="categories-grid">
-        <div class="cat-card reveal">
-          <span class="cat-emoji">🥤</span>
-          <span class="cat-label">Bebidas</span>
+    </div>
+
+    <div class="brands-track-wrapper">
+      <div class="brands-track">
+        <!-- Group 1 -->
+        <div class="brands-track-group">
+          <div class="brand-logo-item"><img src="CTDLOGO.PNG" alt="CTD" /></div>
+          <div class="brand-logo-item"><img src="CORSIALSALOGO.PNG" alt="Corsialsa" /></div>
+          <div class="brand-logo-item"><img src="AWG-logo.JPG" alt="AWG" /></div>
+          <div class="brand-logo-item"><img src="original.png" alt="Brand" /></div>
+          <div class="brand-logo-item"><img src="boing.png" alt="Boing" /></div>
+          <div class="brand-logo-item"><img src="https://www.lala.com.mx/themes/lala-theme/assets/images/logo.png" alt="Lala" /></div>
+          <div class="brand-logo-item"><img src="https://toppng.com/uploads/preview/sabritas-vector-logo-free-download-11574196903ax09mnhv3j.png" alt="Sabritas" /></div>
+          <div class="brand-logo-item"><img src="https://images.seeklogo.com/logo-png/6/2/herdez-logo-png_seeklogo-66411.png" alt="Herdez" /></div>
+          <div class="brand-logo-item"><img src="https://www.harrydavis.com/wp-content/uploads/2025/01/Cacique-Logo-Curved_-square.png" alt="Cacique" /></div>
+          <div class="brand-logo-item"><img src="https://www.clipartmax.com/png/middle/118-1183116_maseca-masa-harina.png" alt="Maseca" /></div>
+          <div class="brand-logo-item"><img src="https://cortesdist.com/wp-content/uploads/2024/10/logos-web-cortes_la-finca-1-e1730255629364.png" alt="La Finca" /></div>
+          <div class="brand-logo-item"><img src="yeyas_Mesa de trabajo 1.png" alt="Yeyas" /></div>
+          <div class="brand-logo-item"><img src="https://mma.prnewswire.com/media/143145/goya_foods_logo.jpg?p=facebook" alt="Goya" /></div>
+          <div class="brand-logo-item"><img src="https://images.seeklogo.com/logo-png/32/2/la-costena-logo-png_seeklogo-321631.png" alt="La Costeña" /></div>
         </div>
-        <div class="cat-card reveal reveal-delay-1">
-          <span class="cat-emoji">🍿</span>
-          <span class="cat-label">Snacks</span>
-        </div>
-        <div class="cat-card reveal reveal-delay-2">
-          <span class="cat-emoji">🌾</span>
-          <span class="cat-label">Granos</span>
-        </div>
-        <div class="cat-card reveal reveal-delay-3">
-          <span class="cat-emoji">🧂</span>
-          <span class="cat-label">Condimentos</span>
-        </div>
-        <div class="cat-card reveal reveal-delay-4">
-          <span class="cat-emoji">🧀</span>
-          <span class="cat-label">Lácteos</span>
-        </div>
-        <div class="cat-card reveal">
-          <span class="cat-emoji">🧊</span>
-          <span class="cat-label">Congelados</span>
-        </div>
-        <div class="cat-card reveal reveal-delay-1">
-          <span class="cat-emoji">🍬</span>
-          <span class="cat-label">Dulces</span>
-        </div>
-        <div class="cat-card reveal reveal-delay-2">
-          <span class="cat-emoji">🌍</span>
-          <span class="cat-label">Importados</span>
-        </div>
-        <div class="cat-card reveal reveal-delay-3">
-          <span class="cat-emoji">🥐</span>
-          <span class="cat-label">Panadería</span>
-        </div>
-        <div class="cat-card reveal reveal-delay-4">
-          <span class="cat-emoji">🥫</span>
-          <span class="cat-label">Enlatados</span>
+        <!-- Group 2 (identical copy for seamless loop) -->
+        <div class="brands-track-group">
+          <div class="brand-logo-item"><img src="CTDLOGO.PNG" alt="CTD" /></div>
+          <div class="brand-logo-item"><img src="CORSIALSALOGO.PNG" alt="Corsialsa" /></div>
+          <div class="brand-logo-item"><img src="AWG-logo.JPG" alt="AWG" /></div>
+          <div class="brand-logo-item"><img src="original.png" alt="Brand" /></div>
+          <div class="brand-logo-item"><img src="boing.png" alt="Boing" /></div>
+          <div class="brand-logo-item"><img src="https://www.lala.com.mx/themes/lala-theme/assets/images/logo.png" alt="Lala" /></div>
+          <div class="brand-logo-item"><img src="https://toppng.com/uploads/preview/sabritas-vector-logo-free-download-11574196903ax09mnhv3j.png" alt="Sabritas" /></div>
+          <div class="brand-logo-item"><img src="https://images.seeklogo.com/logo-png/6/2/herdez-logo-png_seeklogo-66411.png" alt="Herdez" /></div>
+          <div class="brand-logo-item"><img src="https://www.harrydavis.com/wp-content/uploads/2025/01/Cacique-Logo-Curved_-square.png" alt="Cacique" /></div>
+          <div class="brand-logo-item"><img src="https://www.clipartmax.com/png/middle/118-1183116_maseca-masa-harina.png" alt="Maseca" /></div>
+          <div class="brand-logo-item"><img src="https://cortesdist.com/wp-content/uploads/2024/10/logos-web-cortes_la-finca-1-e1730255629364.png" alt="La Finca" /></div>
+          <div class="brand-logo-item"><img src="yeyas_Mesa de trabajo 1.png" alt="Yeyas" /></div>
+          <div class="brand-logo-item"><img src="https://mma.prnewswire.com/media/143145/goya_foods_logo.jpg?p=facebook" alt="Goya" /></div>
+          <div class="brand-logo-item"><img src="https://images.seeklogo.com/logo-png/32/2/la-costena-logo-png_seeklogo-321631.png" alt="La Costeña" /></div>
         </div>
       </div>
     </div>
