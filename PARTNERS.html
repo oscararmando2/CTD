@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>CTD Partners &amp; Wholesale — Central Trade Distribution</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <!-- Leaflet.js -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    /* ─── Reset & Base ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #c8a96e;
+      --gold-light: #e0c38a;
+      --gold-dim: rgba(200, 169, 110, 0.15);
+      --bg: #0a0a0f;
+      --bg2: #0f0f16;
+      --bg3: #13131c;
+      --smoke: #e8e8ec;
+      --muted: #888899;
+      --font-title: 'Cormorant Garamond', serif;
+      --font-body: 'DM Sans', sans-serif;
+      --radius: 12px;
+      --transition: 0.35s ease;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--smoke);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    a { color: var(--gold); text-decoration: none; }
+    a:hover { color: var(--gold-light); }
+
+    /* ─── Navbar ─── */
+    .navbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2.5rem;
+      height: 68px;
+      background: rgba(10, 10, 15, 0.75);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid rgba(200, 169, 110, 0.18);
+    }
+
+    .navbar-logo img {
+      height: 42px;
+      width: auto;
+      display: block;
+      filter: drop-shadow(0 0 6px rgba(200,169,110,0.35));
+    }
+
+    .navbar-label {
+      font-family: var(--font-body);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+
+    /* ─── Hero ─── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 120px 2rem 80px;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 0%, rgba(200,169,110,0.07) 0%, transparent 70%),
+        var(--bg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 50% 80% at 50% 100%, rgba(200,169,110,0.04) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-inner { max-width: 780px; position: relative; z-index: 1; }
+
+    .hero-eyebrow {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.26em;
+      text-transform: uppercase;
+      color: var(--gold);
+      border: 1px solid rgba(200,169,110,0.35);
+      padding: 0.35rem 1.1rem;
+      border-radius: 999px;
+      margin-bottom: 1.8rem;
+    }
+
+    .hero-title {
+      font-family: var(--font-title);
+      font-size: clamp(2.6rem, 6vw, 4.4rem);
+      font-weight: 600;
+      line-height: 1.1;
+      color: #fff;
+      margin-bottom: 1rem;
+    }
+
+    .hero-title span { color: var(--gold); }
+
+    .hero-subtitle {
+      font-family: var(--font-body);
+      font-size: clamp(1rem, 2.2vw, 1.25rem);
+      font-weight: 300;
+      color: var(--gold-light);
+      letter-spacing: 0.04em;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-desc {
+      font-size: 1rem;
+      color: var(--muted);
+      max-width: 580px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.75;
+    }
+
+    .btn-wa {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      background: var(--gold);
+      color: #0a0a0f;
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 0.95rem;
+      letter-spacing: 0.05em;
+      padding: 0.85rem 2.2rem;
+      border-radius: 999px;
+      transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+      box-shadow: 0 4px 28px rgba(200,169,110,0.3);
+    }
+
+    .btn-wa:hover {
+      background: var(--gold-light);
+      color: #0a0a0f;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 36px rgba(200,169,110,0.45);
+    }
+
+    .btn-wa svg { width: 22px; height: 22px; flex-shrink: 0; }
+
+    /* ─── Section commons ─── */
+    .section {
+      padding: 90px 2rem;
+    }
+
+    .section-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 0.75rem;
+    }
+
+    .section-title {
+      font-family: var(--font-title);
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 600;
+      color: #fff;
+      line-height: 1.15;
+      margin-bottom: 0.5rem;
+    }
+
+    .section-sub {
+      color: var(--muted);
+      font-size: 1rem;
+      margin-bottom: 3rem;
+    }
+
+    /* ─── Metrics ─── */
+    .metrics { background: var(--bg2); }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5px;
+      border: 1px solid rgba(200,169,110,0.12);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    @media (max-width: 768px) {
+      .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 420px) {
+      .metrics-grid { grid-template-columns: 1fr; }
+    }
+
+    .metric-item {
+      background: var(--bg3);
+      padding: 2.4rem 1.5rem;
+      text-align: center;
+      border-right: 1px solid rgba(200,169,110,0.1);
+      transition: background var(--transition);
+    }
+
+    .metric-item:last-child { border-right: none; }
+    .metric-item:hover { background: rgba(200,169,110,0.05); }
+
+    .metric-number {
+      font-family: var(--font-title);
+      font-size: clamp(2.8rem, 5vw, 3.8rem);
+      font-weight: 700;
+      color: var(--gold);
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+
+    .metric-label {
+      font-size: 0.78rem;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      color: var(--smoke);
+      line-height: 1.5;
+    }
+
+    .metric-label-en {
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+
+    /* ─── Map ─── */
+    .map-section { background: var(--bg); }
+
+    #coverage-map {
+      width: 100%;
+      height: 480px;
+      border-radius: var(--radius);
+      border: 1px solid rgba(200,169,110,0.18);
+      overflow: hidden;
+      box-shadow: 0 8px 48px rgba(0,0,0,0.5);
+    }
+
+    /* Custom Leaflet circle marker style */
+    .ctd-circle-marker {
+      background: var(--gold);
+      border: 2px solid #fff;
+      border-radius: 50%;
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-body);
+      font-weight: 700;
+      color: #0a0a0f;
+      box-shadow: 0 2px 12px rgba(200,169,110,0.6);
+      cursor: default;
+    }
+
+    .leaflet-tooltip {
+      background: rgba(10,10,15,0.92) !important;
+      border: 1px solid rgba(200,169,110,0.4) !important;
+      color: var(--smoke) !important;
+      font-family: var(--font-body) !important;
+      font-size: 0.82rem !important;
+      padding: 5px 10px !important;
+      border-radius: 6px !important;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
+    }
+
+    .leaflet-tooltip::before { display: none !important; }
+
+    /* ─── Why CTD ─── */
+    .why-section { background: var(--bg2); }
+
+    .why-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .why-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 520px) {
+      .why-grid { grid-template-columns: 1fr; }
+    }
+
+    .why-card {
+      background: var(--bg3);
+      border: 1px solid rgba(200,169,110,0.1);
+      border-radius: var(--radius);
+      padding: 2rem 1.5rem;
+      transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition);
+    }
+
+    .why-card:hover {
+      border-color: rgba(200,169,110,0.4);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(200,169,110,0.1);
+    }
+
+    .why-icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    .why-card-title {
+      font-family: var(--font-title);
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--gold);
+      margin-bottom: 0.5rem;
+    }
+
+    .why-card-text {
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    /* ─── Categories ─── */
+    .categories-section { background: var(--bg); }
+
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1rem;
+    }
+
+    @media (max-width: 900px) {
+      .categories-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    @media (max-width: 500px) {
+      .categories-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .cat-card {
+      background: var(--bg3);
+      border: 1px solid rgba(200,169,110,0.08);
+      border-radius: var(--radius);
+      padding: 1.5rem 1rem;
+      text-align: center;
+      transition: border-color var(--transition), background var(--transition), transform var(--transition);
+    }
+
+    .cat-card:hover {
+      border-color: rgba(200,169,110,0.3);
+      background: rgba(200,169,110,0.05);
+      transform: translateY(-3px);
+    }
+
+    .cat-emoji { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
+
+    .cat-label {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--smoke);
+      letter-spacing: 0.03em;
+    }
+
+    /* ─── Footer ─── */
+    .footer {
+      background: var(--bg2);
+      border-top: 1px solid rgba(200,169,110,0.15);
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+
+    .footer-logo img {
+      height: 48px;
+      width: auto;
+      margin: 0 auto 1.5rem;
+      display: block;
+      filter: drop-shadow(0 0 8px rgba(200,169,110,0.3));
+    }
+
+    .footer-contact {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .footer-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .footer-item a {
+      color: var(--gold);
+      transition: color var(--transition);
+    }
+
+    .footer-item a:hover { color: var(--gold-light); }
+
+    .footer-copy {
+      font-size: 0.75rem;
+      color: rgba(136,136,153,0.5);
+      letter-spacing: 0.05em;
+    }
+
+    /* ─── Divider line ─── */
+    .gold-line {
+      width: 48px;
+      height: 2px;
+      background: var(--gold);
+      margin: 1rem 0 2.5rem;
+      border-radius: 2px;
+    }
+
+    /* ─── Scroll animation ─── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.65s ease, transform 0.65s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+  </style>
+</head>
+<body>
+
+  <!-- ══ NAVBAR ══ -->
+  <nav class="navbar">
+    <a class="navbar-logo" href="#">
+      <img src="CTDLOGO.PNG" alt="CTD Logo" />
+    </a>
+    <span class="navbar-label">Partners &amp; Wholesale</span>
+  </nav>
+
+  <!-- ══ HERO ══ -->
+  <section class="hero">
+    <div class="hero-inner">
+      <span class="hero-eyebrow">Distribución Mayorista · Midwest</span>
+      <h1 class="hero-title">Su Próximo <span>Socio Estratégico</span><br>en el Midwest</h1>
+      <p class="hero-subtitle">Your Latin Food Distribution Partner</p>
+      <p class="hero-desc">
+        Central Trade Distribution conecta marcas de alimentos latinos con más de 72 tiendas en Kansas City y la región. Ofrecemos logística, almacenamiento y distribución confiable con términos flexibles para proveedores y distribuidores.
+      </p>
+      <a class="btn-wa" href="https://wa.me/19133688814" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20.52 3.48A11.93 11.93 0 0 0 12 0C5.37 0 0 5.37 0 12c0 2.11.55 4.16 1.6 5.96L0 24l6.22-1.63A11.94 11.94 0 0 0 12 24c6.63 0 12-5.37 12-12 0-3.21-1.25-6.22-3.48-8.52ZM12 22c-1.85 0-3.66-.5-5.24-1.44l-.38-.22-3.92 1.03 1.04-3.82-.25-.39A9.93 9.93 0 0 1 2 12C2 6.48 6.48 2 12 2c2.67 0 5.17 1.04 7.07 2.93A9.94 9.94 0 0 1 22 12c0 5.52-4.48 10-10 10Zm5.44-7.44c-.3-.15-1.76-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.95 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.47-2.4-1.49-.89-.8-1.49-1.78-1.67-2.08-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51-.17-.01-.37-.01-.57-.01-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.22 3.08c.15.2 2.1 3.2 5.09 4.49.71.31 1.27.49 1.7.63.72.23 1.37.2 1.88.12.57-.09 1.76-.72 2.01-1.41.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35Z"/>
+        </svg>
+        Contactar por WhatsApp
+      </a>
+    </div>
+  </section>
+
+  <!-- ══ METRICS ══ -->
+  <section class="section metrics">
+    <div class="section-inner">
+      <div class="metrics-grid">
+        <div class="metric-item reveal">
+          <div class="metric-number">72+</div>
+          <div class="metric-label">Socios Activos</div>
+          <div class="metric-label-en">Active Partners</div>
+        </div>
+        <div class="metric-item reveal reveal-delay-1">
+          <div class="metric-number">2,300+</div>
+          <div class="metric-label">Cajas Mensuales</div>
+          <div class="metric-label-en">Monthly Cases</div>
+        </div>
+        <div class="metric-item reveal reveal-delay-2">
+          <div class="metric-number">300+</div>
+          <div class="metric-label">SKUs Disponibles</div>
+          <div class="metric-label-en">SKUs Available</div>
+        </div>
+        <div class="metric-item reveal reveal-delay-3">
+          <div class="metric-number">30+</div>
+          <div class="metric-label">Entregas Semanales</div>
+          <div class="metric-label-en">Weekly Deliveries</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ MAP ══ -->
+  <section class="section map-section">
+    <div class="section-inner">
+      <span class="section-tag reveal">Cobertura</span>
+      <h2 class="section-title reveal">Zona de Distribución</h2>
+      <div class="gold-line reveal"></div>
+      <p class="section-sub reveal">Kansas City Metro &amp; Región</p>
+      <div id="coverage-map" class="reveal"></div>
+    </div>
+  </section>
+
+  <!-- ══ WHY CTD ══ -->
+  <section class="section why-section">
+    <div class="section-inner">
+      <span class="section-tag reveal">Ventajas</span>
+      <h2 class="section-title reveal">¿Por qué CTD?</h2>
+      <div class="gold-line reveal"></div>
+      <div class="why-grid">
+        <div class="why-card reveal reveal-delay-1">
+          <span class="why-icon">🤝</span>
+          <div class="why-card-title">Pago Puntual</div>
+          <p class="why-card-text">Net 15 terms garantizados. Cumplimos con cada ciclo de pago, sin demoras ni excusas.</p>
+        </div>
+        <div class="why-card reveal reveal-delay-2">
+          <span class="why-icon">📦</span>
+          <div class="why-card-title">Volumen Consistente</div>
+          <p class="why-card-text">Más de 2,300 cajas mensuales distribuidas con regularidad mes a mes en toda la región.</p>
+        </div>
+        <div class="why-card reveal reveal-delay-3">
+          <span class="why-icon">🏪</span>
+          <div class="why-card-title">Red Establecida</div>
+          <p class="why-card-text">Acceso inmediato a más de 72 tiendas latinas con relaciones activas y de confianza.</p>
+        </div>
+        <div class="why-card reveal reveal-delay-4">
+          <span class="why-icon">📈</span>
+          <div class="why-card-title">Crecimiento Sostenido</div>
+          <p class="why-card-text">Expansión continua en el Midwest con nuevos socios incorporándose cada mes.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ CATEGORIES ══ -->
+  <section class="section categories-section">
+    <div class="section-inner">
+      <span class="section-tag reveal">Portafolio</span>
+      <h2 class="section-title reveal">Categorías que Manejamos</h2>
+      <div class="gold-line reveal"></div>
+      <div class="categories-grid">
+        <div class="cat-card reveal">
+          <span class="cat-emoji">🥤</span>
+          <span class="cat-label">Bebidas</span>
+        </div>
+        <div class="cat-card reveal reveal-delay-1">
+          <span class="cat-emoji">🍿</span>
+          <span class="cat-label">Snacks</span>
+        </div>
+        <div class="cat-card reveal reveal-delay-2">
+          <span class="cat-emoji">🌾</span>
+          <span class="cat-label">Granos</span>
+        </div>
+        <div class="cat-card reveal reveal-delay-3">
+          <span class="cat-emoji">🧂</span>
+          <span class="cat-label">Condimentos</span>
+        </div>
+        <div class="cat-card reveal reveal-delay-4">
+          <span class="cat-emoji">🧀</span>
+          <span class="cat-label">Lácteos</span>
+        </div>
+        <div class="cat-card reveal">
+          <span class="cat-emoji">🧊</span>
+          <span class="cat-label">Congelados</span>
+        </div>
+        <div class="cat-card reveal reveal-delay-1">
+          <span class="cat-emoji">🍬</span>
+          <span class="cat-label">Dulces</span>
+        </div>
+        <div class="cat-card reveal reveal-delay-2">
+          <span class="cat-emoji">🌍</span>
+          <span class="cat-label">Importados</span>
+        </div>
+        <div class="cat-card reveal reveal-delay-3">
+          <span class="cat-emoji">🥐</span>
+          <span class="cat-label">Panadería</span>
+        </div>
+        <div class="cat-card reveal reveal-delay-4">
+          <span class="cat-emoji">🥫</span>
+          <span class="cat-label">Enlatados</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ FOOTER ══ -->
+  <footer class="footer">
+    <div class="footer-logo">
+      <img src="CTDLOGO.PNG" alt="CTD Logo" />
+    </div>
+    <div class="footer-contact">
+      <div class="footer-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#c8a96e" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20.52 3.48A11.93 11.93 0 0 0 12 0C5.37 0 0 5.37 0 12c0 2.11.55 4.16 1.6 5.96L0 24l6.22-1.63A11.94 11.94 0 0 0 12 24c6.63 0 12-5.37 12-12 0-3.21-1.25-6.22-3.48-8.52ZM12 22c-1.85 0-3.66-.5-5.24-1.44l-.38-.22-3.92 1.03 1.04-3.82-.25-.39A9.93 9.93 0 0 1 2 12C2 6.48 6.48 2 12 2c2.67 0 5.17 1.04 7.07 2.93A9.94 9.94 0 0 1 22 12c0 5.52-4.48 10-10 10Zm5.44-7.44c-.3-.15-1.76-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.95 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.47-2.4-1.49-.89-.8-1.49-1.78-1.67-2.08-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51-.17-.01-.37-.01-.57-.01-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.22 3.08c.15.2 2.1 3.2 5.09 4.49.71.31 1.27.49 1.7.63.72.23 1.37.2 1.88.12.57-.09 1.76-.72 2.01-1.41.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35Z"/>
+        </svg>
+        <a href="https://wa.me/19133688814" target="_blank" rel="noopener noreferrer">+1 (913) 368-8814</a>
+      </div>
+      <div class="footer-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c8a96e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+          <polyline points="22,6 12,13 2,6"/>
+        </svg>
+        <a href="mailto:info@ctdkansascity.com">info@ctdkansascity.com</a>
+      </div>
+      <div class="footer-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c8a96e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+          <circle cx="12" cy="10" r="3"/>
+        </svg>
+        Kansas City, KS
+      </div>
+    </div>
+    <p class="footer-copy">Central Trade Distribution — Kansas City, KS</p>
+  </footer>
+
+  <!-- ══ SCRIPTS ══ -->
+  <script>
+    // ── Intersection Observer for scroll reveal ──
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      },
+      { threshold: 0.12 }
+    );
+    reveals.forEach((el) => observer.observe(el));
+
+    // ── Leaflet Map ──
+    const map = L.map('coverage-map', {
+      center: [39.0997, -94.5786],
+      zoom: 10,
+      zoomControl: true,
+      attributionControl: true,
+      scrollWheelZoom: false,
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd',
+      maxZoom: 19,
+    }).addTo(map);
+
+    const locations = [
+      { name: 'Kansas City, KS', count: 30, lat: 39.1141, lng: -94.6275 },
+      { name: 'Kansas City, MO', count: 25, lat: 39.0997, lng: -94.5786 },
+      { name: 'Olathe, KS',       count: 8,  lat: 38.8814, lng: -94.8191 },
+      { name: 'Overland Park, KS',count: 5,  lat: 38.9822, lng: -94.6708 },
+      { name: 'Grandview, MO',    count: 5,  lat: 38.8859, lng: -94.5327 },
+      { name: 'Shawnee, KS',      count: 5,  lat: 39.0228, lng: -94.7154 },
+      { name: 'Independence, MO', count: 4,  lat: 39.0911, lng: -94.4155 },
+      { name: 'Topeka, KS',       count: 4,  lat: 39.0473, lng: -95.6752 },
+      { name: 'Gladstone, MO',    count: 3,  lat: 39.2042, lng: -94.5563 },
+      { name: 'Lenexa, KS',       count: 3,  lat: 38.9534, lng: -94.7341 },
+      { name: 'Belton, MO',       count: 2,  lat: 38.8120, lng: -94.5313 },
+      { name: 'Lawrence, KS',     count: 2,  lat: 38.9717, lng: -95.2353 },
+      { name: 'St. Louis, MO',    count: 1,  lat: 38.6270, lng: -90.1994 },
+    ];
+
+    const maxCount = Math.max(...locations.map((l) => l.count));
+
+    locations.forEach(({ name, count, lat, lng }) => {
+      const radius = Math.max(18, Math.min(46, 18 + (count / maxCount) * 28));
+      const fontSize = radius < 26 ? '11px' : radius < 36 ? '13px' : '15px';
+
+      const icon = L.divIcon({
+        className: '',
+        html: `<div class="ctd-circle-marker" style="width:${radius * 2}px;height:${radius * 2}px;font-size:${fontSize};line-height:${radius * 2}px;text-align:center;background:#c8a96e;border:2px solid #fff;border-radius:50%;font-family:'DM Sans',sans-serif;font-weight:700;color:#0a0a0f;box-shadow:0 2px 12px rgba(200,169,110,0.6);">${count}</div>`,
+        iconSize: [radius * 2, radius * 2],
+        iconAnchor: [radius, radius],
+      });
+
+      const marker = L.marker([lat, lng], { icon })
+        .addTo(map)
+        .bindTooltip(`${name} — ${count} Partner${count !== 1 ? 's' : ''}`, {
+          permanent: false,
+          direction: 'top',
+          offset: [0, -(radius + 4)],
+          className: '',
+        });
+    });
+  </script>
+</body>
+</html>
