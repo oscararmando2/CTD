@@ -272,19 +272,15 @@
       box-shadow: 0 8px 48px rgba(0,0,0,0.5);
     }
 
-    /* Custom Leaflet circle marker style */
-    .ctd-circle-marker {
-      background: var(--gold);
-      border: 2px solid #fff;
-      border-radius: 50%;
-      display: flex !important;
-      align-items: center;
-      justify-content: center;
-      font-family: var(--font-body);
-      font-weight: 700;
-      color: #0a0a0f;
-      box-shadow: 0 2px 12px rgba(200,169,110,0.6);
-      cursor: default;
+    /* Custom Leaflet pin marker style */
+    .ctd-pin-marker {
+      width: 24px;
+      height: 24px;
+      background: #c8a96e;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      box-shadow: 0 2px 8px rgba(200,169,110,0.55);
+      cursor: pointer;
     }
 
     .leaflet-tooltip {
@@ -691,7 +687,7 @@
         <div class="brands-track-group">
           <div class="brand-logo-item"><img src="CTDLOGO.PNG" alt="CTD" /></div>
           <div class="brand-logo-item"><img src="CORSIALSALOGO.PNG" alt="Corsialsa" /></div>
-          <div class="brand-logo-item"><img src="AWG-logo.JPG" alt="AWG" /></div>
+          <div class="brand-logo-item"><img src="AWG.jpg" alt="AWG" /></div>
           <div class="brand-logo-item"><img src="original.png" alt="Brand" /></div>
           <div class="brand-logo-item"><img src="boing.png" alt="Boing" /></div>
           <div class="brand-logo-item"><img src="https://www.lala.com.mx/themes/lala-theme/assets/images/logo.png" alt="Lala" /></div>
@@ -708,7 +704,7 @@
         <div class="brands-track-group">
           <div class="brand-logo-item"><img src="CTDLOGO.PNG" alt="CTD" /></div>
           <div class="brand-logo-item"><img src="CORSIALSALOGO.PNG" alt="Corsialsa" /></div>
-          <div class="brand-logo-item"><img src="AWG-logo.JPG" alt="AWG" /></div>
+          <div class="brand-logo-item"><img src="AWG.jpg" alt="AWG" /></div>
           <div class="brand-logo-item"><img src="original.png" alt="Brand" /></div>
           <div class="brand-logo-item"><img src="boing.png" alt="Boing" /></div>
           <div class="brand-logo-item"><img src="https://www.lala.com.mx/themes/lala-theme/assets/images/logo.png" alt="Lala" /></div>
@@ -731,13 +727,6 @@
       <img src="CTDLOGO.PNG" alt="CTD Logo" />
     </div>
     <div class="footer-contact">
-      <div class="footer-item">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c8a96e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-          <polyline points="22,6 12,13 2,6"/>
-        </svg>
-        <a href="mailto:info@ctdkansascity.com">info@ctdkansascity.com</a>
-      </div>
       <div class="footer-item">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c8a96e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
@@ -796,25 +785,20 @@
       { name: 'St. Louis, MO',    count: 1,  lat: 38.6270, lng: -90.1994 },
     ];
 
-    const maxCount = Math.max(...locations.map((l) => l.count));
-
-    locations.forEach(({ name, count, lat, lng }) => {
-      const radius = Math.max(18, Math.min(46, 18 + (count / maxCount) * 28));
-      const fontSize = radius < 26 ? '11px' : radius < 36 ? '13px' : '15px';
-
+    locations.forEach(({ name, lat, lng }) => {
       const icon = L.divIcon({
         className: '',
-        html: `<div class="ctd-circle-marker" style="width:${radius * 2}px;height:${radius * 2}px;font-size:${fontSize};line-height:${radius * 2}px;text-align:center;background:#c8a96e;border:2px solid #fff;border-radius:50%;font-family:'DM Sans',sans-serif;font-weight:700;color:#0a0a0f;box-shadow:0 2px 12px rgba(200,169,110,0.6);">${count}</div>`,
-        iconSize: [radius * 2, radius * 2],
-        iconAnchor: [radius, radius],
+        html: `<div class="ctd-pin-marker"></div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 24],
       });
 
-      const marker = L.marker([lat, lng], { icon })
+      L.marker([lat, lng], { icon })
         .addTo(map)
-        .bindTooltip(`${name} — ${count} Partner${count !== 1 ? 's' : ''}`, {
+        .bindTooltip(name, {
           permanent: false,
           direction: 'top',
-          offset: [0, -(radius + 4)],
+          offset: [0, -28],
           className: '',
         });
     });
