@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Catálogo · Central Trade Distribution</title>
+  <meta name="description" content="Catálogo completo de productos latinos de Central Trade Distribution — distribuidora mayorista en Kansas City." />
+  <link rel="icon" href="../CTDLOGO.PNG" />
+
+  <!-- Fuentes -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ============================================================
+       VARIABLES Y BASE
+       ============================================================ */
+    :root {
+      --green:       #247232;
+      --green-dark:  #1a5526;
+      --green-light: #2e8a3d;
+      --green-50:    #e8f3ea;
+      --green-100:   #d0e7d4;
+      --red:         #db2c1a;
+      --orange:      #f89429;
+      --text:        #1a2e1f;
+      --text-soft:   #4a5d4f;
+      --muted:       #7a8a7e;
+      --bg:          #f5faf6;
+      --card:        #ffffff;
+      --border:      #e3ede5;
+      --radio:       16px;
+      --sombra:      0 2px 8px rgba(36, 114, 50, 0.06), 0 8px 24px rgba(36, 114, 50, 0.04);
+      --sombra-hover:0 4px 16px rgba(36, 114, 50, 0.10), 0 16px 40px rgba(36, 114, 50, 0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    img { display: block; max-width: 100%; }
+    a { color: inherit; text-decoration: none; }
+
+    /* ============================================================
+       HEADER / TOP NAV
+       ============================================================ */
+    .top-bar {
+      background: white;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .top-bar-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .top-bar a.logo-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 0.95rem;
+      color: var(--green);
+    }
+    .top-bar a.logo-link img { height: 36px; width: auto; }
+    .top-bar .crumb {
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    .top-bar .crumb::before { content: '/'; margin: 0 8px; color: var(--border); }
+    .top-bar .back {
+      margin-left: auto;
+      font-size: 0.85rem;
+      color: var(--text-soft);
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 10px;
+      transition: background 0.15s;
+    }
+    .top-bar .back:hover { background: var(--green-50); color: var(--green); }
+
+    /* ============================================================
+       HERO / COVER
+       ============================================================ */
+    .hero {
+      background:
+        radial-gradient(circle at 80% 20%, rgba(248,148,41,0.12) 0%, transparent 50%),
+        radial-gradient(circle at 20% 80%, rgba(219,44,26,0.08) 0%, transparent 50%),
+        linear-gradient(135deg, var(--green-dark) 0%, var(--green) 60%, var(--green-light) 100%);
+      color: white;
+      padding: 64px 24px 56px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: end;
+      gap: 32px;
+    }
+    .hero-eyebrow {
+      font-size: 0.8rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      opacity: 0.85;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .hero h1 {
+      font-size: clamp(2.4rem, 6vw, 4rem);
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+      margin-bottom: 14px;
+    }
+    .hero h1 .accent {
+      background: linear-gradient(90deg, #fff 0%, #ffe6b8 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .hero p {
+      font-size: clamp(1rem, 2vw, 1.15rem);
+      opacity: 0.9;
+      max-width: 560px;
+      font-weight: 400;
+    }
+    .hero-stats {
+      display: flex;
+      gap: 28px;
+      align-items: flex-end;
+      white-space: nowrap;
+    }
+    .hero-stat {
+      text-align: right;
+    }
+    .hero-stat .num {
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+    .hero-stat .lbl {
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      opacity: 0.8;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    @media (max-width: 720px) {
+      .hero-inner { grid-template-columns: 1fr; }
+      .hero-stats { justify-content: flex-start; flex-wrap: wrap; }
+      .hero-stat { text-align: left; }
+    }
+
+    /* ============================================================
+       BÚSQUEDA Y NAV DE CATEGORÍAS
+       ============================================================ */
+    .controls {
+      background: white;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 65px;
+      z-index: 90;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+    }
+    .controls-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 14px 24px;
+    }
+    .search-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .search-input-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 260px;
+    }
+    .search-input-wrap::before {
+      content: '🔍';
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.95rem;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    .search-input {
+      width: 100%;
+      padding: 12px 14px 12px 40px;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .search-input:focus { border-color: var(--green); background: white; }
+    .search-count {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .cat-nav {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: thin;
+    }
+    .cat-nav::-webkit-scrollbar { height: 4px; }
+    .cat-nav::-webkit-scrollbar-thumb { background: var(--green-100); border-radius: 2px; }
+    .cat-chip {
+      flex: 0 0 auto;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: var(--bg);
+      color: var(--text-soft);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .cat-chip:hover { background: var(--green-50); color: var(--green); }
+    .cat-chip.active {
+      background: var(--green);
+      color: white;
+      border-color: var(--green);
+    }
+    .cat-chip .cnt {
+      opacity: 0.7;
+      font-weight: 500;
+      margin-left: 4px;
+    }
+
+    /* ============================================================
+       CONTENIDO PRINCIPAL
+       ============================================================ */
+    main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+    }
+
+    /* Banner de categoría (estilo del PDF) */
+    .cat-banner {
+      background: linear-gradient(120deg, var(--green-dark) 0%, var(--green) 50%, var(--green-light) 100%);
+      border-radius: var(--radio);
+      padding: 28px 32px;
+      margin: 36px 0 20px;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      box-shadow: var(--sombra);
+      scroll-margin-top: 160px; /* para anclas con stickies */
+    }
+    .cat-banner:first-of-type { margin-top: 8px; }
+    .cat-banner-text h2 {
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      margin-bottom: 4px;
+    }
+    .cat-banner-text p {
+      font-size: 0.9rem;
+      opacity: 0.85;
+      font-weight: 400;
+    }
+    .cat-banner-badge {
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(6px);
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    /* Grid de productos */
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+    }
+    @media (max-width: 480px) {
+      .product-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    }
+
+    .product-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radio);
+      overflow: hidden;
+      box-shadow: var(--sombra);
+      transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+      display: flex;
+      flex-direction: column;
+    }
+    .product-card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--sombra-hover);
+      border-color: var(--green-100);
+    }
+    .product-img-wrap {
+      aspect-ratio: 1;
+      background:
+        linear-gradient(135deg, #fafdfa 0%, #f0f7f1 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .product-img-wrap img {
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      transition: transform 0.25s;
+    }
+    .product-card:hover .product-img-wrap img { transform: scale(1.05); }
+    .product-img-fallback {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--green-50);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      color: var(--green);
+      opacity: 0.5;
+    }
+    .product-info {
+      padding: 14px 14px 16px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .product-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+      letter-spacing: -0.01em;
+      /* Limit to 3 lines */
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .product-meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-weight: 500;
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .product-meta .barcode-label {
+      background: var(--green-50);
+      color: var(--green);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      letter-spacing: 0.04em;
+      font-weight: 700;
+    }
+
+    /* Empty state for hidden categories */
+    .cat-empty .product-grid { display: none; }
+    .cat-empty .cat-banner { display: none; }
+
+    /* Estado de carga */
+    .loading {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+    .loading .spinner {
+      display: inline-block;
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--green-100);
+      border-top-color: var(--green);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-bottom: 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--red);
+      font-weight: 600;
+    }
+
+    /* "Sin resultados" para búsqueda */
+    .no-results {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+      font-size: 1rem;
+    }
+    .no-results .emoji { font-size: 3rem; display: block; margin-bottom: 12px; opacity: 0.5; }
+    .no-results.hidden { display: none; }
+
+    /* ============================================================
+       FOOTER
+       ============================================================ */
+    footer {
+      background: var(--green-dark);
+      color: rgba(255,255,255,0.85);
+      padding: 40px 24px;
+      text-align: center;
+      margin-top: 60px;
+    }
+    footer .footer-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+    footer img {
+      height: 44px;
+      margin: 0 auto 14px;
+      filter: brightness(0) invert(1);
+      opacity: 0.95;
+    }
+    footer p {
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+    }
+    footer .small {
+      font-size: 0.8rem;
+      opacity: 0.65;
+      margin-top: 12px;
+    }
+    footer a { color: white; font-weight: 600; }
+
+    /* Botón "ir arriba" */
+    .to-top {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--green);
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-size: 1.3rem;
+      box-shadow: 0 6px 20px rgba(36,114,50,0.35);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 80;
+    }
+    .to-top.visible { opacity: 1; pointer-events: auto; }
+    .to-top:hover { transform: translateY(-3px); }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════ TOP BAR ══════════ -->
+  <div class="top-bar">
+    <div class="top-bar-inner">
+      <a class="logo-link" href="../">
+        <img src="../CTDLOGO.PNG" alt="CTD" />
+        <span>CENTRAL TRADE DISTRIBUTION</span>
+      </a>
+      <span class="crumb">Catálogo</span>
+      <a class="back" href="../">← Volver al sitio</a>
+    </div>
+  </div>
+
+  <!-- ══════════ HERO ══════════ -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div>
+        <div class="hero-eyebrow">Distribuidora Mayorista · Kansas City</div>
+        <h1>Nuestro <span class="accent">Catálogo</span></h1>
+        <p>Productos latinos auténticos para tu negocio. Calidad y variedad en cada categoría — desde bebidas refrescantes hasta panadería tradicional, salsas y especias.</p>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="num" id="statTotal">—</div>
+          <div class="lbl">Productos</div>
+        </div>
+        <div class="hero-stat">
+          <div class="num" id="statCats">—</div>
+          <div class="lbl">Categorías</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ BÚSQUEDA + CAT NAV ══════════ -->
+  <div class="controls">
+    <div class="controls-inner">
+      <div class="search-row">
+        <div class="search-input-wrap">
+          <input type="text" id="searchInput" class="search-input"
+                 placeholder="Buscar producto (nombre, marca, presentación…)"
+                 autocomplete="off" />
+        </div>
+        <div class="search-count" id="searchCount"></div>
+      </div>
+      <nav class="cat-nav" id="catNav"></nav>
+    </div>
+  </div>
+
+  <!-- ══════════ MAIN — RENDER DE CATEGORÍAS ══════════ -->
+  <main id="catalogContainer">
+    <div class="loading">
+      <div class="spinner"></div>
+      <div>Cargando productos…</div>
+    </div>
+  </main>
+
+  <div class="no-results hidden" id="noResults">
+    <span class="emoji">🔍</span>
+    <p>No se encontraron productos que coincidan con tu búsqueda.</p>
+  </div>
+
+  <!-- ══════════ FOOTER ══════════ -->
+  <footer>
+    <div class="footer-inner">
+      <img src="../CTDLOGO.PNG" alt="Central Trade Distribution" />
+      <p><strong>Central Trade Distribution</strong></p>
+      <p>Distribuidora mayorista de alimentos latinos en Kansas City</p>
+      <p class="small">¿Te interesa cotizar? <a href="../#contacto">Contáctanos</a> · Precios a mayoristas</p>
+    </div>
+  </footer>
+
+  <button class="to-top" id="toTopBtn" aria-label="Ir arriba">↑</button>
+
+  <script>
+    // ============================================================
+    // PARSER CSV SIMPLE (Description,Barcode2,ULRIMAGEN)
+    // ============================================================
+    function parseCSV(text) {
+      const lines = text.replace(/\r/g, '').split('\n').filter(l => l.trim().length > 0);
+      const header = lines.shift().split(',').map(h => h.trim());
+      return lines.map(line => {
+        // Split solo en las primeras 2 comas (description puede traer comas internas)
+        const firstComma = line.indexOf(',');
+        const secondComma = line.indexOf(',', firstComma + 1);
+        if (firstComma === -1 || secondComma === -1) return null;
+        return {
+          name:    line.slice(0, firstComma).trim(),
+          barcode: line.slice(firstComma + 1, secondComma).trim(),
+          image:   line.slice(secondComma + 1).trim()
+        };
+      }).filter(Boolean);
+    }
+
+    // ============================================================
+    // CATEGORIZACIÓN AUTOMÁTICA POR NOMBRE
+    // ============================================================
+    function categorize(name) {
+      const n = name.toUpperCase();
+
+      // Bebidas energéticas
+      if (/\bADRENALINE\b|\bRAPTOR\b|ENERGIZANTE/.test(n)) return 'Bebidas Energéticas';
+
+      // Refrescos y jugos (REFRESHING FRUIT línea completa)
+      if (/^REFRESHING FRUIT/.test(n)) return 'Refrescos y Jugos';
+
+      // Bebidas tradicionales
+      if (/HORCHATA|PINOLILLO/.test(n)) return 'Bebidas Tradicionales';
+
+      // Salsas y aderezos
+      if (/SALSA|MOJO CRIOLLO|CHILE PICANTE|KETCHUP|MAYONESA|PICAMAS/.test(n)) return 'Salsas y Aderezos';
+
+      // Especias y adobos
+      if (/PIMIENTA|COMINO|ACHIOTE|PIMENTON|RELAJO|SEMILLA DE MORRO/.test(n)) return 'Especias y Adobos';
+
+      // Pastas
+      if (/^INA |PASTA|ESPAGUETT|CABELLO DE ANGEL|CARACOL|CODITO|CODO|CORBATON|LINGUINI|CHAO MEIN/.test(n)) return 'Pastas';
+
+      // Arroz
+      if (/ARROZ|\bRICE\b/.test(n)) return 'Arroz';
+
+      // Frijoles
+      if (/FRIJOL/.test(n)) return 'Frijoles';
+
+      // Harinas
+      if (/HARINA/.test(n)) return 'Harinas';
+
+      // Tostadas y botanas (tortillas horneadas, lenguitas, etc.)
+      if (/TOSTADA|TOSTACAS|TUSTACAS|LENGUITAS/.test(n)) return 'Tostadas y Botanas';
+
+      // Panadería y galletas
+      if (/CONCHAS|SEMITA|GUARACHA|MARIAS|MARGARITA|ROSQUETE|ROSQUILLA/.test(n)) return 'Panadería y Galletas';
+
+      // Conservas / vegetales en conserva
+      if (/NOPAL|PACAYA|PANELA/.test(n)) return 'Conservas y Vegetales';
+
+      return 'Otros Productos';
+    }
+
+    // Orden preferido de categorías
+    const CAT_ORDER = [
+      'Refrescos y Jugos',
+      'Bebidas Energéticas',
+      'Bebidas Tradicionales',
+      'Salsas y Aderezos',
+      'Especias y Adobos',
+      'Pastas',
+      'Arroz',
+      'Frijoles',
+      'Harinas',
+      'Panadería y Galletas',
+      'Tostadas y Botanas',
+      'Conservas y Vegetales',
+      'Otros Productos'
+    ];
+
+    // Subtítulos descriptivos por categoría
+    const CAT_DESC = {
+      'Refrescos y Jugos':       'Aguas frescas, jugos naturales, aloe vera y bebidas con chía',
+      'Bebidas Energéticas':     'Energizantes en presentaciones grandes y personales',
+      'Bebidas Tradicionales':   'Horchatas y bebidas auténticas centroamericanas',
+      'Salsas y Aderezos':       'Salsas picantes, mojo, soya, mayonesa y aderezos',
+      'Especias y Adobos':       'Pimienta, comino, achiote, relajo y mezclas de sazón',
+      'Pastas':                  'Pastas italianas y chao mein en distintas presentaciones',
+      'Arroz':                   'Arroz Jasmine en presentaciones para tu negocio',
+      'Frijoles':                'Frijol rojo de seda, piloy y refritos',
+      'Harinas':                 'Harinas de cebada, haba y pinolillo',
+      'Panadería y Galletas':    'Conchas, semitas, marías, rosquillas y panadería tradicional',
+      'Tostadas y Botanas':      'Tostadas horneadas, tustacas y lenguitas',
+      'Conservas y Vegetales':   'Nopal, pacaya, panela y conservas selectas',
+      'Otros Productos':         'Productos complementarios de nuestra línea'
+    };
+
+    // Emoji ilustrativo por categoría (para fallback de imagen)
+    const CAT_EMOJI = {
+      'Refrescos y Jugos':       '🧃',
+      'Bebidas Energéticas':     '⚡',
+      'Bebidas Tradicionales':   '🥛',
+      'Salsas y Aderezos':       '🌶️',
+      'Especias y Adobos':       '🧂',
+      'Pastas':                  '🍝',
+      'Arroz':                   '🍚',
+      'Frijoles':                '🫘',
+      'Harinas':                 '🌾',
+      'Panadería y Galletas':    '🥐',
+      'Tostadas y Botanas':      '🌮',
+      'Conservas y Vegetales':   '🥬',
+      'Otros Productos':         '📦'
+    };
+
+    // ============================================================
+    // ESTADO Y RENDER
+    // ============================================================
+    let TODOS = [];        // array de {name, barcode, image, cat}
+    let POR_CAT = {};      // {cat: [productos]}
+
+    function slug(s) {
+      return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+              .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    }
+
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, m =>
+        ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+
+    function renderCatNav() {
+      const nav = document.getElementById('catNav');
+      const cats = CAT_ORDER.filter(c => POR_CAT[c] && POR_CAT[c].length > 0);
+      const total = TODOS.length;
+
+      const chips = [
+        `<a class="cat-chip active" data-cat="" href="#">Todas <span class="cnt">${total}</span></a>`,
+        ...cats.map(c =>
+          `<a class="cat-chip" data-cat="${esc(c)}" href="#cat-${slug(c)}">${esc(c)} <span class="cnt">${POR_CAT[c].length}</span></a>`
+        )
+      ];
+      nav.innerHTML = chips.join('');
+
+      // Highlight al hacer clic
+      nav.querySelectorAll('.cat-chip').forEach(chip => {
+        chip.addEventListener('click', (e) => {
+          nav.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+        });
+      });
+    }
+
+    function renderCatalog() {
+      const cont = document.getElementById('catalogContainer');
+      const cats = CAT_ORDER.filter(c => POR_CAT[c] && POR_CAT[c].length > 0);
+
+      cont.innerHTML = cats.map(cat => {
+        const items = POR_CAT[cat];
+        const emoji = CAT_EMOJI[cat] || '📦';
+        return `
+          <section class="cat-section" data-cat="${esc(cat)}" id="cat-${slug(cat)}">
+            <div class="cat-banner">
+              <div class="cat-banner-text">
+                <h2>${esc(cat)}</h2>
+                <p>${esc(CAT_DESC[cat] || '')}</p>
+              </div>
+              <div class="cat-banner-badge">${items.length} productos</div>
+            </div>
+            <div class="product-grid">
+              ${items.map(p => productCard(p, emoji)).join('')}
+            </div>
+          </section>
+        `;
+      }).join('');
+    }
+
+    function productCard(p, fallbackEmoji) {
+      const safeName = esc(p.name);
+      const safeImg = esc(p.image);
+      const safeBc = esc(p.barcode);
+      return `
+        <article class="product-card" data-name="${safeName.toUpperCase()}" data-barcode="${safeBc}">
+          <div class="product-img-wrap">
+            ${p.image
+              ? `<img src="${safeImg}" alt="${safeName}" loading="lazy"
+                   onerror="this.outerHTML='<div class=&quot;product-img-fallback&quot;>${fallbackEmoji}</div>'">`
+              : `<div class="product-img-fallback">${fallbackEmoji}</div>`}
+          </div>
+          <div class="product-info">
+            <h3 class="product-name">${safeName}</h3>
+            <div class="product-meta">
+              <span class="barcode-label">CÓDIGO</span>
+              <span>${safeBc}</span>
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    // ============================================================
+    // BÚSQUEDA EN VIVO
+    // ============================================================
+    function setupSearch() {
+      const input = document.getElementById('searchInput');
+      const count = document.getElementById('searchCount');
+      const noResults = document.getElementById('noResults');
+
+      function applyFilter() {
+        const q = input.value.trim().toUpperCase();
+        const cards = document.querySelectorAll('.product-card');
+        const sections = document.querySelectorAll('.cat-section');
+        let visible = 0;
+
+        cards.forEach(card => {
+          const name = card.dataset.name || '';
+          const bc = card.dataset.barcode || '';
+          const match = !q || name.includes(q) || bc.includes(q);
+          card.style.display = match ? '' : 'none';
+          if (match) visible++;
+        });
+
+        // Ocultar secciones vacías
+        sections.forEach(sec => {
+          const anyVisible = sec.querySelectorAll('.product-card:not([style*="none"])').length > 0;
+          sec.style.display = anyVisible ? '' : 'none';
+        });
+
+        count.textContent = q ? `${visible} resultado${visible === 1 ? '' : 's'}` : '';
+        noResults.classList.toggle('hidden', visible > 0 || !q);
+      }
+
+      input.addEventListener('input', applyFilter);
+    }
+
+    // ============================================================
+    // BOTÓN "IR ARRIBA"
+    // ============================================================
+    function setupToTop() {
+      const btn = document.getElementById('toTopBtn');
+      window.addEventListener('scroll', () => {
+        btn.classList.toggle('visible', window.scrollY > 400);
+      });
+      btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    }
+
+    // ============================================================
+    // INIT — FETCH CSV
+    // ============================================================
+    async function init() {
+      try {
+        // CSV vive en la raíz del repo (un nivel arriba de /catalogo/)
+        const res = await fetch('../productos.csv', { cache: 'no-cache' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const text = await res.text();
+        const productos = parseCSV(text);
+
+        TODOS = productos.map(p => ({ ...p, cat: categorize(p.name) }));
+
+        // Agrupar por categoría y ordenar alfabético dentro de cada una
+        POR_CAT = {};
+        TODOS.forEach(p => {
+          (POR_CAT[p.cat] = POR_CAT[p.cat] || []).push(p);
+        });
+        Object.values(POR_CAT).forEach(arr =>
+          arr.sort((a, b) => a.name.localeCompare(b.name, 'es'))
+        );
+
+        // Stats
+        document.getElementById('statTotal').textContent = TODOS.length;
+        document.getElementById('statCats').textContent =
+          Object.keys(POR_CAT).filter(c => POR_CAT[c].length > 0).length;
+
+        renderCatNav();
+        renderCatalog();
+        setupSearch();
+        setupToTop();
+
+      } catch (e) {
+        console.error(e);
+        document.getElementById('catalogContainer').innerHTML =
+          `<div class="error">⚠️ No se pudo cargar el catálogo (${esc(e.message)}). Intenta recargar la página.</div>`;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
