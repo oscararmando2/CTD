@@ -403,6 +403,44 @@
     .cat-empty .product-grid { display: none; }
     .cat-empty .cat-banner { display: none; }
 
+    /* Botón "Ver más / Ver menos" por sección */
+    .see-more-wrap {
+      display: flex;
+      justify-content: center;
+      margin-top: 22px;
+    }
+    .see-more-btn {
+      background: white;
+      color: var(--green);
+      border: 2px solid var(--green-100);
+      padding: 12px 28px;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.18s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: var(--sombra);
+    }
+    .see-more-btn:hover {
+      background: var(--green);
+      color: white;
+      border-color: var(--green);
+      transform: translateY(-2px);
+      box-shadow: var(--sombra-hover);
+    }
+    .see-more-btn .chevron {
+      display: inline-block;
+      transition: transform 0.2s;
+    }
+    .see-more-btn.expanded .chevron {
+      transform: rotate(180deg);
+    }
+    .see-more-wrap.hidden { display: none; }
+
     /* Estado de carga */
     .loading {
       text-align: center;
@@ -611,8 +649,8 @@
     }
 
     // Orden preferido de categorías (las que no estén aquí se ponen al final)
+    // "Frutas y Vegetales Frescos" va al final por petición del cliente.
     const CAT_ORDER = [
-      'Frutas y Vegetales Frescos',
       'Bebidas',
       'Lácteos',
       'Carnicería',
@@ -625,8 +663,12 @@
       'Conservas',
       'Galletas',
       'Dulces',
-      'Snacks y Botanas'
+      'Snacks y Botanas',
+      'Frutas y Vegetales Frescos'
     ];
+
+    // Cantidad de productos mostrados por sección antes del botón "Ver más"
+    const SECTION_LIMIT = 12;
 
     // Subtítulos descriptivos por categoría
     const CAT_DESC = {
@@ -670,6 +712,7 @@
     let TODOS = [];                  // array de {name, barcode, image, cat, ...}
     let POR_CAT = {};                // {cat: [productos]}
     let EFFECTIVE_CAT_ORDER = [];    // CAT_ORDER + categorías nuevas no listadas
+    const SECTION_EXPANDED = {};     // { 'Bebidas': true/false } — qué secciones están expandidas
 
     function slug(s) {
       return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -710,6 +753,9 @@
       cont.innerHTML = cats.map(cat => {
         const items = POR_CAT[cat];
         const emoji = CAT_EMOJI[cat] || '📦';
+        const hasMore = items.length > SECTION_LIMIT;
+        // Cada card recibe data-pos con su índice — el filtro de visibilidad
+        // lo usa para decidir cuáles esconder cuando la sección está colapsada.
         return `
           <section class="cat-section" data-cat="${esc(cat)}" id="cat-${slug(cat)}">
             <div class="cat-banner">
@@ -720,19 +766,39 @@
               <div class="cat-banner-badge">${items.length} productos</div>
             </div>
             <div class="product-grid">
-              ${items.map(p => productCard(p, emoji)).join('')}
+              ${items.map((p, i) => productCard(p, emoji, i)).join('')}
             </div>
+            ${hasMore ? `
+              <div class="see-more-wrap" data-cat-btn="${esc(cat)}">
+                <button class="see-more-btn" type="button"
+                        data-action="toggle-section" data-cat="${esc(cat)}">
+                  <span class="lbl">Ver los ${items.length - SECTION_LIMIT} restantes</span>
+                  <span class="chevron">▼</span>
+                </button>
+              </div>
+            ` : ''}
           </section>
         `;
       }).join('');
+
+      // Wire up botones "Ver más / menos"
+      cont.querySelectorAll('[data-action="toggle-section"]').forEach(btn => {
+        btn.addEventListener('click', () => toggleSection(btn.dataset.cat));
+      });
+
+      // Aplicar visibilidad inicial (todas las secciones colapsadas)
+      applyVisibility();
     }
 
-    function productCard(p, fallbackEmoji) {
+    function productCard(p, fallbackEmoji, posInCat) {
       const safeName = esc(p.name);
       const safeImg = esc(p.image);
       const safeBc = esc(p.barcode);
       return `
-        <article class="product-card" data-name="${safeName.toUpperCase()}" data-barcode="${safeBc}">
+        <article class="product-card"
+                 data-name="${safeName.toUpperCase()}"
+                 data-barcode="${safeBc}"
+                 data-pos="${posInCat}">
           <div class="product-img-wrap">
             ${p.image
               ? `<img src="${safeImg}" alt="${safeName}" loading="lazy"
@@ -747,38 +813,88 @@
     }
 
     // ============================================================
-    // BÚSQUEDA EN VIVO
+    // EXPANDIR / COLAPSAR SECCIÓN
     // ============================================================
+    function toggleSection(cat) {
+      SECTION_EXPANDED[cat] = !SECTION_EXPANDED[cat];
+      // Actualizar texto y rotación del botón
+      const btn = document.querySelector(`.see-more-btn[data-cat="${CSS.escape(cat)}"]`);
+      if (btn) {
+        btn.classList.toggle('expanded', SECTION_EXPANDED[cat]);
+        const lbl = btn.querySelector('.lbl');
+        if (lbl) {
+          const total = POR_CAT[cat].length;
+          lbl.textContent = SECTION_EXPANDED[cat]
+            ? 'Ver menos'
+            : `Ver los ${total - SECTION_LIMIT} restantes`;
+        }
+      }
+      applyVisibility();
+    }
+
+    // ============================================================
+    // BÚSQUEDA EN VIVO — solo guarda el query, applyVisibility hace el filtro
+    // ============================================================
+    let _currentQuery = '';
     function setupSearch() {
       const input = document.getElementById('searchInput');
-      const count = document.getElementById('searchCount');
-      const noResults = document.getElementById('noResults');
+      input.addEventListener('input', () => {
+        _currentQuery = input.value.trim().toUpperCase();
+        applyVisibility();
+      });
+    }
 
-      function applyFilter() {
-        const q = input.value.trim().toUpperCase();
-        const cards = document.querySelectorAll('.product-card');
-        const sections = document.querySelectorAll('.cat-section');
-        let visible = 0;
+    // ============================================================
+    // APLICAR VISIBILIDAD — combina filtro de búsqueda + colapso por sección
+    // Reglas:
+    //   - Si hay query de búsqueda: muestra TODOS los matches (ignora colapso)
+    //     y oculta el botón "Ver más" durante la búsqueda.
+    //   - Si NO hay query: muestra los primeros SECTION_LIMIT por sección,
+    //     o todos si la sección está expandida.
+    // ============================================================
+    function applyVisibility() {
+      const q = _currentQuery;
+      const isSearching = q.length > 0;
+      const sections = document.querySelectorAll('.cat-section');
+      let totalVisible = 0;
+
+      sections.forEach(sec => {
+        const cat = sec.dataset.cat;
+        const expanded = !!SECTION_EXPANDED[cat];
+        const cards = sec.querySelectorAll('.product-card');
+        let sectionVisible = 0;
 
         cards.forEach(card => {
           const name = card.dataset.name || '';
           const bc = card.dataset.barcode || '';
-          const match = !q || name.includes(q) || bc.includes(q);
-          card.style.display = match ? '' : 'none';
-          if (match) visible++;
+          const pos = parseInt(card.dataset.pos || '0', 10);
+
+          // ¿Matchea el filtro de búsqueda?
+          const matchesQuery = !isSearching || name.includes(q) || bc.includes(q);
+          // ¿Está dentro del límite (cuando NO hay búsqueda)?
+          const withinLimit = expanded || pos < SECTION_LIMIT;
+          // Visible si: matchea búsqueda Y (hay búsqueda activa O está dentro del límite)
+          const show = matchesQuery && (isSearching || withinLimit);
+
+          card.style.display = show ? '' : 'none';
+          if (show) sectionVisible++;
         });
 
-        // Ocultar secciones vacías
-        sections.forEach(sec => {
-          const anyVisible = sec.querySelectorAll('.product-card:not([style*="none"])').length > 0;
-          sec.style.display = anyVisible ? '' : 'none';
-        });
+        // Botón "Ver más" solo es relevante cuando NO hay búsqueda
+        const moreWrap = sec.querySelector('.see-more-wrap');
+        if (moreWrap) moreWrap.classList.toggle('hidden', isSearching);
 
-        count.textContent = q ? `${visible} resultado${visible === 1 ? '' : 's'}` : '';
-        noResults.classList.toggle('hidden', visible > 0 || !q);
-      }
+        // Ocultar sección entera si no hay nada visible (solo aplica durante búsqueda)
+        sec.style.display = (isSearching && sectionVisible === 0) ? 'none' : '';
 
-      input.addEventListener('input', applyFilter);
+        totalVisible += sectionVisible;
+      });
+
+      // Contador y mensaje de "sin resultados"
+      const count = document.getElementById('searchCount');
+      const noResults = document.getElementById('noResults');
+      count.textContent = isSearching ? `${totalVisible} resultado${totalVisible === 1 ? '' : 's'}` : '';
+      noResults.classList.toggle('hidden', !isSearching || totalVisible > 0);
     }
 
     // ============================================================
