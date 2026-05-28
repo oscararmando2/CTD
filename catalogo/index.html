@@ -7,7 +7,6 @@
   <meta name="description" content="Catálogo completo de productos latinos de Central Trade Distribution — distribuidora mayorista en Kansas City." />
   <link rel="icon" href="../CTDLOGO.PNG" />
 
-  <!-- Fuentes -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -24,6 +23,8 @@
       --green-100:   #d0e7d4;
       --red:         #db2c1a;
       --orange:      #f89429;
+      --whatsapp:    #25d366;
+      --whatsapp-dk: #1da851;
       --text:        #1a2e1f;
       --text-soft:   #4a5d4f;
       --muted:       #7a8a7e;
@@ -31,10 +32,10 @@
       --card:        #ffffff;
       --border:      #e3ede5;
       --radio:       16px;
-      --sombra:      0 2px 8px rgba(36, 114, 50, 0.06), 0 8px 24px rgba(36, 114, 50, 0.04);
-      --sombra-hover:0 4px 16px rgba(36, 114, 50, 0.10), 0 16px 40px rgba(36, 114, 50, 0.08);
+      --sombra:      0 2px 8px rgba(36,114,50,0.06), 0 8px 24px rgba(36,114,50,0.04);
+      --sombra-hover:0 4px 16px rgba(36,114,50,0.10), 0 16px 40px rgba(36,114,50,0.08);
+      --sombra-fab:  0 8px 24px rgba(36,114,50,0.35);
     }
-
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     html { scroll-behavior: smooth; }
     body {
@@ -46,24 +47,26 @@
     }
     img { display: block; max-width: 100%; }
     a { color: inherit; text-decoration: none; }
+    button { font-family: inherit; cursor: pointer; }
+    .hidden { display: none !important; }
 
     /* ============================================================
-       HEADER / TOP NAV
+       TOP BAR
        ============================================================ */
     .top-bar {
       background: white;
       border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 0;
+      position: sticky; top: 0;
       z-index: 100;
     }
     .top-bar-inner {
       max-width: 1280px;
       margin: 0 auto;
-      padding: 14px 24px;
+      padding: 14px 20px;
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 14px;
+      flex-wrap: wrap;
     }
     .top-bar a.logo-link {
       display: flex;
@@ -80,29 +83,62 @@
       font-weight: 500;
     }
     .top-bar .crumb::before { content: '/'; margin: 0 8px; color: var(--border); }
-    .top-bar .back {
-      margin-left: auto;
-      font-size: 0.85rem;
-      color: var(--text-soft);
-      font-weight: 600;
-      padding: 8px 14px;
-      border-radius: 10px;
-      transition: background 0.15s;
+    .top-bar .spacer { flex: 1; }
+    .lang-toggle {
+      display: inline-flex;
+      background: var(--bg);
+      border-radius: 999px;
+      padding: 4px;
+      font-size: 0.8rem;
+      font-weight: 700;
     }
-    .top-bar .back:hover { background: var(--green-50); color: var(--green); }
+    .lang-toggle button {
+      border: none; background: transparent;
+      padding: 6px 12px;
+      border-radius: 999px;
+      color: var(--muted);
+      transition: all 0.15s;
+    }
+    .lang-toggle button.active {
+      background: var(--green);
+      color: white;
+    }
 
     /* ============================================================
-       HERO / COVER
+       HERO con patrón decorativo SVG
        ============================================================ */
     .hero {
-      background:
-        radial-gradient(circle at 80% 20%, rgba(248,148,41,0.12) 0%, transparent 50%),
-        radial-gradient(circle at 20% 80%, rgba(219,44,26,0.08) 0%, transparent 50%),
-        linear-gradient(135deg, var(--green-dark) 0%, var(--green) 60%, var(--green-light) 100%);
+      background: linear-gradient(135deg, var(--green-dark) 0%, var(--green) 60%, var(--green-light) 100%);
       color: white;
-      padding: 64px 24px 56px;
+      padding: 56px 20px 60px;
       position: relative;
       overflow: hidden;
+    }
+    .hero::before, .hero::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(60px);
+      opacity: 0.25;
+    }
+    .hero::before {
+      width: 380px; height: 380px;
+      background: var(--orange);
+      top: -120px; right: -100px;
+    }
+    .hero::after {
+      width: 320px; height: 320px;
+      background: var(--green-light);
+      bottom: -120px; left: -80px;
+    }
+    .hero-pattern {
+      position: absolute; inset: 0;
+      opacity: 0.07;
+      background-image:
+        radial-gradient(circle at 20% 30%, white 1px, transparent 1px),
+        radial-gradient(circle at 70% 70%, white 1px, transparent 1px),
+        radial-gradient(circle at 90% 20%, white 1.5px, transparent 1.5px);
+      background-size: 60px 60px, 80px 80px, 100px 100px;
     }
     .hero-inner {
       max-width: 1280px;
@@ -111,9 +147,11 @@
       grid-template-columns: 1fr auto;
       align-items: end;
       gap: 32px;
+      position: relative;
+      z-index: 1;
     }
     .hero-eyebrow {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       letter-spacing: 0.18em;
       text-transform: uppercase;
       opacity: 0.85;
@@ -135,19 +173,11 @@
     }
     .hero p {
       font-size: clamp(1rem, 2vw, 1.15rem);
-      opacity: 0.9;
+      opacity: 0.92;
       max-width: 560px;
-      font-weight: 400;
     }
-    .hero-stats {
-      display: flex;
-      gap: 28px;
-      align-items: flex-end;
-      white-space: nowrap;
-    }
-    .hero-stat {
-      text-align: right;
-    }
+    .hero-stats { display: flex; gap: 28px; align-items: flex-end; white-space: nowrap; }
+    .hero-stat { text-align: right; }
     .hero-stat .num {
       font-size: clamp(2rem, 4vw, 3rem);
       font-weight: 900;
@@ -155,10 +185,10 @@
       letter-spacing: -0.03em;
     }
     .hero-stat .lbl {
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       letter-spacing: 0.12em;
       text-transform: uppercase;
-      opacity: 0.8;
+      opacity: 0.85;
       font-weight: 600;
       margin-top: 4px;
     }
@@ -169,24 +199,23 @@
     }
 
     /* ============================================================
-       BÚSQUEDA Y NAV DE CATEGORÍAS
+       CONTROLS (search + brand filter + cat nav)
        ============================================================ */
     .controls {
       background: white;
       border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 65px;
+      position: sticky; top: 65px;
       z-index: 90;
       box-shadow: 0 1px 0 rgba(0,0,0,0.02);
     }
     .controls-inner {
       max-width: 1280px;
       margin: 0 auto;
-      padding: 14px 24px;
+      padding: 14px 20px;
     }
     .search-row {
       display: flex;
-      gap: 12px;
+      gap: 10px;
       align-items: center;
       margin-bottom: 12px;
       flex-wrap: wrap;
@@ -194,21 +223,17 @@
     .search-input-wrap {
       position: relative;
       flex: 1;
-      min-width: 260px;
+      min-width: 240px;
     }
     .search-input-wrap::before {
       content: '🔍';
-      position: absolute;
-      left: 14px;
-      top: 50%;
+      position: absolute; left: 14px; top: 50%;
       transform: translateY(-50%);
-      font-size: 0.95rem;
-      opacity: 0.5;
+      font-size: 0.95rem; opacity: 0.5;
       pointer-events: none;
     }
-    .search-input {
-      width: 100%;
-      padding: 12px 14px 12px 40px;
+    .search-input, .brand-filter {
+      padding: 11px 14px 11px 40px;
       border: 1.5px solid var(--border);
       border-radius: 12px;
       font-size: 0.95rem;
@@ -218,13 +243,22 @@
       outline: none;
       transition: border-color 0.15s, background 0.15s;
     }
-    .search-input:focus { border-color: var(--green); background: white; }
+    .search-input { width: 100%; }
+    .search-input:focus, .brand-filter:focus { border-color: var(--green); background: white; }
+    .brand-filter {
+      padding: 11px 36px 11px 14px;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M6 8L0 0h12z' fill='%237a8a7e'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      min-width: 200px;
+    }
     .search-count {
       font-size: 0.85rem;
       color: var(--muted);
       font-weight: 500;
     }
-
     .cat-nav {
       display: flex;
       gap: 6px;
@@ -248,73 +282,88 @@
       white-space: nowrap;
     }
     .cat-chip:hover { background: var(--green-50); color: var(--green); }
-    .cat-chip.active {
-      background: var(--green);
-      color: white;
-      border-color: var(--green);
-    }
-    .cat-chip .cnt {
-      opacity: 0.7;
-      font-weight: 500;
-      margin-left: 4px;
-    }
+    .cat-chip.active { background: var(--green); color: white; border-color: var(--green); }
+    .cat-chip .cnt { opacity: 0.7; font-weight: 500; margin-left: 4px; }
 
     /* ============================================================
-       CONTENIDO PRINCIPAL
+       MAIN CONTAINER
        ============================================================ */
     main {
       max-width: 1280px;
       margin: 0 auto;
-      padding: 32px 24px 80px;
+      padding: 32px 20px 100px;
     }
 
-    /* Banner de categoría (estilo del PDF) */
+    /* Banner de categoría (clickable → expand/collapse) */
     .cat-banner {
       background: linear-gradient(120deg, var(--green-dark) 0%, var(--green) 50%, var(--green-light) 100%);
       border-radius: var(--radio);
-      padding: 28px 32px;
-      margin: 36px 0 20px;
+      padding: 22px 28px;
+      margin: 26px 0 0;
       color: white;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 20px;
+      gap: 16px;
       box-shadow: var(--sombra);
-      scroll-margin-top: 160px; /* para anclas con stickies */
+      cursor: pointer;
+      transition: transform 0.18s, box-shadow 0.18s;
+      scroll-margin-top: 170px;
+      user-select: none;
     }
-    .cat-banner:first-of-type { margin-top: 8px; }
+    .cat-banner:hover { transform: translateY(-2px); box-shadow: var(--sombra-hover); }
+    .cat-banner:first-of-type { margin-top: 0; }
     .cat-banner-text h2 {
-      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      font-size: clamp(1.45rem, 2.8vw, 2rem);
       font-weight: 800;
       letter-spacing: -0.01em;
       margin-bottom: 4px;
     }
     .cat-banner-text p {
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       opacity: 0.85;
-      font-weight: 400;
     }
+    .cat-banner-right { display: flex; align-items: center; gap: 14px; }
     .cat-banner-badge {
-      background: rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.18);
       backdrop-filter: blur(6px);
-      padding: 8px 16px;
+      padding: 7px 14px;
       border-radius: 999px;
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       font-weight: 700;
-      letter-spacing: 0.02em;
       white-space: nowrap;
     }
+    .cat-chevron {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.18);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem;
+      transition: transform 0.25s;
+    }
+    .cat-section.expanded .cat-chevron { transform: rotate(180deg); }
 
-    /* Grid de productos */
+    /* Cuerpo de sección (grid + ver más) */
+    .cat-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease, padding 0.3s ease;
+      padding: 0 0;
+    }
+    .cat-section.expanded .cat-body {
+      max-height: 99999px;
+      padding: 18px 0 0;
+    }
     .product-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
     }
     @media (max-width: 480px) {
       .product-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
     }
 
+    /* Product card */
     .product-card {
       background: var(--card);
       border: 1px solid var(--border);
@@ -324,6 +373,8 @@
       transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
       display: flex;
       flex-direction: column;
+      cursor: pointer;
+      position: relative;
     }
     .product-card:hover {
       transform: translateY(-3px);
@@ -333,92 +384,111 @@
     .product-img-wrap {
       aspect-ratio: 1;
       background: #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       padding: 12px;
       position: relative;
       overflow: hidden;
     }
     .product-img-wrap img {
-      max-width: 100%;
-      max-height: 100%;
-      width: auto;
-      height: auto;
+      max-width: 100%; max-height: 100%;
       object-fit: contain;
       transition: transform 0.25s;
     }
     .product-card:hover .product-img-wrap img { transform: scale(1.05); }
     .product-img-fallback {
-      width: 64px;
-      height: 64px;
+      width: 64px; height: 64px;
       border-radius: 50%;
       background: var(--green-50);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       font-size: 1.8rem;
-      color: var(--green);
-      opacity: 0.5;
+      color: var(--green); opacity: 0.5;
     }
     .product-info {
-      padding: 14px 14px 16px;
+      padding: 12px 12px 14px;
       flex: 1;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 4px;
     }
     .product-name {
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       font-weight: 700;
       color: var(--text);
       line-height: 1.3;
-      letter-spacing: -0.01em;
-      /* Limit to 3 lines */
+      letter-spacing: -0.005em;
       display: -webkit-box;
       -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
-    .product-meta {
-      font-size: 0.78rem;
-      color: var(--muted);
-      font-weight: 500;
-      margin-top: auto;
+    .product-meta-row {
       display: flex;
       align-items: center;
       gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 4px;
     }
-    .product-meta .barcode-label {
-      background: var(--green-50);
+    .product-brand {
+      font-size: 0.72rem;
       color: var(--green);
-      padding: 3px 8px;
+      background: var(--green-50);
+      padding: 2px 8px;
       border-radius: 6px;
-      font-size: 0.7rem;
-      letter-spacing: 0.04em;
       font-weight: 700;
+      letter-spacing: 0.02em;
     }
+    .product-pkg {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    /* Stock badge */
+    .stock-badge {
+      position: absolute;
+      top: 8px; left: 8px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      z-index: 2;
+    }
+    .stock-badge.out { background: #fee; color: var(--red); border: 1px solid #fbb; }
+    .stock-badge.low { background: #fff3e0; color: #c66100; border: 1px solid #ffd197; }
 
-    /* Empty state for hidden categories */
-    .cat-empty .product-grid { display: none; }
-    .cat-empty .cat-banner { display: none; }
+    /* Botón ⭐ favorito en card */
+    .fav-btn {
+      position: absolute;
+      top: 8px; right: 8px;
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(4px);
+      font-size: 1.1rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+      z-index: 2;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    .fav-btn:hover { background: white; transform: scale(1.1); }
+    .fav-btn.active { background: var(--green); color: white; }
 
-    /* Botón "Ver más / Ver menos" por sección */
+    /* Botón "Ver más" interno (cuando hay más de SECTION_LIMIT) */
     .see-more-wrap {
       display: flex;
       justify-content: center;
-      margin-top: 22px;
+      margin-top: 20px;
     }
     .see-more-btn {
       background: white;
       color: var(--green);
       border: 2px solid var(--green-100);
-      padding: 12px 28px;
+      padding: 11px 24px;
       border-radius: 999px;
-      font-size: 0.95rem;
+      font-size: 0.92rem;
       font-weight: 700;
-      font-family: inherit;
-      cursor: pointer;
       transition: all 0.18s;
       display: inline-flex;
       align-items: center;
@@ -426,55 +496,362 @@
       box-shadow: var(--sombra);
     }
     .see-more-btn:hover {
-      background: var(--green);
-      color: white;
+      background: var(--green); color: white;
       border-color: var(--green);
       transform: translateY(-2px);
       box-shadow: var(--sombra-hover);
     }
-    .see-more-btn .chevron {
-      display: inline-block;
-      transition: transform 0.2s;
-    }
-    .see-more-btn.expanded .chevron {
-      transform: rotate(180deg);
-    }
-    .see-more-wrap.hidden { display: none; }
+    .see-more-btn .chevron { transition: transform 0.2s; }
+    .see-more-btn.expanded .chevron { transform: rotate(180deg); }
 
-    /* Estado de carga */
-    .loading {
-      text-align: center;
-      padding: 80px 20px;
-      color: var(--muted);
-      font-size: 1rem;
+    /* ============================================================
+       SKELETON LOADING
+       ============================================================ */
+    .skeleton-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 14px;
     }
-    .loading .spinner {
-      display: inline-block;
-      width: 36px;
-      height: 36px;
-      border: 3px solid var(--green-100);
-      border-top-color: var(--green);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-bottom: 12px;
+    .skeleton-card {
+      background: white;
+      border-radius: var(--radio);
+      overflow: hidden;
+      box-shadow: var(--sombra);
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .skeleton-img, .skeleton-line {
+      background: linear-gradient(90deg, #eef4ef 25%, #e0eae2 50%, #eef4ef 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+    .skeleton-img { aspect-ratio: 1; }
+    .skeleton-info { padding: 14px; }
+    .skeleton-line { height: 12px; border-radius: 6px; margin: 6px 0; }
+    .skeleton-line.short { width: 60%; }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Estados */
     .error {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--red);
-      font-weight: 600;
+      text-align: center; padding: 60px 20px;
+      color: var(--red); font-weight: 600;
     }
-
-    /* "Sin resultados" para búsqueda */
     .no-results {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--muted);
-      font-size: 1rem;
+      text-align: center; padding: 60px 20px;
+      color: var(--muted); font-size: 1rem;
     }
     .no-results .emoji { font-size: 3rem; display: block; margin-bottom: 12px; opacity: 0.5; }
-    .no-results.hidden { display: none; }
+
+    /* ============================================================
+       MODAL — Detalle de producto
+       ============================================================ */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(20,40,25,0.65);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center; justify-content: center;
+      padding: 20px;
+      z-index: 200;
+      animation: fadeIn 0.2s ease;
+    }
+    .modal-overlay.visible { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal {
+      background: white;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 880px;
+      max-height: 92vh;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      animation: slideUp 0.25s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(20px); opacity: 0.8; } to { transform: translateY(0); opacity: 1; } }
+    @media (max-width: 720px) {
+      .modal { grid-template-columns: 1fr; max-height: 95vh; overflow-y: auto; }
+    }
+    .modal-img-side {
+      background: #fafdfa;
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+      position: relative;
+      min-height: 280px;
+    }
+    .modal-img-side img {
+      max-width: 100%; max-height: 360px;
+      object-fit: contain;
+    }
+    .modal-img-side .product-img-fallback {
+      width: 120px; height: 120px;
+      font-size: 3rem;
+    }
+    .modal-close {
+      position: absolute;
+      top: 14px; right: 14px;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: white;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      font-size: 1.2rem;
+      color: var(--text);
+      z-index: 10;
+      transition: transform 0.15s;
+    }
+    .modal-close:hover { transform: scale(1.1); }
+    .modal-info-side {
+      padding: 30px 28px;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+    .modal-cat-tag {
+      display: inline-block;
+      font-size: 0.72rem;
+      color: var(--green);
+      background: var(--green-50);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      align-self: flex-start;
+    }
+    .modal-name {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1.2;
+      margin-bottom: 14px;
+    }
+    .modal-attrs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 18px;
+      margin: 16px 0 24px;
+      padding: 14px 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-attr-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .modal-attr-value {
+      font-size: 0.95rem;
+      color: var(--text);
+      font-weight: 600;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: auto;
+      flex-wrap: wrap;
+    }
+    .btn {
+      flex: 1;
+      min-width: 0;
+      padding: 13px 18px;
+      border-radius: 12px;
+      border: none;
+      font-size: 0.95rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.18s;
+      white-space: nowrap;
+    }
+    .btn-wa {
+      background: var(--whatsapp);
+      color: white;
+      box-shadow: 0 4px 12px rgba(37,211,102,0.35);
+    }
+    .btn-wa:hover {
+      background: var(--whatsapp-dk);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(37,211,102,0.45);
+    }
+    .btn-fav {
+      background: white;
+      color: var(--green);
+      border: 2px solid var(--green-100);
+    }
+    .btn-fav:hover { background: var(--green-50); border-color: var(--green); }
+    .btn-fav.active {
+      background: var(--green);
+      color: white;
+      border-color: var(--green);
+    }
+    .modal-share-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 12px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .modal-share-link:hover { color: var(--green); }
+
+    /* ============================================================
+       FAB de Lista + Panel
+       ============================================================ */
+    .fab {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: 999px;
+      padding: 14px 22px 14px 18px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: var(--sombra-fab);
+      z-index: 80;
+      transition: all 0.2s;
+    }
+    .fab:hover { background: var(--green-dark); transform: translateY(-3px); }
+    .fab .fab-count {
+      background: white;
+      color: var(--green);
+      min-width: 24px; height: 24px;
+      border-radius: 999px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 0.78rem;
+      font-weight: 800;
+      padding: 0 6px;
+    }
+    .fab.empty { background: var(--text-soft); }
+    .fab.empty .fab-count { color: var(--text-soft); }
+
+    .panel-overlay {
+      position: fixed; inset: 0;
+      background: rgba(20,40,25,0.55);
+      display: none;
+      z-index: 150;
+      animation: fadeIn 0.2s ease;
+    }
+    .panel-overlay.visible { display: block; }
+    .panel {
+      position: fixed;
+      top: 0; right: 0; bottom: 0;
+      width: 100%;
+      max-width: 480px;
+      background: white;
+      box-shadow: -8px 0 32px rgba(0,0,0,0.2);
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      z-index: 160;
+    }
+    .panel.visible { transform: translateX(0); }
+    .panel-header {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--green);
+      color: white;
+    }
+    .panel-header h3 { font-size: 1.1rem; font-weight: 800; }
+    .panel-header .panel-close {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      font-size: 1rem;
+    }
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+    }
+    .panel-item {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      margin-bottom: 8px;
+      background: white;
+    }
+    .panel-item-img {
+      width: 56px; height: 56px;
+      background: #f7faf8;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .panel-item-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .panel-item-info { flex: 1; min-width: 0; }
+    .panel-item-info .name {
+      font-size: 0.88rem;
+      font-weight: 700;
+      line-height: 1.25;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .panel-item-info .meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+    .panel-item-remove {
+      border: none;
+      background: transparent;
+      color: var(--red);
+      font-size: 1.1rem;
+      padding: 6px 8px;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+    .panel-item-remove:hover { background: #fee; }
+    .panel-empty {
+      padding: 60px 20px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .panel-empty .emoji { font-size: 3rem; display: block; margin-bottom: 10px; opacity: 0.5; }
+    .panel-footer {
+      padding: 16px;
+      border-top: 1px solid var(--border);
+      background: white;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .panel-footer .btn-clear {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .panel-footer .btn-clear:hover { color: var(--red); border-color: var(--red); }
 
     /* ============================================================
        FOOTER
@@ -482,52 +859,23 @@
     footer {
       background: var(--green-dark);
       color: rgba(255,255,255,0.85);
-      padding: 40px 24px;
+      padding: 40px 20px;
       text-align: center;
       margin-top: 60px;
     }
-    footer .footer-inner {
-      max-width: 1280px;
-      margin: 0 auto;
-    }
+    footer .footer-inner { max-width: 1280px; margin: 0 auto; }
     footer img {
-      height: 44px;
-      margin: 0 auto 14px;
+      height: 44px; margin: 0 auto 14px;
       filter: brightness(0) invert(1);
       opacity: 0.95;
     }
-    footer p {
-      font-size: 0.9rem;
-      margin-bottom: 6px;
-    }
+    footer p { font-size: 0.9rem; margin-bottom: 6px; }
     footer .small {
       font-size: 0.8rem;
       opacity: 0.65;
       margin-top: 12px;
     }
     footer a { color: white; font-weight: 600; }
-
-    /* Botón "ir arriba" */
-    .to-top {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background: var(--green);
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-size: 1.3rem;
-      box-shadow: 0 6px 20px rgba(36,114,50,0.35);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s, transform 0.2s;
-      z-index: 80;
-    }
-    .to-top.visible { opacity: 1; pointer-events: auto; }
-    .to-top:hover { transform: translateY(-3px); }
   </style>
 </head>
 <body>
@@ -537,59 +885,72 @@
     <div class="top-bar-inner">
       <a class="logo-link" href="../">
         <img src="../CTDLOGO.PNG" alt="CTD" />
-        <span>CENTRAL TRADE DISTRIBUTION</span>
+        <span data-i18n="brand">CENTRAL TRADE DISTRIBUTION</span>
       </a>
-      <span class="crumb">Catálogo</span>
+      <span class="crumb" data-i18n="breadcrumb">Catálogo</span>
+      <div class="spacer"></div>
+      <div class="lang-toggle" role="group" aria-label="Idioma">
+        <button data-lang-btn="es" class="active">ES</button>
+        <button data-lang-btn="en">EN</button>
+      </div>
     </div>
   </div>
 
   <!-- ══════════ HERO ══════════ -->
   <section class="hero">
+    <div class="hero-pattern" aria-hidden="true"></div>
     <div class="hero-inner">
       <div>
-        <div class="hero-eyebrow">Distribuidora Mayorista · Kansas City</div>
-        <h1>Nuestro <span class="accent">Catálogo</span></h1>
-        <p>Productos latinos auténticos para tu negocio. Calidad y variedad en cada categoría — desde bebidas refrescantes hasta panadería tradicional, salsas y especias.</p>
+        <div class="hero-eyebrow" data-i18n="hero.eyebrow">Distribuidora Mayorista · Kansas City</div>
+        <h1>
+          <span data-i18n="hero.title.lead">Nuestro</span>
+          <span class="accent" data-i18n="hero.title.accent">Catálogo</span>
+        </h1>
+        <p data-i18n="hero.sub">Productos latinos auténticos para tu negocio. Calidad y variedad en cada categoría — desde bebidas refrescantes hasta panadería tradicional, salsas y especias.</p>
       </div>
       <div class="hero-stats">
         <div class="hero-stat">
           <div class="num" id="statTotal">—</div>
-          <div class="lbl">Productos</div>
+          <div class="lbl" data-i18n="hero.stat.products">Productos</div>
         </div>
         <div class="hero-stat">
           <div class="num" id="statCats">—</div>
-          <div class="lbl">Categorías</div>
+          <div class="lbl" data-i18n="hero.stat.categories">Categorías</div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ══════════ BÚSQUEDA + CAT NAV ══════════ -->
+  <!-- ══════════ CONTROLS ══════════ -->
   <div class="controls">
     <div class="controls-inner">
       <div class="search-row">
         <div class="search-input-wrap">
           <input type="text" id="searchInput" class="search-input"
-                 placeholder="Buscar producto (nombre, marca, presentación…)"
+                 data-i18n-attr="placeholder=search.placeholder"
+                 placeholder="Buscar producto (nombre, marca, código…)"
                  autocomplete="off" />
         </div>
+        <select id="brandFilter" class="brand-filter">
+          <option value="" data-i18n="filter.allBrands">Todas las marcas</option>
+        </select>
         <div class="search-count" id="searchCount"></div>
       </div>
       <nav class="cat-nav" id="catNav"></nav>
     </div>
   </div>
 
-  <!-- ══════════ MAIN — RENDER DE CATEGORÍAS ══════════ -->
+  <!-- ══════════ MAIN ══════════ -->
   <main id="catalogContainer">
-    <div class="loading">
-      <div class="spinner"></div>
-      <div>Cargando productos…</div>
+    <!-- Skeleton loading -->
+    <div class="skeleton-grid" id="skeletonLoader">
+      <!-- 8 skeletons generated by JS -->
     </div>
   </main>
 
   <div class="no-results hidden" id="noResults">
     <span class="emoji">🔍</span>
-    <p>No se encontraron productos que coincidan con tu búsqueda.</p>
+    <p data-i18n="noResults">No se encontraron productos que coincidan con tu búsqueda.</p>
   </div>
 
   <!-- ══════════ FOOTER ══════════ -->
@@ -597,45 +958,293 @@
     <div class="footer-inner">
       <img src="../CTDLOGO.PNG" alt="Central Trade Distribution" />
       <p><strong>Central Trade Distribution</strong></p>
-      <p>Distribuidora mayorista de alimentos latinos en Kansas City</p>
-      <p class="small">¿Te interesa cotizar? <a href="../#contacto">Contáctanos</a> · Precios a mayoristas</p>
+      <p data-i18n="footer.tagline">Distribuidora mayorista de alimentos latinos en Kansas City</p>
+      <p class="small">
+        <span data-i18n="footer.quote">¿Te interesa cotizar?</span>
+        <a href="../#contacto" data-i18n="footer.contact">Contáctanos</a>
+        · <span data-i18n="footer.prices">Precios a mayoristas</span>
+      </p>
     </div>
   </footer>
 
-  <button class="to-top" id="toTopBtn" aria-label="Ir arriba">↑</button>
+  <!-- ══════════ MODAL DE PRODUCTO ══════════ -->
+  <div class="modal-overlay" id="productModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true">
+      <button class="modal-close" id="modalClose" aria-label="Cerrar">✕</button>
+      <div class="modal-img-side" id="modalImgSide"></div>
+      <div class="modal-info-side">
+        <span class="modal-cat-tag" id="modalCat"></span>
+        <h2 class="modal-name" id="modalName"></h2>
+        <div class="modal-attrs" id="modalAttrs"></div>
+        <div class="modal-actions">
+          <button class="btn btn-fav" id="modalFavBtn">
+            <span class="ico">⭐</span>
+            <span class="lbl"></span>
+          </button>
+          <a class="btn btn-wa" id="modalWaBtn" target="_blank" rel="noopener">
+            <span>💬</span>
+            <span data-i18n="modal.quote">Cotizar por WhatsApp</span>
+          </a>
+        </div>
+        <span class="modal-share-link" id="modalShareBtn">
+          🔗 <span data-i18n="modal.copyLink">Copiar link del producto</span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ FAB DE LISTA ══════════ -->
+  <button class="fab empty" id="fabBtn" aria-label="Ver mi lista de cotización">
+    <span>📋</span>
+    <span data-i18n="fab.label">Mi lista</span>
+    <span class="fab-count" id="fabCount">0</span>
+  </button>
+
+  <!-- ══════════ PANEL DE LISTA ══════════ -->
+  <div class="panel-overlay" id="panelOverlay"></div>
+  <aside class="panel" id="listPanel" aria-hidden="true">
+    <div class="panel-header">
+      <h3 data-i18n="panel.title">Mi lista de cotización</h3>
+      <button class="panel-close" id="panelClose" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="panel-body" id="panelBody"></div>
+    <div class="panel-footer">
+      <a class="btn btn-wa" id="panelWaBtn" target="_blank" rel="noopener">
+        <span>💬</span>
+        <span data-i18n="panel.send">Enviar lista por WhatsApp</span>
+      </a>
+      <button class="btn btn-clear" id="panelClearBtn" data-i18n="panel.clear">Vaciar lista</button>
+    </div>
+  </aside>
 
   <script>
     // ============================================================
-    // PARSER CSV con soporte para campos entre comillas
-    // Formato: Name, Category, Brand, ImageURL, Code, Barcode
+    // CONFIG
+    // ============================================================
+    const WHATSAPP_NUMBER = '19133688814'; // Tomado del index.html principal
+    const SECTION_LIMIT = 12;
+    const STORAGE_KEYS = {
+      list: 'ctd_catalog_list_v1',
+      lang: 'ctd_catalog_lang_v1',
+      expanded: 'ctd_catalog_expanded_v1'
+    };
+
+    // ============================================================
+    // I18N — diccionario de strings
+    // ============================================================
+    const I18N = {
+      es: {
+        'brand': 'CENTRAL TRADE DISTRIBUTION',
+        'breadcrumb': 'Catálogo',
+        'hero.eyebrow': 'Distribuidora Mayorista · Kansas City',
+        'hero.title.lead': 'Nuestro',
+        'hero.title.accent': 'Catálogo',
+        'hero.sub': 'Productos latinos auténticos para tu negocio. Calidad y variedad en cada categoría — desde bebidas refrescantes hasta panadería tradicional, salsas y especias.',
+        'hero.stat.products': 'Productos',
+        'hero.stat.categories': 'Categorías',
+        'search.placeholder': 'Buscar producto (nombre, marca, código…)',
+        'filter.allBrands': 'Todas las marcas',
+        'noResults': 'No se encontraron productos que coincidan con tu búsqueda.',
+        'modal.quote': 'Cotizar por WhatsApp',
+        'modal.copyLink': 'Copiar link del producto',
+        'modal.linkCopied': '✅ Link copiado',
+        'modal.fav.add': 'Agregar a mi lista',
+        'modal.fav.remove': 'Quitar de mi lista',
+        'attr.brand': 'Marca',
+        'attr.category': 'Categoría',
+        'attr.code': 'Código',
+        'attr.barcode': 'Código de barras',
+        'attr.package': 'Presentación',
+        'attr.stock': 'Disponibilidad',
+        'stock.in': 'Disponible',
+        'stock.out': 'Agotado',
+        'stock.low': 'Pocas piezas',
+        'fab.label': 'Mi lista',
+        'panel.title': 'Mi lista de cotización',
+        'panel.send': 'Enviar lista por WhatsApp',
+        'panel.clear': 'Vaciar lista',
+        'panel.empty': 'Aún no agregaste productos. Da clic en ⭐ en cualquier tarjeta para empezar.',
+        'see.more': 'Ver los {n} restantes',
+        'see.less': 'Ver menos',
+        'collapse.hint': 'Toca para abrir',
+        'footer.tagline': 'Distribuidora mayorista de alimentos latinos en Kansas City',
+        'footer.quote': '¿Te interesa cotizar?',
+        'footer.contact': 'Contáctanos',
+        'footer.prices': 'Precios a mayoristas',
+        'wa.singleIntro': 'Hola CTD, me interesa cotizar este producto:',
+        'wa.listIntro': 'Hola CTD, me interesa cotizar estos productos:',
+      },
+      en: {
+        'brand': 'CENTRAL TRADE DISTRIBUTION',
+        'breadcrumb': 'Catalog',
+        'hero.eyebrow': 'Wholesale Distributor · Kansas City',
+        'hero.title.lead': 'Our',
+        'hero.title.accent': 'Catalog',
+        'hero.sub': 'Authentic Latin products for your business. Quality and variety across every category — from refreshing drinks to traditional bakery, sauces and spices.',
+        'hero.stat.products': 'Products',
+        'hero.stat.categories': 'Categories',
+        'search.placeholder': 'Search product (name, brand, code…)',
+        'filter.allBrands': 'All brands',
+        'noResults': 'No products match your search.',
+        'modal.quote': 'Request a quote via WhatsApp',
+        'modal.copyLink': 'Copy product link',
+        'modal.linkCopied': '✅ Link copied',
+        'modal.fav.add': 'Add to my list',
+        'modal.fav.remove': 'Remove from my list',
+        'attr.brand': 'Brand',
+        'attr.category': 'Category',
+        'attr.code': 'Code',
+        'attr.barcode': 'Barcode',
+        'attr.package': 'Package',
+        'attr.stock': 'Availability',
+        'stock.in': 'In stock',
+        'stock.out': 'Out of stock',
+        'stock.low': 'Low stock',
+        'fab.label': 'My list',
+        'panel.title': 'My quote list',
+        'panel.send': 'Send list via WhatsApp',
+        'panel.clear': 'Clear list',
+        'panel.empty': 'You haven\'t added any products yet. Tap ⭐ on any card to start.',
+        'see.more': 'Show {n} more',
+        'see.less': 'Show less',
+        'collapse.hint': 'Tap to open',
+        'footer.tagline': 'Wholesale Latin food distributor in Kansas City',
+        'footer.quote': 'Interested in pricing?',
+        'footer.contact': 'Contact us',
+        'footer.prices': 'Wholesale pricing',
+        'wa.singleIntro': 'Hi CTD, I\'d like a quote on this product:',
+        'wa.listIntro': 'Hi CTD, I\'d like a quote on these products:',
+      }
+    };
+
+    // Traducciones de categorías ES→EN (los nombres en CSV están en ES)
+    const CAT_TRANSLATIONS = {
+      'Bebidas': 'Beverages',
+      'Lácteos': 'Dairy',
+      'Carnicería': 'Meat',
+      'Refrigerados': 'Refrigerated',
+      'Congelados': 'Frozen',
+      'Abarrotes': 'Dry Goods',
+      'Granos': 'Grains',
+      'Harinas': 'Flour',
+      'Condimentos': 'Condiments',
+      'Conservas': 'Preserves',
+      'Galletas': 'Cookies',
+      'Dulces': 'Sweets',
+      'Snacks y Botanas': 'Snacks',
+      'Frutas y Vegetales Frescos': 'Fresh Produce'
+    };
+
+    const CAT_ORDER = [
+      'Bebidas','Lácteos','Carnicería','Refrigerados','Congelados','Abarrotes',
+      'Granos','Harinas','Condimentos','Conservas','Galletas','Dulces',
+      'Snacks y Botanas','Frutas y Vegetales Frescos'
+    ];
+    const CAT_DESC = {
+      'Frutas y Vegetales Frescos': 'Frescos selectos: frutas tropicales, vegetales y raíces',
+      'Bebidas': 'Aguas frescas, jugos, energizantes, electrolitos y refrescos',
+      'Lácteos': 'Quesos, mantequillas y derivados lácteos',
+      'Carnicería': 'Embutidos, cueritos y productos cárnicos',
+      'Refrigerados': 'Productos que requieren cadena de frío',
+      'Congelados': 'Pulpas, frutas y productos congelados',
+      'Abarrotes': 'Productos básicos y de despensa',
+      'Granos': 'Arroz, frijoles y otros granos selectos',
+      'Harinas': 'Harinas de maíz, trigo, cebada, haba y pinolillo',
+      'Condimentos': 'Aceites, salsas, mayonesa, especias y aderezos',
+      'Conservas': 'Vegetales y frutas en conserva',
+      'Galletas': 'Galletas dulces, marías, conchas y panadería',
+      'Dulces': 'Dulces, chocolates, marshmallows y golosinas',
+      'Snacks y Botanas': 'Chicharrones, frituras y botanas saladas'
+    };
+    const CAT_DESC_EN = {
+      'Frutas y Vegetales Frescos': 'Selected fresh produce: tropical fruits, vegetables and roots',
+      'Bebidas': 'Aguas frescas, juices, energy drinks, electrolytes and sodas',
+      'Lácteos': 'Cheeses, butters and dairy products',
+      'Carnicería': 'Sausages, pork rinds and meat products',
+      'Refrigerados': 'Products requiring cold-chain',
+      'Congelados': 'Pulps, fruits and frozen products',
+      'Abarrotes': 'Basic pantry goods',
+      'Granos': 'Rice, beans and other select grains',
+      'Harinas': 'Corn, wheat, barley, fava and pinolillo flours',
+      'Condimentos': 'Oils, sauces, mayonnaise, spices and dressings',
+      'Conservas': 'Vegetables and fruits in conserve',
+      'Galletas': 'Sweet cookies, marías, conchas and bakery',
+      'Dulces': 'Candies, chocolates, marshmallows and treats',
+      'Snacks y Botanas': 'Chicharrones, chips and salty snacks'
+    };
+    const CAT_EMOJI = {
+      'Frutas y Vegetales Frescos':'🥬','Bebidas':'🥤','Lácteos':'🧀','Carnicería':'🥩',
+      'Refrigerados':'❄️','Congelados':'🧊','Abarrotes':'🛒','Granos':'🌾',
+      'Harinas':'🌾','Condimentos':'🌶️','Conservas':'🥫','Galletas':'🍪',
+      'Dulces':'🍬','Snacks y Botanas':'🥨'
+    };
+
+    // ============================================================
+    // STATE
+    // ============================================================
+    let TODOS = [];
+    let POR_CAT = {};
+    let EFFECTIVE_CAT_ORDER = [];
+    const SECTION_EXPANDED = {};   // cat → bool (expanded MORE than the 12 limit)
+    const SECTION_OPEN = {};       // cat → bool (accordion open at all)
+    let CURRENT_LANG = 'es';
+    let _query = '';
+    let _brandFilter = '';
+    let LIST = new Set();          // set of product codes
+
+    // ============================================================
+    // HELPERS
+    // ============================================================
+    const $ = s => document.querySelector(s);
+    const $$ = s => document.querySelectorAll(s);
+    const esc = s => String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    const slug = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    function t(key, vars) {
+      let s = (I18N[CURRENT_LANG] && I18N[CURRENT_LANG][key]) || I18N.es[key] || key;
+      if (vars) Object.keys(vars).forEach(k => s = s.replace(`{${k}}`, vars[k]));
+      return s;
+    }
+    function catName(c) { return CURRENT_LANG === 'en' ? (CAT_TRANSLATIONS[c] || c) : c; }
+    function catDesc(c) { return CURRENT_LANG === 'en' ? (CAT_DESC_EN[c] || '') : (CAT_DESC[c] || ''); }
+
+    // ============================================================
+    // STORAGE
+    // ============================================================
+    function loadList() {
+      try { LIST = new Set(JSON.parse(localStorage.getItem(STORAGE_KEYS.list)) || []); }
+      catch (e) { LIST = new Set(); }
+    }
+    function saveList() {
+      try { localStorage.setItem(STORAGE_KEYS.list, JSON.stringify([...LIST])); } catch (e) {}
+    }
+    function loadLang() {
+      try { CURRENT_LANG = localStorage.getItem(STORAGE_KEYS.lang) || 'es'; }
+      catch (e) { CURRENT_LANG = 'es'; }
+    }
+    function saveLang() {
+      try { localStorage.setItem(STORAGE_KEYS.lang, CURRENT_LANG); } catch (e) {}
+    }
+
+    // ============================================================
+    // CSV PARSER (with quoted-field support)
     // ============================================================
     function parseCSV(text) {
-      const rows = [];
-      let row = [];
-      let field = '';
-      let inQuotes = false;
+      const rows = []; let row = []; let field = ''; let inQuotes = false;
       const src = text.replace(/\r/g, '');
-
       for (let i = 0; i < src.length; i++) {
         const ch = src[i];
         if (inQuotes) {
-          if (ch === '"') {
-            if (src[i + 1] === '"') { field += '"'; i++; }
-            else { inQuotes = false; }
-          } else {
-            field += ch;
-          }
+          if (ch === '"') { if (src[i+1] === '"') { field += '"'; i++; } else inQuotes = false; }
+          else field += ch;
         } else {
-          if (ch === '"') { inQuotes = true; }
+          if (ch === '"') inQuotes = true;
           else if (ch === ',') { row.push(field); field = ''; }
           else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
-          else { field += ch; }
+          else field += ch;
         }
       }
-      // último campo/fila
       if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
-
-      const header = rows.shift().map(h => h.trim());
+      rows.shift(); // header
       return rows
         .filter(r => r.length >= 4 && r[0].trim().length > 0)
         .map(r => ({
@@ -644,161 +1253,159 @@
           brand:    (r[2] || '').trim(),
           image:    (r[3] || '').trim(),
           code:     (r[4] || '').trim(),
-          barcode:  (r[5] || '').trim()
+          barcode:  (r[5] || '').trim(),
+          pkg:      (r[6] || '').trim(),
+          stock:    (r[7] || 'in_stock').trim()
         }));
     }
 
-    // Orden preferido de categorías (las que no estén aquí se ponen al final)
-    // "Frutas y Vegetales Frescos" va al final por petición del cliente.
-    const CAT_ORDER = [
-      'Bebidas',
-      'Lácteos',
-      'Carnicería',
-      'Refrigerados',
-      'Congelados',
-      'Abarrotes',
-      'Granos',
-      'Harinas',
-      'Condimentos',
-      'Conservas',
-      'Galletas',
-      'Dulces',
-      'Snacks y Botanas',
-      'Frutas y Vegetales Frescos'
-    ];
-
-    // Cantidad de productos mostrados por sección antes del botón "Ver más"
-    const SECTION_LIMIT = 12;
-
-    // Subtítulos descriptivos por categoría
-    const CAT_DESC = {
-      'Frutas y Vegetales Frescos': 'Frescos selectos: frutas tropicales, vegetales y raíces',
-      'Bebidas':                    'Aguas frescas, jugos, energizantes, electrolitos y refrescos',
-      'Lácteos':                    'Quesos, mantequillas y derivados lácteos',
-      'Carnicería':                 'Embutidos, cueritos y productos cárnicos',
-      'Refrigerados':               'Productos que requieren cadena de frío',
-      'Congelados':                 'Pulpas, frutas y productos congelados',
-      'Abarrotes':                  'Productos básicos y de despensa',
-      'Granos':                     'Arroz, frijoles y otros granos selectos',
-      'Harinas':                    'Harinas de maíz, trigo, cebada, haba y pinolillo',
-      'Condimentos':                'Aceites, salsas, mayonesa, especias y aderezos',
-      'Conservas':                  'Vegetales y frutas en conserva',
-      'Galletas':                   'Galletas dulces, marías, conchas y panadería',
-      'Dulces':                     'Dulces, chocolates, marshmallows y golosinas',
-      'Snacks y Botanas':           'Chicharrones, frituras y botanas saladas'
-    };
-
-    // Emoji ilustrativo por categoría (para fallback de imagen)
-    const CAT_EMOJI = {
-      'Frutas y Vegetales Frescos': '🥬',
-      'Bebidas':                    '🥤',
-      'Lácteos':                    '🧀',
-      'Carnicería':                 '🥩',
-      'Refrigerados':               '❄️',
-      'Congelados':                 '🧊',
-      'Abarrotes':                  '🛒',
-      'Granos':                     '🌾',
-      'Harinas':                    '🌾',
-      'Condimentos':                '🌶️',
-      'Conservas':                  '🥫',
-      'Galletas':                   '🍪',
-      'Dulces':                     '🍬',
-      'Snacks y Botanas':           '🥨'
-    };
-
     // ============================================================
-    // ESTADO Y RENDER
+    // RENDER — Skeleton
     // ============================================================
-    let TODOS = [];                  // array de {name, barcode, image, cat, ...}
-    let POR_CAT = {};                // {cat: [productos]}
-    let EFFECTIVE_CAT_ORDER = [];    // CAT_ORDER + categorías nuevas no listadas
-    const SECTION_EXPANDED = {};     // { 'Bebidas': true/false } — qué secciones están expandidas
-
-    function slug(s) {
-      return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
-              .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    function renderSkeleton() {
+      const sk = $('#skeletonLoader');
+      sk.innerHTML = Array(8).fill(0).map(() => `
+        <div class="skeleton-card">
+          <div class="skeleton-img"></div>
+          <div class="skeleton-info">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line short"></div>
+          </div>
+        </div>`).join('');
     }
 
-    function esc(s) {
-      return String(s).replace(/[&<>"']/g, m =>
-        ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    // ============================================================
+    // RENDER — Brand filter dropdown
+    // ============================================================
+    function renderBrandFilter() {
+      const counts = {};
+      TODOS.forEach(p => { if (p.brand) counts[p.brand] = (counts[p.brand]||0)+1; });
+      const brands = Object.keys(counts).sort((a,b) => a.localeCompare(b, 'es'));
+      const sel = $('#brandFilter');
+      const allOpt = t('filter.allBrands');
+      sel.innerHTML = `<option value="">${esc(allOpt)} (${TODOS.length})</option>` +
+        brands.map(b => `<option value="${esc(b)}">${esc(b)} (${counts[b]})</option>`).join('');
     }
 
+    // ============================================================
+    // RENDER — Cat nav (chips)
+    // ============================================================
     function renderCatNav() {
-      const nav = document.getElementById('catNav');
-      const cats = EFFECTIVE_CAT_ORDER.filter(c => POR_CAT[c] && POR_CAT[c].length > 0);
+      const nav = $('#catNav');
+      const cats = EFFECTIVE_CAT_ORDER.filter(c => POR_CAT[c]?.length > 0);
       const total = TODOS.length;
-
-      const chips = [
-        `<a class="cat-chip active" data-cat="" href="#">Todas <span class="cnt">${total}</span></a>`,
-        ...cats.map(c =>
-          `<a class="cat-chip" data-cat="${esc(c)}" href="#cat-${slug(c)}">${esc(c)} <span class="cnt">${POR_CAT[c].length}</span></a>`
-        )
-      ];
-      nav.innerHTML = chips.join('');
-
-      // Highlight al hacer clic
+      nav.innerHTML = [
+        `<a class="cat-chip active" data-cat-jump="" href="#">${CURRENT_LANG==='en'?'All':'Todas'} <span class="cnt">${total}</span></a>`,
+        ...cats.map(c => `<a class="cat-chip" data-cat-jump="${esc(c)}" href="#cat-${slug(c)}">${esc(catName(c))} <span class="cnt">${POR_CAT[c].length}</span></a>`)
+      ].join('');
       nav.querySelectorAll('.cat-chip').forEach(chip => {
         chip.addEventListener('click', (e) => {
           nav.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
           chip.classList.add('active');
+          const cat = chip.dataset.catJump;
+          if (cat) {
+            SECTION_OPEN[cat] = true;
+            const sec = $(`.cat-section[data-cat="${CSS.escape(cat)}"]`);
+            if (sec) sec.classList.add('expanded');
+          }
         });
       });
     }
 
+    // ============================================================
+    // RENDER — Catalog (all sections, all initially CLOSED)
+    // ============================================================
     function renderCatalog() {
-      const cont = document.getElementById('catalogContainer');
-      const cats = EFFECTIVE_CAT_ORDER.filter(c => POR_CAT[c] && POR_CAT[c].length > 0);
+      const cont = $('#catalogContainer');
+      $('#skeletonLoader')?.remove();
+      const cats = EFFECTIVE_CAT_ORDER.filter(c => POR_CAT[c]?.length > 0);
 
       cont.innerHTML = cats.map(cat => {
         const items = POR_CAT[cat];
         const emoji = CAT_EMOJI[cat] || '📦';
         const hasMore = items.length > SECTION_LIMIT;
-        // Cada card recibe data-pos con su índice — el filtro de visibilidad
-        // lo usa para decidir cuáles esconder cuando la sección está colapsada.
         return `
           <section class="cat-section" data-cat="${esc(cat)}" id="cat-${slug(cat)}">
-            <div class="cat-banner">
+            <div class="cat-banner" data-action="toggle-cat" data-cat="${esc(cat)}">
               <div class="cat-banner-text">
-                <h2>${esc(cat)}</h2>
-                <p>${esc(CAT_DESC[cat] || '')}</p>
+                <h2>${esc(catName(cat))}</h2>
+                <p>${esc(catDesc(cat))}</p>
               </div>
-              <div class="cat-banner-badge">${items.length} productos</div>
-            </div>
-            <div class="product-grid">
-              ${items.map((p, i) => productCard(p, emoji, i)).join('')}
-            </div>
-            ${hasMore ? `
-              <div class="see-more-wrap" data-cat-btn="${esc(cat)}">
-                <button class="see-more-btn" type="button"
-                        data-action="toggle-section" data-cat="${esc(cat)}">
-                  <span class="lbl">Ver los ${items.length - SECTION_LIMIT} restantes</span>
-                  <span class="chevron">▼</span>
-                </button>
+              <div class="cat-banner-right">
+                <span class="cat-banner-badge">${items.length} ${CURRENT_LANG==='en'?'items':'productos'}</span>
+                <span class="cat-chevron">▼</span>
               </div>
-            ` : ''}
+            </div>
+            <div class="cat-body">
+              <div class="product-grid">
+                ${items.map((p, i) => productCard(p, emoji, i)).join('')}
+              </div>
+              ${hasMore ? (() => {
+                const isExp = !!SECTION_EXPANDED[cat];
+                const lbl = isExp ? t('see.less') : t('see.more', {n: items.length - SECTION_LIMIT});
+                return `
+                <div class="see-more-wrap">
+                  <button class="see-more-btn ${isExp?'expanded':''}" type="button" data-action="toggle-more" data-cat="${esc(cat)}">
+                    <span class="lbl">${esc(lbl)}</span>
+                    <span class="chevron">▼</span>
+                  </button>
+                </div>`;
+              })() : ''}
+            </div>
           </section>
         `;
       }).join('');
 
-      // Wire up botones "Ver más / menos"
-      cont.querySelectorAll('[data-action="toggle-section"]').forEach(btn => {
-        btn.addEventListener('click', () => toggleSection(btn.dataset.cat));
+      // Wire bindings
+      cont.querySelectorAll('[data-action="toggle-cat"]').forEach(el => {
+        el.addEventListener('click', (e) => {
+          // Banner click → toggle accordion
+          toggleCategory(el.dataset.cat);
+        });
+      });
+      cont.querySelectorAll('[data-action="toggle-more"]').forEach(el => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleSeeMore(el.dataset.cat);
+        });
+      });
+      cont.querySelectorAll('[data-action="open-modal"]').forEach(el => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openModal(el.dataset.code);
+        });
+      });
+      cont.querySelectorAll('[data-action="toggle-fav"]').forEach(el => {
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleFav(el.dataset.code);
+        });
       });
 
-      // Aplicar visibilidad inicial (todas las secciones colapsadas)
       applyVisibility();
     }
 
     function productCard(p, fallbackEmoji, posInCat) {
       const safeName = esc(p.name);
       const safeImg = esc(p.image);
-      const safeBc = esc(p.barcode);
+      const isFav = LIST.has(p.code);
+      const stockBadge = p.stock === 'out_of_stock'
+        ? `<span class="stock-badge out">${t('stock.out')}</span>`
+        : p.stock === 'low'
+        ? `<span class="stock-badge low">${t('stock.low')}</span>`
+        : '';
       return `
         <article class="product-card"
                  data-name="${safeName.toUpperCase()}"
-                 data-barcode="${safeBc}"
-                 data-pos="${posInCat}">
+                 data-barcode="${esc(p.barcode)}"
+                 data-brand="${esc(p.brand)}"
+                 data-code="${esc(p.code)}"
+                 data-pos="${posInCat}"
+                 data-action="open-modal">
+          ${stockBadge}
+          <button class="fav-btn ${isFav?'active':''}" data-action="toggle-fav" data-code="${esc(p.code)}" aria-label="Favorito">
+            ${isFav ? '✓' : '⭐'}
+          </button>
           <div class="product-img-wrap">
             ${p.image
               ? `<img src="${safeImg}" alt="${safeName}" loading="lazy"
@@ -807,17 +1414,25 @@
           </div>
           <div class="product-info">
             <h3 class="product-name">${safeName}</h3>
+            <div class="product-meta-row">
+              ${p.brand ? `<span class="product-brand">${esc(p.brand)}</span>` : ''}
+              ${p.pkg ? `<span class="product-pkg">${esc(p.pkg)}</span>` : ''}
+            </div>
           </div>
         </article>
       `;
     }
 
     // ============================================================
-    // EXPANDIR / COLAPSAR SECCIÓN
+    // ACCORDION + SEE MORE
     // ============================================================
-    function toggleSection(cat) {
+    function toggleCategory(cat) {
+      SECTION_OPEN[cat] = !SECTION_OPEN[cat];
+      const sec = $(`.cat-section[data-cat="${CSS.escape(cat)}"]`);
+      if (sec) sec.classList.toggle('expanded', SECTION_OPEN[cat]);
+    }
+    function toggleSeeMore(cat) {
       SECTION_EXPANDED[cat] = !SECTION_EXPANDED[cat];
-      // Actualizar texto y rotación del botón
       const btn = document.querySelector(`.see-more-btn[data-cat="${CSS.escape(cat)}"]`);
       if (btn) {
         btn.classList.toggle('expanded', SECTION_EXPANDED[cat]);
@@ -825,135 +1440,316 @@
         if (lbl) {
           const total = POR_CAT[cat].length;
           lbl.textContent = SECTION_EXPANDED[cat]
-            ? 'Ver menos'
-            : `Ver los ${total - SECTION_LIMIT} restantes`;
+            ? t('see.less')
+            : t('see.more', {n: total - SECTION_LIMIT});
         }
       }
       applyVisibility();
     }
 
     // ============================================================
-    // BÚSQUEDA EN VIVO — solo guarda el query, applyVisibility hace el filtro
-    // ============================================================
-    let _currentQuery = '';
-    function setupSearch() {
-      const input = document.getElementById('searchInput');
-      input.addEventListener('input', () => {
-        _currentQuery = input.value.trim().toUpperCase();
-        applyVisibility();
-      });
-    }
-
-    // ============================================================
-    // APLICAR VISIBILIDAD — combina filtro de búsqueda + colapso por sección
-    // Reglas:
-    //   - Si hay query de búsqueda: muestra TODOS los matches (ignora colapso)
-    //     y oculta el botón "Ver más" durante la búsqueda.
-    //   - Si NO hay query: muestra los primeros SECTION_LIMIT por sección,
-    //     o todos si la sección está expandida.
+    // FILTERING (search + brand + see-more)
     // ============================================================
     function applyVisibility() {
-      const q = _currentQuery;
+      const q = _query;
       const isSearching = q.length > 0;
-      const sections = document.querySelectorAll('.cat-section');
+      const brandSel = _brandFilter;
+      const isFiltering = isSearching || brandSel.length > 0;
+
       let totalVisible = 0;
 
-      sections.forEach(sec => {
+      $$('.cat-section').forEach(sec => {
         const cat = sec.dataset.cat;
         const expanded = !!SECTION_EXPANDED[cat];
         const cards = sec.querySelectorAll('.product-card');
-        let sectionVisible = 0;
+        let secVisible = 0;
 
         cards.forEach(card => {
           const name = card.dataset.name || '';
           const bc = card.dataset.barcode || '';
+          const brand = card.dataset.brand || '';
+          const code = card.dataset.code || '';
           const pos = parseInt(card.dataset.pos || '0', 10);
 
-          // ¿Matchea el filtro de búsqueda?
-          const matchesQuery = !isSearching || name.includes(q) || bc.includes(q);
-          // ¿Está dentro del límite (cuando NO hay búsqueda)?
+          const matchSearch = !isSearching || name.includes(q) || bc.includes(q) || code.includes(q) || brand.toUpperCase().includes(q);
+          const matchBrand = !brandSel || brand === brandSel;
           const withinLimit = expanded || pos < SECTION_LIMIT;
-          // Visible si: matchea búsqueda Y (hay búsqueda activa O está dentro del límite)
-          const show = matchesQuery && (isSearching || withinLimit);
+          const show = matchSearch && matchBrand && (isFiltering || withinLimit);
 
           card.style.display = show ? '' : 'none';
-          if (show) sectionVisible++;
+          if (show) secVisible++;
         });
 
-        // Botón "Ver más" solo es relevante cuando NO hay búsqueda
-        const moreWrap = sec.querySelector('.see-more-wrap');
-        if (moreWrap) moreWrap.classList.toggle('hidden', isSearching);
+        // See-more button hidden when filtering
+        const more = sec.querySelector('.see-more-wrap');
+        if (more) more.classList.toggle('hidden', isFiltering);
 
-        // Ocultar sección entera si no hay nada visible (solo aplica durante búsqueda)
-        sec.style.display = (isSearching && sectionVisible === 0) ? 'none' : '';
+        // Auto-open section while filtering & it has matches
+        if (isFiltering) {
+          sec.classList.toggle('expanded', secVisible > 0);
+          sec.style.display = secVisible > 0 ? '' : 'none';
+        } else {
+          sec.style.display = '';
+          // restore accordion state
+          sec.classList.toggle('expanded', !!SECTION_OPEN[cat]);
+        }
 
-        totalVisible += sectionVisible;
+        totalVisible += secVisible;
       });
 
-      // Contador y mensaje de "sin resultados"
-      const count = document.getElementById('searchCount');
-      const noResults = document.getElementById('noResults');
-      count.textContent = isSearching ? `${totalVisible} resultado${totalVisible === 1 ? '' : 's'}` : '';
-      noResults.classList.toggle('hidden', !isSearching || totalVisible > 0);
+      $('#searchCount').textContent = isFiltering
+        ? `${totalVisible} ${CURRENT_LANG==='en'?'results':'resultado'+(totalVisible===1?'':'s')}`
+        : '';
+      $('#noResults').classList.toggle('hidden', !isFiltering || totalVisible > 0);
     }
 
     // ============================================================
-    // BOTÓN "IR ARRIBA"
+    // MODAL DE PRODUCTO
     // ============================================================
-    function setupToTop() {
-      const btn = document.getElementById('toTopBtn');
-      window.addEventListener('scroll', () => {
-        btn.classList.toggle('visible', window.scrollY > 400);
-      });
-      btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    function openModal(code) {
+      const p = TODOS.find(x => x.code === code);
+      if (!p) return;
+      const fallback = CAT_EMOJI[p.category] || '📦';
+
+      $('#modalCat').textContent = catName(p.category);
+      $('#modalName').textContent = p.name;
+      $('#modalImgSide').innerHTML = p.image
+        ? `<img src="${esc(p.image)}" alt="${esc(p.name)}" onerror="this.outerHTML='<div class=&quot;product-img-fallback&quot;>${fallback}</div>'">`
+        : `<div class="product-img-fallback">${fallback}</div>`;
+
+      // Attrs
+      const attrs = [];
+      if (p.brand)   attrs.push([t('attr.brand'), p.brand]);
+      if (p.pkg)     attrs.push([t('attr.package'), p.pkg]);
+      if (p.code)    attrs.push([t('attr.code'), p.code]);
+      if (p.barcode) attrs.push([t('attr.barcode'), p.barcode]);
+      const stockLabel = p.stock === 'out_of_stock' ? t('stock.out')
+                       : p.stock === 'low' ? t('stock.low')
+                       : t('stock.in');
+      attrs.push([t('attr.stock'), stockLabel]);
+      $('#modalAttrs').innerHTML = attrs.map(([k,v]) => `
+        <div>
+          <div class="modal-attr-label">${esc(k)}</div>
+          <div class="modal-attr-value">${esc(v)}</div>
+        </div>`).join('');
+
+      // Botón favorito
+      const favBtn = $('#modalFavBtn');
+      const isFav = LIST.has(p.code);
+      favBtn.classList.toggle('active', isFav);
+      favBtn.querySelector('.lbl').textContent = isFav ? t('modal.fav.remove') : t('modal.fav.add');
+      favBtn.querySelector('.ico').textContent = isFav ? '✓' : '⭐';
+      favBtn.onclick = () => { toggleFav(p.code); openModal(p.code); /* re-render */ };
+
+      // WhatsApp directo
+      const waMsg = encodeURIComponent(
+        `${t('wa.singleIntro')}\n\n• ${p.name}` +
+        (p.brand ? ` (${p.brand})` : '') +
+        (p.code ? `\n  ${t('attr.code')}: ${p.code}` : '')
+      );
+      $('#modalWaBtn').href = `https://wa.me/${WHATSAPP_NUMBER}?text=${waMsg}`;
+
+      // Share/copy link → cuando exista página individual, link a /p/{slug}/
+      const shareBtn = $('#modalShareBtn');
+      const productUrl = `${location.origin}${location.pathname}p/${p.code}/`;
+      shareBtn.innerHTML = `🔗 <span>${esc(t('modal.copyLink'))}</span>`;
+      shareBtn.onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(productUrl);
+          shareBtn.innerHTML = `<span>${esc(t('modal.linkCopied'))}</span>`;
+          setTimeout(() => {
+            shareBtn.innerHTML = `🔗 <span>${esc(t('modal.copyLink'))}</span>`;
+          }, 1500);
+        } catch (e) {
+          // Fallback: show prompt
+          prompt(t('modal.copyLink'), productUrl);
+        }
+      };
+
+      $('#productModal').classList.add('visible');
+      $('#productModal').setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeModal() {
+      $('#productModal').classList.remove('visible');
+      $('#productModal').setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
     }
 
     // ============================================================
-    // INIT — FETCH CSV
+    // FAVORITOS / LISTA
+    // ============================================================
+    function toggleFav(code) {
+      if (LIST.has(code)) LIST.delete(code);
+      else LIST.add(code);
+      saveList();
+      updateFavUI();
+    }
+    function updateFavUI() {
+      // Update fav buttons en todas las cards
+      $$('.fav-btn').forEach(btn => {
+        const code = btn.dataset.code;
+        const isFav = LIST.has(code);
+        btn.classList.toggle('active', isFav);
+        btn.textContent = isFav ? '✓' : '⭐';
+      });
+      // FAB count
+      const n = LIST.size;
+      $('#fabCount').textContent = n;
+      $('#fabBtn').classList.toggle('empty', n === 0);
+    }
+
+    // ============================================================
+    // PANEL DE LISTA
+    // ============================================================
+    function openPanel() {
+      renderPanel();
+      $('#panelOverlay').classList.add('visible');
+      $('#listPanel').classList.add('visible');
+      $('#listPanel').setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
+    function closePanel() {
+      $('#panelOverlay').classList.remove('visible');
+      $('#listPanel').classList.remove('visible');
+      $('#listPanel').setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+    }
+    function renderPanel() {
+      const body = $('#panelBody');
+      const products = TODOS.filter(p => LIST.has(p.code));
+
+      if (products.length === 0) {
+        body.innerHTML = `<div class="panel-empty"><span class="emoji">📋</span><p>${esc(t('panel.empty'))}</p></div>`;
+      } else {
+        body.innerHTML = products.map(p => {
+          const fb = CAT_EMOJI[p.category] || '📦';
+          return `
+            <div class="panel-item">
+              <div class="panel-item-img">
+                ${p.image
+                  ? `<img src="${esc(p.image)}" alt="" onerror="this.outerHTML='<span style=&quot;font-size:1.4rem;&quot;>${fb}</span>'">`
+                  : `<span style="font-size:1.4rem;">${fb}</span>`}
+              </div>
+              <div class="panel-item-info">
+                <div class="name">${esc(p.name)}</div>
+                <div class="meta">${esc(p.brand || '')}${p.brand && p.pkg ? ' · ' : ''}${esc(p.pkg || '')}</div>
+              </div>
+              <button class="panel-item-remove" data-remove="${esc(p.code)}" aria-label="Quitar">✕</button>
+            </div>
+          `;
+        }).join('');
+
+        body.querySelectorAll('[data-remove]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            toggleFav(btn.dataset.remove);
+            renderPanel();
+          });
+        });
+      }
+
+      // WhatsApp button con la lista completa
+      const lines = products.map(p =>
+        `• ${p.name}` + (p.brand ? ` (${p.brand})` : '') + (p.pkg ? ` — ${p.pkg}` : '')
+      ).join('\n');
+      const waMsg = encodeURIComponent(`${t('wa.listIntro')}\n\n${lines}`);
+      const waBtn = $('#panelWaBtn');
+      waBtn.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${waMsg}`;
+      waBtn.style.pointerEvents = products.length === 0 ? 'none' : '';
+      waBtn.style.opacity = products.length === 0 ? '0.4' : '';
+    }
+
+    // ============================================================
+    // I18N applier — actualiza todos los nodos con data-i18n
+    // ============================================================
+    function applyLang() {
+      document.documentElement.lang = CURRENT_LANG;
+      $$('[data-i18n]').forEach(el => {
+        el.textContent = t(el.dataset.i18n);
+      });
+      $$('[data-i18n-attr]').forEach(el => {
+        // formato: "placeholder=key.path"
+        const parts = el.dataset.i18nAttr.split('=');
+        if (parts.length === 2) el.setAttribute(parts[0].trim(), t(parts[1].trim()));
+      });
+      $$('.lang-toggle button').forEach(b => {
+        b.classList.toggle('active', b.dataset.langBtn === CURRENT_LANG);
+      });
+      // Re-render lo dinámico
+      renderBrandFilter();
+      renderCatNav();
+      renderCatalog();
+      updateFavUI();
+    }
+
+    // ============================================================
+    // INIT
     // ============================================================
     async function init() {
+      renderSkeleton();
+      loadLang();
+      loadList();
+
       try {
-        // CSV ahora vive junto al HTML (catalogo/catalogo.csv)
         const res = await fetch('./catalogo.csv', { cache: 'no-cache' });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const text = await res.text();
         const productos = parseCSV(text);
 
-        // Usar la categoría que viene en el archivo. Si la categoría no está
-        // en CAT_ORDER, se agrega al final (categorías nuevas funcionan
-        // automáticamente sin tocar este código).
         TODOS = productos.map(p => ({ ...p, cat: p.category || 'Otros' }));
 
-        // Agrupar por categoría y ordenar alfabético dentro de cada una
         POR_CAT = {};
-        TODOS.forEach(p => {
-          (POR_CAT[p.cat] = POR_CAT[p.cat] || []).push(p);
-        });
-        Object.values(POR_CAT).forEach(arr =>
-          arr.sort((a, b) => a.name.localeCompare(b.name, 'es'))
-        );
+        TODOS.forEach(p => { (POR_CAT[p.cat] = POR_CAT[p.cat] || []).push(p); });
+        Object.values(POR_CAT).forEach(arr => arr.sort((a, b) => a.name.localeCompare(b.name, 'es')));
 
-        // Categorías que aparecen en los datos pero no en CAT_ORDER
-        // → se agregan al final, en orden de aparición
         const extraCats = Object.keys(POR_CAT).filter(c => !CAT_ORDER.includes(c));
         EFFECTIVE_CAT_ORDER = [...CAT_ORDER.filter(c => POR_CAT[c]), ...extraCats];
 
-        // Stats
-        document.getElementById('statTotal').textContent = TODOS.length;
-        document.getElementById('statCats').textContent = EFFECTIVE_CAT_ORDER.length;
+        $('#statTotal').textContent = TODOS.length;
+        $('#statCats').textContent = EFFECTIVE_CAT_ORDER.length;
 
-        renderCatNav();
-        renderCatalog();
-        setupSearch();
-        setupToTop();
+        applyLang();
+
+        // Search input
+        $('#searchInput').addEventListener('input', (e) => {
+          _query = e.target.value.trim().toUpperCase();
+          applyVisibility();
+        });
+        // Brand filter
+        $('#brandFilter').addEventListener('change', (e) => {
+          _brandFilter = e.target.value;
+          applyVisibility();
+        });
+        // Modal close
+        $('#modalClose').addEventListener('click', closeModal);
+        $('#productModal').addEventListener('click', (e) => {
+          if (e.target === $('#productModal')) closeModal();
+        });
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') { closeModal(); closePanel(); }
+        });
+        // FAB
+        $('#fabBtn').addEventListener('click', openPanel);
+        $('#panelClose').addEventListener('click', closePanel);
+        $('#panelOverlay').addEventListener('click', closePanel);
+        $('#panelClearBtn').addEventListener('click', () => {
+          if (LIST.size === 0) return;
+          LIST.clear(); saveList(); updateFavUI(); renderPanel();
+        });
+        // Lang toggle
+        $$('.lang-toggle button').forEach(b => {
+          b.addEventListener('click', () => {
+            CURRENT_LANG = b.dataset.langBtn;
+            saveLang();
+            applyLang();
+          });
+        });
 
       } catch (e) {
         console.error(e);
-        document.getElementById('catalogContainer').innerHTML =
-          `<div class="error">⚠️ No se pudo cargar el catálogo (${esc(e.message)}). Intenta recargar la página.</div>`;
+        $('#catalogContainer').innerHTML = `<div class="error">⚠️ ${esc(e.message)}</div>`;
       }
     }
-
     init();
   </script>
 </body>
