@@ -254,6 +254,32 @@
       background-position: right 14px center;
       min-width: 200px;
     }
+    .collapse-toggle {
+      background: white;
+      border: 1.5px solid var(--border);
+      color: var(--text-soft);
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .collapse-toggle:hover {
+      border-color: var(--green);
+      color: var(--green);
+      background: var(--green-50);
+    }
+    .collapse-toggle.active {
+      background: var(--green);
+      color: white;
+      border-color: var(--green);
+    }
+    .collapse-toggle .ico { font-size: 1rem; line-height: 1; }
     .search-count {
       font-size: 0.85rem;
       color: var(--muted);
@@ -934,6 +960,10 @@
         <select id="brandFilter" class="brand-filter">
           <option value="" data-i18n="filter.allBrands">Todas las marcas</option>
         </select>
+        <button id="collapseAllBtn" class="collapse-toggle" type="button">
+          <span class="ico">⇕</span>
+          <span class="lbl" data-i18n="collapse.toggle">Vista compacta</span>
+        </button>
         <div class="search-count" id="searchCount"></div>
       </div>
       <nav class="cat-nav" id="catNav"></nav>
@@ -1067,6 +1097,8 @@
         'see.more': 'Ver los {n} restantes',
         'see.less': 'Ver menos',
         'collapse.hint': 'Toca para abrir',
+        'collapse.toggle': 'Vista compacta',
+        'collapse.toggleBack': 'Ver productos',
         'footer.tagline': 'Distribuidora mayorista de alimentos latinos en Kansas City',
         'footer.quote': '¿Te interesa cotizar?',
         'footer.contact': 'Contáctanos',
@@ -1108,6 +1140,8 @@
         'see.more': 'Show {n} more',
         'see.less': 'Show less',
         'collapse.hint': 'Tap to open',
+        'collapse.toggle': 'Compact view',
+        'collapse.toggleBack': 'Show products',
         'footer.tagline': 'Wholesale Latin food distributor in Kansas City',
         'footer.quote': 'Interested in pricing?',
         'footer.contact': 'Contact us',
@@ -1708,6 +1742,11 @@
         $('#statTotal').textContent = TODOS.length;
         $('#statCats').textContent = EFFECTIVE_CAT_ORDER.length;
 
+        // Por default todas las secciones inician EXPANDIDAS (modo e-commerce)
+        // El usuario puede colapsar individualmente clickeando un banner,
+        // o usar el botón "Colapsar todas".
+        EFFECTIVE_CAT_ORDER.forEach(c => { SECTION_OPEN[c] = true; });
+
         applyLang();
 
         // Search input
@@ -1719,6 +1758,24 @@
         $('#brandFilter').addEventListener('change', (e) => {
           _brandFilter = e.target.value;
           applyVisibility();
+        });
+        // Toggle "Vista compacta" (colapsa/expande todas las secciones)
+        $('#collapseAllBtn').addEventListener('click', () => {
+          // Si hay al menos una abierta → colapsar todas. Si están todas cerradas → abrir todas.
+          const anyOpen = EFFECTIVE_CAT_ORDER.some(c => SECTION_OPEN[c]);
+          const newState = !anyOpen;
+          EFFECTIVE_CAT_ORDER.forEach(c => { SECTION_OPEN[c] = newState; });
+          $$('.cat-section').forEach(sec => {
+            sec.classList.toggle('expanded', newState);
+          });
+          // Actualizar label e indicador del botón
+          const btn = $('#collapseAllBtn');
+          btn.classList.toggle('active', !newState);
+          btn.querySelector('.lbl').textContent = newState
+            ? t('collapse.toggle')      // están abiertas → label invita a colapsar
+            : t('collapse.toggleBack'); // están cerradas → label invita a abrir
+          // Scroll suave al primer banner si se colapsaron todas (para no quedar perdido)
+          if (!newState) window.scrollTo({ top: $('#catalogContainer').offsetTop - 200, behavior: 'smooth' });
         });
         // Modal close
         $('#modalClose').addEventListener('click', closeModal);
