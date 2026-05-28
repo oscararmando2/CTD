@@ -568,125 +568,108 @@
 
   <script>
     // ============================================================
-    // PARSER CSV SIMPLE (Description,Barcode2,ULRIMAGEN)
+    // PARSER CSV con soporte para campos entre comillas
+    // Formato: Name, Category, Brand, ImageURL, Code, Barcode
     // ============================================================
     function parseCSV(text) {
-      const lines = text.replace(/\r/g, '').split('\n').filter(l => l.trim().length > 0);
-      const header = lines.shift().split(',').map(h => h.trim());
-      return lines.map(line => {
-        // Split solo en las primeras 2 comas (description puede traer comas internas)
-        const firstComma = line.indexOf(',');
-        const secondComma = line.indexOf(',', firstComma + 1);
-        if (firstComma === -1 || secondComma === -1) return null;
-        return {
-          name:    line.slice(0, firstComma).trim(),
-          barcode: line.slice(firstComma + 1, secondComma).trim(),
-          image:   line.slice(secondComma + 1).trim()
-        };
-      }).filter(Boolean);
+      const rows = [];
+      let row = [];
+      let field = '';
+      let inQuotes = false;
+      const src = text.replace(/\r/g, '');
+
+      for (let i = 0; i < src.length; i++) {
+        const ch = src[i];
+        if (inQuotes) {
+          if (ch === '"') {
+            if (src[i + 1] === '"') { field += '"'; i++; }
+            else { inQuotes = false; }
+          } else {
+            field += ch;
+          }
+        } else {
+          if (ch === '"') { inQuotes = true; }
+          else if (ch === ',') { row.push(field); field = ''; }
+          else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+          else { field += ch; }
+        }
+      }
+      // último campo/fila
+      if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+
+      const header = rows.shift().map(h => h.trim());
+      return rows
+        .filter(r => r.length >= 4 && r[0].trim().length > 0)
+        .map(r => ({
+          name:     (r[0] || '').trim(),
+          category: (r[1] || '').trim(),
+          brand:    (r[2] || '').trim(),
+          image:    (r[3] || '').trim(),
+          code:     (r[4] || '').trim(),
+          barcode:  (r[5] || '').trim()
+        }));
     }
 
-    // ============================================================
-    // CATEGORIZACIÓN AUTOMÁTICA POR NOMBRE
-    // ============================================================
-    function categorize(name) {
-      const n = name.toUpperCase();
-
-      // Bebidas energéticas
-      if (/\bADRENALINE\b|\bRAPTOR\b|ENERGIZANTE/.test(n)) return 'Bebidas Energéticas';
-
-      // Refrescos y jugos (REFRESHING FRUIT línea completa)
-      if (/^REFRESHING FRUIT/.test(n)) return 'Refrescos y Jugos';
-
-      // Bebidas tradicionales
-      if (/HORCHATA|PINOLILLO/.test(n)) return 'Bebidas Tradicionales';
-
-      // Salsas y aderezos
-      if (/SALSA|MOJO CRIOLLO|CHILE PICANTE|KETCHUP|MAYONESA|PICAMAS/.test(n)) return 'Salsas y Aderezos';
-
-      // Especias y adobos
-      if (/PIMIENTA|COMINO|ACHIOTE|PIMENTON|RELAJO|SEMILLA DE MORRO/.test(n)) return 'Especias y Adobos';
-
-      // Pastas
-      if (/^INA |PASTA|ESPAGUETT|CABELLO DE ANGEL|CARACOL|CODITO|CODO|CORBATON|LINGUINI|CHAO MEIN/.test(n)) return 'Pastas';
-
-      // Arroz
-      if (/ARROZ|\bRICE\b/.test(n)) return 'Arroz';
-
-      // Frijoles
-      if (/FRIJOL/.test(n)) return 'Frijoles';
-
-      // Harinas
-      if (/HARINA/.test(n)) return 'Harinas';
-
-      // Tostadas y botanas (tortillas horneadas, lenguitas, etc.)
-      if (/TOSTADA|TOSTACAS|TUSTACAS|LENGUITAS/.test(n)) return 'Tostadas y Botanas';
-
-      // Panadería y galletas
-      if (/CONCHAS|SEMITA|GUARACHA|MARIAS|MARGARITA|ROSQUETE|ROSQUILLA/.test(n)) return 'Panadería y Galletas';
-
-      // Conservas / vegetales en conserva
-      if (/NOPAL|PACAYA|PANELA/.test(n)) return 'Conservas y Vegetales';
-
-      return 'Otros Productos';
-    }
-
-    // Orden preferido de categorías
+    // Orden preferido de categorías (las que no estén aquí se ponen al final)
     const CAT_ORDER = [
-      'Refrescos y Jugos',
-      'Bebidas Energéticas',
-      'Bebidas Tradicionales',
-      'Salsas y Aderezos',
-      'Especias y Adobos',
-      'Pastas',
-      'Arroz',
-      'Frijoles',
+      'Frutas y Vegetales Frescos',
+      'Bebidas',
+      'Lácteos',
+      'Carnicería',
+      'Refrigerados',
+      'Congelados',
+      'Abarrotes',
+      'Granos',
       'Harinas',
-      'Panadería y Galletas',
-      'Tostadas y Botanas',
-      'Conservas y Vegetales',
-      'Otros Productos'
+      'Condimentos',
+      'Conservas',
+      'Galletas',
+      'Dulces',
+      'Snacks y Botanas'
     ];
 
     // Subtítulos descriptivos por categoría
     const CAT_DESC = {
-      'Refrescos y Jugos':       'Aguas frescas, jugos naturales, aloe vera y bebidas con chía',
-      'Bebidas Energéticas':     'Energizantes en presentaciones grandes y personales',
-      'Bebidas Tradicionales':   'Horchatas y bebidas auténticas centroamericanas',
-      'Salsas y Aderezos':       'Salsas picantes, mojo, soya, mayonesa y aderezos',
-      'Especias y Adobos':       'Pimienta, comino, achiote, relajo y mezclas de sazón',
-      'Pastas':                  'Pastas italianas y chao mein en distintas presentaciones',
-      'Arroz':                   'Arroz Jasmine en presentaciones para tu negocio',
-      'Frijoles':                'Frijol rojo de seda, piloy y refritos',
-      'Harinas':                 'Harinas de cebada, haba y pinolillo',
-      'Panadería y Galletas':    'Conchas, semitas, marías, rosquillas y panadería tradicional',
-      'Tostadas y Botanas':      'Tostadas horneadas, tustacas y lenguitas',
-      'Conservas y Vegetales':   'Nopal, pacaya, panela y conservas selectas',
-      'Otros Productos':         'Productos complementarios de nuestra línea'
+      'Frutas y Vegetales Frescos': 'Frescos selectos: frutas tropicales, vegetales y raíces',
+      'Bebidas':                    'Aguas frescas, jugos, energizantes, electrolitos y refrescos',
+      'Lácteos':                    'Quesos, mantequillas y derivados lácteos',
+      'Carnicería':                 'Embutidos, cueritos y productos cárnicos',
+      'Refrigerados':               'Productos que requieren cadena de frío',
+      'Congelados':                 'Pulpas, frutas y productos congelados',
+      'Abarrotes':                  'Productos básicos y de despensa',
+      'Granos':                     'Arroz, frijoles y otros granos selectos',
+      'Harinas':                    'Harinas de maíz, trigo, cebada, haba y pinolillo',
+      'Condimentos':                'Aceites, salsas, mayonesa, especias y aderezos',
+      'Conservas':                  'Vegetales y frutas en conserva',
+      'Galletas':                   'Galletas dulces, marías, conchas y panadería',
+      'Dulces':                     'Dulces, chocolates, marshmallows y golosinas',
+      'Snacks y Botanas':           'Chicharrones, frituras y botanas saladas'
     };
 
     // Emoji ilustrativo por categoría (para fallback de imagen)
     const CAT_EMOJI = {
-      'Refrescos y Jugos':       '🧃',
-      'Bebidas Energéticas':     '⚡',
-      'Bebidas Tradicionales':   '🥛',
-      'Salsas y Aderezos':       '🌶️',
-      'Especias y Adobos':       '🧂',
-      'Pastas':                  '🍝',
-      'Arroz':                   '🍚',
-      'Frijoles':                '🫘',
-      'Harinas':                 '🌾',
-      'Panadería y Galletas':    '🥐',
-      'Tostadas y Botanas':      '🌮',
-      'Conservas y Vegetales':   '🥬',
-      'Otros Productos':         '📦'
+      'Frutas y Vegetales Frescos': '🥬',
+      'Bebidas':                    '🥤',
+      'Lácteos':                    '🧀',
+      'Carnicería':                 '🥩',
+      'Refrigerados':               '❄️',
+      'Congelados':                 '🧊',
+      'Abarrotes':                  '🛒',
+      'Granos':                     '🌾',
+      'Harinas':                    '🌾',
+      'Condimentos':                '🌶️',
+      'Conservas':                  '🥫',
+      'Galletas':                   '🍪',
+      'Dulces':                     '🍬',
+      'Snacks y Botanas':           '🥨'
     };
 
     // ============================================================
     // ESTADO Y RENDER
     // ============================================================
-    let TODOS = [];        // array de {name, barcode, image, cat}
-    let POR_CAT = {};      // {cat: [productos]}
+    let TODOS = [];                  // array de {name, barcode, image, cat, ...}
+    let POR_CAT = {};                // {cat: [productos]}
+    let EFFECTIVE_CAT_ORDER = [];    // CAT_ORDER + categorías nuevas no listadas
 
     function slug(s) {
       return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -700,7 +683,7 @@
 
     function renderCatNav() {
       const nav = document.getElementById('catNav');
-      const cats = CAT_ORDER.filter(c => POR_CAT[c] && POR_CAT[c].length > 0);
+      const cats = EFFECTIVE_CAT_ORDER.filter(c => POR_CAT[c] && POR_CAT[c].length > 0);
       const total = TODOS.length;
 
       const chips = [
@@ -722,7 +705,7 @@
 
     function renderCatalog() {
       const cont = document.getElementById('catalogContainer');
-      const cats = CAT_ORDER.filter(c => POR_CAT[c] && POR_CAT[c].length > 0);
+      const cats = EFFECTIVE_CAT_ORDER.filter(c => POR_CAT[c] && POR_CAT[c].length > 0);
 
       cont.innerHTML = cats.map(cat => {
         const items = POR_CAT[cat];
@@ -814,13 +797,16 @@
     // ============================================================
     async function init() {
       try {
-        // CSV vive en la raíz del repo (un nivel arriba de /catalogo/)
-        const res = await fetch('../productos.csv', { cache: 'no-cache' });
+        // CSV ahora vive junto al HTML (catalogo/catalogo.csv)
+        const res = await fetch('./catalogo.csv', { cache: 'no-cache' });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const text = await res.text();
         const productos = parseCSV(text);
 
-        TODOS = productos.map(p => ({ ...p, cat: categorize(p.name) }));
+        // Usar la categoría que viene en el archivo. Si la categoría no está
+        // en CAT_ORDER, se agrega al final (categorías nuevas funcionan
+        // automáticamente sin tocar este código).
+        TODOS = productos.map(p => ({ ...p, cat: p.category || 'Otros' }));
 
         // Agrupar por categoría y ordenar alfabético dentro de cada una
         POR_CAT = {};
@@ -831,10 +817,14 @@
           arr.sort((a, b) => a.name.localeCompare(b.name, 'es'))
         );
 
+        // Categorías que aparecen en los datos pero no en CAT_ORDER
+        // → se agregan al final, en orden de aparición
+        const extraCats = Object.keys(POR_CAT).filter(c => !CAT_ORDER.includes(c));
+        EFFECTIVE_CAT_ORDER = [...CAT_ORDER.filter(c => POR_CAT[c]), ...extraCats];
+
         // Stats
         document.getElementById('statTotal').textContent = TODOS.length;
-        document.getElementById('statCats').textContent =
-          Object.keys(POR_CAT).filter(c => POR_CAT[c].length > 0).length;
+        document.getElementById('statCats').textContent = EFFECTIVE_CAT_ORDER.length;
 
         renderCatNav();
         renderCatalog();
