@@ -32,7 +32,7 @@ ROOT = Path(__file__).resolve().parent          # CTD/catalogo
 REPO_ROOT = ROOT.parent                          # CTD
 CSV_PATH = ROOT / 'catalogo.csv'
 P_DIR = ROOT / 'p'
-SITE_BASE = 'https://centraltradedist.com'       # cambia si tu dominio cambia
+SITE_BASE = 'https://www.centraltradedist.com'   # Vercel sirve canónico con www
 WHATSAPP = '19133688814'
 
 CAT_EMOJI = {
