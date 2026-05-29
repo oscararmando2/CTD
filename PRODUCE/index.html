@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Generador de Órdenes · Central Trade Distribution</title>
-  <meta name="description" content="Crea tu orden mayorista de Central Trade Distribution y envíala por WhatsApp." />
+  <title>Orden de Produce · Central Trade Distribution</title>
+  <meta name="description" content="Crea tu orden mayorista de frutas y verduras frescas de Central Trade Distribution y envíala por WhatsApp." />
   <meta name="robots" content="noindex, nofollow" />
   <link rel="icon" href="../CTDLOGO.PNG" />
 
@@ -661,15 +661,15 @@
         <img src="../CTDLOGO.PNG" alt="CTD" />
         <span>CENTRAL TRADE DISTRIBUTION</span>
       </a>
-      <span class="crumb">Generador de Órdenes</span>
+      <span class="crumb">Orden de Produce</span>
     </div>
   </div>
 
   <!-- ══════════ HERO ══════════ -->
   <section class="hero">
     <div class="hero-inner">
-      <h1>📦 Generador de Órdenes</h1>
-      <p>Arma tu pedido, agrega cantidades y envíalo por WhatsApp.</p>
+      <h1>🥬 Orden de Produce</h1>
+      <p>Frutas y verduras frescas. Arma tu pedido y envíalo por WhatsApp.</p>
     </div>
   </section>
 
@@ -681,7 +681,6 @@
                placeholder="Buscar por nombre o PLU…"
                autocomplete="off" />
       </div>
-      <nav class="cat-nav" id="catNav"></nav>
     </div>
   </div>
 
@@ -1138,7 +1137,6 @@ ${productLines}
         const text = await res.text();
         PRODUCTS = parseCSV(text);
 
-        renderCatNav();
         renderGrid();
         updateFab();
 
