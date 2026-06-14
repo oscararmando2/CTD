@@ -218,6 +218,154 @@
     }
 
     /* ============================================================
+       NUEVOS PRODUCTOS — sección destacada (mobile-first)
+       ============================================================ */
+    .new-section {
+      background:
+        radial-gradient(circle at 12% 0%, rgba(248,148,41,0.10), transparent 45%),
+        radial-gradient(circle at 95% 100%, rgba(36,114,50,0.08), transparent 40%),
+        var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .new-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 28px 20px 32px;
+    }
+    .new-head {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .new-badge {
+      align-self: flex-start;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(90deg, var(--orange), #ffb35c);
+      color: #5a3000;
+      font-weight: 800;
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-radius: 999px;
+      box-shadow: 0 4px 12px rgba(248,148,41,0.30);
+    }
+    .new-head h2 {
+      font-size: clamp(1.5rem, 4.5vw, 2.1rem);
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      line-height: 1.1;
+    }
+    .new-head p {
+      color: var(--text-soft);
+      font-size: 0.96rem;
+      max-width: 560px;
+    }
+    .new-banner {
+      display: block;
+      border-radius: var(--radio);
+      overflow: hidden;
+      box-shadow: var(--sombra);
+      margin-bottom: 18px;
+      aspect-ratio: 1600 / 840;
+      background: var(--green-dark);
+    }
+    .new-banner img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* Carrusel de tarjetas — scroll horizontal en móvil */
+    .new-track {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: 78%;
+      gap: 14px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      padding: 4px 0 10px;
+      scrollbar-width: thin;
+    }
+    .new-track::-webkit-scrollbar { height: 6px; }
+    .new-track::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+    .new-card {
+      scroll-snap-align: start;
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-align: left;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radio);
+      padding: 16px;
+      box-shadow: var(--sombra);
+      transition: transform 0.15s, box-shadow 0.15s;
+      width: 100%;
+    }
+    .new-card:hover, .new-card:focus-visible {
+      transform: translateY(-3px);
+      box-shadow: var(--sombra-hover);
+      outline: none;
+    }
+    .new-card-ribbon {
+      position: absolute;
+      top: 10px; right: 10px;
+      background: var(--red);
+      color: white;
+      font-size: 0.6rem;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      padding: 3px 8px;
+      border-radius: 999px;
+    }
+    .new-card-icon {
+      flex-shrink: 0;
+      width: 64px; height: 64px;
+      display: grid;
+      place-items: center;
+      font-size: 2rem;
+      border-radius: 14px;
+      background: var(--green-50);
+      border: 1px solid var(--green-100);
+      overflow: hidden;
+    }
+    .new-card-icon img { width: 100%; height: 100%; object-fit: contain; }
+    .new-card-body { min-width: 0; flex: 1; }
+    .new-card-name {
+      font-weight: 800;
+      font-size: 0.98rem;
+      line-height: 1.25;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .new-card-pkg {
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .new-card-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--green);
+    }
+    /* Desktop: grid en lugar de carrusel */
+    @media (min-width: 721px) {
+      .new-track {
+        grid-auto-flow: row;
+        grid-auto-columns: auto;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        overflow: visible;
+      }
+    }
+
+    /* ============================================================
        CONTROLS (search + brand filter + cat nav)
        ============================================================ */
     .controls {
@@ -941,28 +1089,18 @@
     </div>
   </div>
 
-  <!-- ══════════ HERO ══════════ -->
-  <section class="hero">
-    <div class="hero-pattern" aria-hidden="true"></div>
-    <div class="hero-inner">
-      <div>
-        <div class="hero-eyebrow" data-i18n="hero.eyebrow">Distribuidora Mayorista · Kansas City</div>
-        <h1>
-          <span data-i18n="hero.title.lead">Nuestro</span>
-          <span class="accent" data-i18n="hero.title.accent">Catálogo</span>
-        </h1>
-        <p data-i18n="hero.sub">Productos latinos auténticos para tu negocio. Calidad y variedad en cada categoría — desde bebidas refrescantes hasta panadería tradicional, salsas y especias.</p>
+  <!-- ══════════ NUEVOS PRODUCTOS (hero) ══════════ -->
+  <section class="new-section" id="newProducts" aria-label="Nuevos productos">
+    <div class="new-inner">
+      <div class="new-head">
+        <span class="new-badge" data-i18n="new.badge">✨ Nuevos</span>
+        <h2 data-i18n="new.title">Recién llegados</h2>
+        <p data-i18n="new.sub">Nuevos jarabes y miel — listos para cotizar.</p>
       </div>
-      <div class="hero-stats">
-        <div class="hero-stat">
-          <div class="num" id="statTotal">—</div>
-          <div class="lbl" data-i18n="hero.stat.products">Productos</div>
-        </div>
-        <div class="hero-stat">
-          <div class="num" id="statCats">—</div>
-          <div class="lbl" data-i18n="hero.stat.categories">Categorías</div>
-        </div>
+      <div class="new-banner">
+        <img src="./nuevos.jpg" alt="" data-i18n-attr="alt=new.bannerAlt" loading="eager" />
       </div>
+      <div class="new-track" id="newTrack"></div>
     </div>
   </section>
 
@@ -1072,6 +1210,15 @@
     // ============================================================
     const WHATSAPP_NUMBER = '19133688814'; // Tomado del index.html principal
     const SECTION_LIMIT = 12;
+
+    // Productos NUEVOS destacados (por código del CSV) + emoji decorativo
+    const NEW_PRODUCTS = [
+      { code: '523', emoji: '🍓' }, // Syrup Strawberry / Fresa
+      { code: '524', emoji: '🟤' }, // Syrup Tamarind
+      { code: '521', emoji: '🥭' }, // Syrup Mango Chamoy
+      { code: '520', emoji: '🥤' }, // Syrup Guanabana
+      { code: '575', emoji: '🍯' }, // Honey Bee With Honeycomb
+    ];
     const STORAGE_KEYS = {
       list: 'ctd_catalog_list_v1',
       lang: 'ctd_catalog_lang_v1',
@@ -1091,6 +1238,12 @@
         'hero.sub': 'Productos latinos auténticos para tu negocio. Calidad y variedad en cada categoría — desde bebidas refrescantes hasta panadería tradicional, salsas y especias.',
         'hero.stat.products': 'Productos',
         'hero.stat.categories': 'Categorías',
+        'new.badge': '✨ Nuevos',
+        'new.title': 'Recién llegados',
+        'new.sub': 'Nuevos jarabes y miel — listos para cotizar.',
+        'new.bannerAlt': 'Nuevos productos: jarabes de fresa, tamarindo, mango chamoy, guanábana y miel',
+        'new.tag': 'NUEVO',
+        'new.cta': 'Cotizar',
         'search.placeholder': 'Buscar producto (nombre, marca, código…)',
         'filter.allBrands': 'Todas las marcas',
         'noResults': 'No se encontraron productos que coincidan con tu búsqueda.',
@@ -1134,6 +1287,12 @@
         'hero.sub': 'Authentic Latin products for your business. Quality and variety across every category — from refreshing drinks to traditional bakery, sauces and spices.',
         'hero.stat.products': 'Products',
         'hero.stat.categories': 'Categories',
+        'new.badge': '✨ New',
+        'new.title': 'Just Arrived',
+        'new.sub': 'New syrups & honey — ready to quote.',
+        'new.bannerAlt': 'New products: strawberry, tamarind, mango chamoy, soursop syrups and honey',
+        'new.tag': 'NEW',
+        'new.cta': 'Get a quote',
         'search.placeholder': 'Search product (name, brand, code…)',
         'filter.allBrands': 'All brands',
         'noResults': 'No products match your search.',
@@ -1325,6 +1484,41 @@
             <div class="skeleton-line short"></div>
           </div>
         </div>`).join('');
+    }
+
+    // ============================================================
+    // RENDER — Nuevos productos (sección destacada)
+    // ============================================================
+    function renderNewProducts() {
+      const track = $('#newTrack');
+      if (!track) return;
+      const items = NEW_PRODUCTS
+        .map(n => ({ ...n, p: TODOS.find(x => x.code === n.code) }))
+        .filter(n => n.p);
+
+      if (!items.length) {
+        $('#newProducts')?.classList.add('hidden');
+        return;
+      }
+      $('#newProducts')?.classList.remove('hidden');
+
+      track.innerHTML = items.map(({ p, emoji }) => `
+        <button class="new-card" type="button" data-action="open-modal" data-code="${esc(p.code)}">
+          <span class="new-card-ribbon">${esc(t('new.tag'))}</span>
+          <div class="new-card-icon">${p.image
+            ? `<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy" onerror="this.outerHTML='${emoji}'">`
+            : emoji}</div>
+          <div class="new-card-body">
+            <div class="new-card-name">${esc(p.name)}</div>
+            <div class="new-card-pkg">${esc([p.brand, p.pkg].filter(Boolean).join(' · '))}</div>
+            <span class="new-card-cta">${esc(t('new.cta'))} →</span>
+          </div>
+        </button>
+      `).join('');
+
+      track.querySelectorAll('[data-action="open-modal"]').forEach(el => {
+        el.addEventListener('click', () => openModal(el.dataset.code));
+      });
     }
 
     // ============================================================
@@ -1729,6 +1923,7 @@
         b.classList.toggle('active', b.dataset.langBtn === CURRENT_LANG);
       });
       // Re-render lo dinámico
+      renderNewProducts();
       renderBrandFilter();
       renderCatNav();
       renderCatalog();
@@ -1758,8 +1953,8 @@
         const extraCats = Object.keys(POR_CAT).filter(c => !CAT_ORDER.includes(c));
         EFFECTIVE_CAT_ORDER = [...CAT_ORDER.filter(c => POR_CAT[c]), ...extraCats];
 
-        $('#statTotal').textContent = TODOS.length;
-        $('#statCats').textContent = EFFECTIVE_CAT_ORDER.length;
+        const _st = $('#statTotal'); if (_st) _st.textContent = TODOS.length;
+        const _sc = $('#statCats'); if (_sc) _sc.textContent = EFFECTIVE_CAT_ORDER.length;
 
         // Por default todas las secciones inician EXPANDIDAS (modo e-commerce)
         // El usuario puede colapsar individualmente clickeando un banner,
