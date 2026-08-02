@@ -14,20 +14,20 @@
   <!-- Open Graph — preview de WhatsApp / Facebook / LinkedIn -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Central Trade Distribution" />
-  <meta property="og:title" content="Nuevo: Don Julio Salsa Ranchera y Sofrito · CTD" />
-  <meta property="og:description" content="Llegaron las nuevas presentaciones de Don Julio a Central Trade Distribution. Míralas en el catálogo." />
+  <meta property="og:title" content="Flash Sale · Frijol Rojo de Seda La Finca a $39.99 · CTD" />
+  <meta property="og:description" content="Oferta especial: La Finca Frijol Rojo de Seda 6/64 oz a $39.99. Precios de mayoreo — cotiza por WhatsApp." />
   <meta property="og:url" content="https://www.centraltradedist.com/catalogo/" />
-  <meta property="og:image" content="https://www.centraltradedist.com/catalogo/og-djulio.jpg" />
+  <meta property="og:image" content="https://www.centraltradedist.com/catalogo/og-frijol.jpg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="Don Julio Salsa Ranchera y Sofrito — nuevos productos en CTD" />
+  <meta property="og:image:alt" content="Flash Sale — La Finca Frijol Rojo de Seda 6/64 oz a $39.99" />
   <meta property="og:locale" content="es_MX" />
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Nuevo: Don Julio Salsa Ranchera y Sofrito · CTD" />
-  <meta name="twitter:description" content="Llegaron las nuevas presentaciones de Don Julio a Central Trade Distribution. Míralas en el catálogo." />
-  <meta name="twitter:image" content="https://www.centraltradedist.com/catalogo/og-djulio.jpg" />
+  <meta name="twitter:title" content="Flash Sale · Frijol Rojo de Seda La Finca a $39.99 · CTD" />
+  <meta name="twitter:description" content="Oferta especial: La Finca Frijol Rojo de Seda 6/64 oz a $39.99. Precios de mayoreo — cotiza por WhatsApp." />
+  <meta name="twitter:image" content="https://www.centraltradedist.com/catalogo/og-frijol.jpg" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -352,14 +352,32 @@
       color: var(--muted);
       font-weight: 500;
     }
+    .new-card-foot {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .new-card-price {
+      font-size: 1.15rem;
+      font-weight: 900;
+      color: var(--red);
+      letter-spacing: -0.01em;
+      line-height: 1;
+    }
     .new-card-cta {
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      margin-top: 8px;
       font-size: 0.78rem;
       font-weight: 700;
       color: var(--green);
+    }
+    /* Una sola tarjeta → ocupa todo el ancho (sin carrusel) */
+    .new-track.single {
+      grid-auto-columns: 1fr;
+      overflow-x: visible;
     }
     /* Desktop: grid en lugar de carrusel */
     @media (min-width: 721px) {
@@ -369,6 +387,7 @@
         grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
         overflow: visible;
       }
+      .new-track.single { grid-template-columns: minmax(0, 460px); }
     }
 
     /* ============================================================
@@ -1172,9 +1191,9 @@
           <span class="time" data-i18n="intro.now">ahora</span>
         </div>
       </div>
-      <div class="intro-title" id="introTitle" data-i18n="promo.dj.intro.title">¡Nuevo: Don Julio! 🎉</div>
-      <div class="intro-body" data-i18n="promo.dj.intro.body">Llegaron Don Julio Salsa Ranchera y Sofrito a CTD. Míralos en el catálogo.</div>
-      <img class="intro-img" src="./don-julio-display.jpg" alt="" data-i18n-attr="alt=promo.dj.bannerAlt" />
+      <div class="intro-title" id="introTitle" data-i18n="intro.title">🫘 ¡Frijol Rojo de Seda a $39.99!</div>
+      <div class="intro-body" data-i18n="intro.body">Flash Sale en La Finca Frijol Rojo de Seda 6/64 oz. ¡Aprovecha y cotiza!</div>
+      <img class="intro-img" src="./nuevos.jpg" alt="" data-i18n-attr="alt=new.bannerAlt" />
       <button class="intro-btn" id="introOk" data-i18n="intro.ok">Listo</button>
     </div>
   </div>
@@ -1315,13 +1334,9 @@
     const WHATSAPP_NUMBER = '19133688814'; // Tomado del index.html principal
     const SECTION_LIMIT = 12;
 
-    // Productos NUEVOS destacados (por código del CSV) + emoji decorativo
+    // Productos NUEVOS destacados (por código del CSV) + emoji y precio de promo
     const NEW_PRODUCTS = [
-      { code: '523', emoji: '🍓' }, // Syrup Strawberry / Fresa
-      { code: '524', emoji: '🟤' }, // Syrup Tamarind
-      { code: '521', emoji: '🥭' }, // Syrup Mango Chamoy
-      { code: '520', emoji: '🥤' }, // Syrup Guanabana
-      { code: '575', emoji: '🍯' }, // Honey Bee With Honeycomb
+      { code: '68', emoji: '🫘', price: '$39.99' }, // LA FINCA FRIJOL ROJO DE SEDA 6/64 OZ
     ];
     const STORAGE_KEYS = {
       list: 'ctd_catalog_list_v1',
@@ -1344,8 +1359,8 @@
         'hero.stat.categories': 'Categorías',
         'new.badge': '✨ Nuevos',
         'new.title': 'Recién llegados',
-        'new.sub': 'Nuevos productos — listos para cotizar.',
-        'new.bannerAlt': 'Nuevos productos: jarabes de fresa, tamarindo, mango chamoy, guanábana y miel',
+        'new.sub': 'Frijol Rojo de Seda La Finca 6/64 oz — oferta a $39.99.',
+        'new.bannerAlt': 'Flash Sale: La Finca Frijol Rojo de Seda 6/64 oz a $39.99',
         'new.tag': 'NUEVO',
         'new.cta': 'Cotizar',
         'promo.dj.badge': '✨ Nuevo',
@@ -1355,8 +1370,8 @@
         'promo.dj.intro.title': '¡Nuevo: Don Julio! 🎉',
         'promo.dj.intro.body': 'Llegaron Don Julio Salsa Ranchera y Sofrito a CTD. Míralos en el catálogo.',
         'intro.now': 'ahora',
-        'intro.title': '¡Nuevos productos! 🎉',
-        'intro.body': 'Llegaron nuevos jarabes y miel a CTD. Échales un ojo en el catálogo.',
+        'intro.title': '🫘 ¡Frijol Rojo de Seda a $39.99!',
+        'intro.body': 'Flash Sale en La Finca Frijol Rojo de Seda 6/64 oz. ¡Aprovecha y cotiza!',
         'intro.ok': 'Listo',
         'search.placeholder': 'Buscar producto (nombre, marca, código…)',
         'filter.allBrands': 'Todas las marcas',
@@ -1403,8 +1418,8 @@
         'hero.stat.categories': 'Categories',
         'new.badge': '✨ New',
         'new.title': 'Just Arrived',
-        'new.sub': 'New products — ready to quote.',
-        'new.bannerAlt': 'New products: strawberry, tamarind, mango chamoy, soursop syrups and honey',
+        'new.sub': 'La Finca Red Beans (Silk) 6/64 oz — now $39.99.',
+        'new.bannerAlt': 'Flash Sale: La Finca Red Beans (Silk) 6/64 oz at $39.99',
         'new.tag': 'NEW',
         'new.cta': 'Get a quote',
         'promo.dj.badge': '✨ New',
@@ -1414,8 +1429,8 @@
         'promo.dj.intro.title': 'New: Don Julio! 🎉',
         'promo.dj.intro.body': 'Don Julio Salsa Ranchera & Sofrito just arrived at CTD. Check them in the catalog.',
         'intro.now': 'now',
-        'intro.title': 'New products! 🎉',
-        'intro.body': 'New syrups & honey just arrived at CTD. Check them out in the catalog.',
+        'intro.title': '🫘 Red Beans now $39.99!',
+        'intro.body': 'Flash Sale on La Finca Red Beans (Silk) 6/64 oz. Grab it and quote!',
         'intro.ok': 'Got it',
         'search.placeholder': 'Search product (name, brand, code…)',
         'filter.allBrands': 'All brands',
@@ -1626,7 +1641,8 @@
       }
       $('#newProducts')?.classList.remove('hidden');
 
-      track.innerHTML = items.map(({ p, emoji }) => `
+      track.classList.toggle('single', items.length === 1);
+      track.innerHTML = items.map(({ p, emoji, price }) => `
         <button class="new-card" type="button" data-action="open-modal" data-code="${esc(p.code)}">
           <span class="new-card-ribbon">${esc(t('new.tag'))}</span>
           <div class="new-card-icon">${p.image
@@ -1635,7 +1651,10 @@
           <div class="new-card-body">
             <div class="new-card-name">${esc(p.name)}</div>
             <div class="new-card-pkg">${esc([p.brand, p.pkg].filter(Boolean).join(' · '))}</div>
-            <span class="new-card-cta">${esc(t('new.cta'))} →</span>
+            <div class="new-card-foot">
+              ${price ? `<span class="new-card-price">${esc(price)}</span>` : ''}
+              <span class="new-card-cta">${esc(t('new.cta'))} →</span>
+            </div>
           </div>
         </button>
       `).join('');
@@ -2069,10 +2088,10 @@
         introOverlay.classList.remove('visible');
         introOverlay.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = '';
-        try { sessionStorage.setItem('ctd_intro_seen_v1', '1'); } catch (e) {}
+        try { sessionStorage.setItem('ctd_intro_seen_v2', '1'); } catch (e) {}
       }
       let introSeen = null;
-      try { introSeen = sessionStorage.getItem('ctd_intro_seen_v1'); } catch (e) {}
+      try { introSeen = sessionStorage.getItem('ctd_intro_seen_v2'); } catch (e) {}
       if (introOverlay && !introSeen) {
         // Traducir textos del intro al idioma actual antes de mostrar
         introOverlay.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
