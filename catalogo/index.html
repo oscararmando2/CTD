@@ -395,6 +395,36 @@
       .new-track.single { grid-template-columns: minmax(0, 460px); }
     }
 
+    /* Banners de promoción (uno por oferta) */
+    .promo-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 880px;
+    }
+    .promo-banner {
+      border: none;
+      padding: 0;
+      background: none;
+      cursor: pointer;
+      border-radius: var(--radio);
+      overflow: hidden;
+      box-shadow: var(--sombra);
+      transition: transform 0.15s, box-shadow 0.15s;
+      width: 100%;
+    }
+    .promo-banner:hover, .promo-banner:focus-visible {
+      transform: translateY(-3px);
+      box-shadow: var(--sombra-hover);
+      outline: none;
+    }
+    .promo-banner img {
+      width: 100%;
+      display: block;
+      aspect-ratio: 1600 / 840;
+      object-fit: cover;
+    }
+
     /* ============================================================
        PUSH / NOTIFICACIÓN DE ENTRADA
        ============================================================ */
@@ -1208,9 +1238,9 @@
   <section class="new-section" id="newArrivals" aria-label="Recién llegados">
     <div class="new-inner">
       <div class="new-head">
-        <span class="new-badge" data-i18n="new.badge">✨ Nuevos</span>
-        <h2 data-i18n="new.title">Recién llegados</h2>
-        <p data-i18n="new.sub">Llegaron los snacks Delicias Yeya — cotiza por WhatsApp.</p>
+        <span class="new-badge" data-i18n="new.badge">🎉 ¡Nuevo!</span>
+        <h2 data-i18n="new.title">¡Llegó Delicias Yeya!</h2>
+        <p data-i18n="new.sub">Snacks de trigo frito recién llegados — cotiza por WhatsApp.</p>
       </div>
       <div class="new-banner">
         <img src="./yeya-banner.jpg" alt="" data-i18n-attr="alt=new.bannerAlt" loading="eager" />
@@ -1227,7 +1257,7 @@
         <h2 data-i18n="promo.title">Ofertas de la semana</h2>
         <p data-i18n="promo.sub">Aprovecha estos precios — cotiza por WhatsApp.</p>
       </div>
-      <div class="new-track" id="promoTrack"></div>
+      <div class="promo-stack" id="promoTrack"></div>
     </div>
   </section>
 
@@ -1347,11 +1377,11 @@
       { name: 'Delicias Yeya Mini Squares 3.5 oz',          img: './yeya/mini-squares.jpeg' },
       { name: 'Delicias Yeya Mini Squares Chili Lime 3.5 oz', img: './yeya/mini-squares-chile.jpeg' },
     ];
-    // PROMOS (por código del CSV) — etiqueta de promo en vez de precio
+    // PROMOS (por código del CSV) — cada una con su banner; abre el modal del producto
     const PROMOS = [
-      { code: '134', emoji: '🥤', promo: { es: '$16.99', en: '$16.99' } },          // AMP GOLD 12/20 OZ
-      { code: '63',  emoji: '🍚', promo: { es: '5 + 1 gratis', en: '5 + 1 free' } }, // LA FINCA JASMINE RICE 6/5 LB
-      { code: '68',  emoji: '🫘', promo: { es: '5 + 1 gratis', en: '5 + 1 free' } }, // LA FINCA FRIJOL ROJO DE SEDA 6/64 OZ
+      { code: '134', banner: './promo-amp.jpg' },     // AMP GOLD 12/20 OZ — $16.99
+      { code: '63',  banner: './promo-jasmine.jpg' }, // LA FINCA JASMINE RICE 6/5 LB — 5+1 gratis
+      { code: '68',  banner: './promo-frijol.jpg' },  // LA FINCA FRIJOL ROJO DE SEDA 6/64 OZ — 5+1 gratis
     ];
     const STORAGE_KEYS = {
       list: 'ctd_catalog_list_v1',
@@ -1372,9 +1402,9 @@
         'hero.sub': 'Productos latinos auténticos para tu negocio. Calidad y variedad en cada categoría — desde bebidas refrescantes hasta panadería tradicional, salsas y especias.',
         'hero.stat.products': 'Productos',
         'hero.stat.categories': 'Categorías',
-        'new.badge': '✨ Nuevos',
-        'new.title': 'Recién llegados',
-        'new.sub': 'Llegaron los snacks Delicias Yeya — cotiza por WhatsApp.',
+        'new.badge': '🎉 ¡Nuevo!',
+        'new.title': '¡Llegó Delicias Yeya!',
+        'new.sub': 'Snacks de trigo frito recién llegados — cotiza por WhatsApp.',
         'new.bannerAlt': 'Nuevos snacks Delicias Yeya: Duros, Mini Rings, Mini Wheels y Mini Squares',
         'new.tag': 'NUEVO',
         'new.cta': 'Cotizar',
@@ -1429,9 +1459,9 @@
         'hero.sub': 'Authentic Latin products for your business. Quality and variety across every category — from refreshing drinks to traditional bakery, sauces and spices.',
         'hero.stat.products': 'Products',
         'hero.stat.categories': 'Categories',
-        'new.badge': '✨ New',
-        'new.title': 'Just Arrived',
-        'new.sub': 'New Delicias Yeya snacks just arrived — quote on WhatsApp.',
+        'new.badge': '🎉 New!',
+        'new.title': 'Delicias Yeya is here!',
+        'new.sub': 'Fried-wheat snacks just landed — quote on WhatsApp.',
         'new.bannerAlt': 'New Delicias Yeya snacks: Duros, Mini Rings, Mini Wheels and Mini Squares',
         'new.tag': 'NEW',
         'new.cta': 'Get a quote',
@@ -1672,25 +1702,10 @@
       if (!items.length) { $('#promos')?.classList.add('hidden'); return; }
       $('#promos')?.classList.remove('hidden');
 
-      track.classList.toggle('single', items.length === 1);
-      track.innerHTML = items.map(({ p, emoji, promo }) => {
-        const label = typeof promo === 'string' ? promo : (promo[CURRENT_LANG] || promo.es);
-        return `
-        <button class="new-card" type="button" data-action="open-modal" data-code="${esc(p.code)}">
-          <span class="new-card-ribbon promo">${esc(t('promo.tag'))}</span>
-          <div class="new-card-icon">${p.image
-            ? `<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy" onerror="this.outerHTML='${emoji}'">`
-            : emoji}</div>
-          <div class="new-card-body">
-            <div class="new-card-name">${esc(p.name)}</div>
-            <div class="new-card-pkg">${esc([p.brand, p.pkg].filter(Boolean).join(' · '))}</div>
-            <div class="new-card-foot">
-              <span class="new-card-price">${esc(label)}</span>
-              <span class="new-card-cta">${esc(t('new.cta'))} →</span>
-            </div>
-          </div>
-        </button>`;
-      }).join('');
+      track.innerHTML = items.map(({ p, banner }) => `
+        <button class="promo-banner" type="button" data-action="open-modal" data-code="${esc(p.code)}" aria-label="${esc(p.name)}">
+          <img src="${esc(banner)}" alt="${esc(p.name)}" loading="lazy">
+        </button>`).join('');
 
       track.querySelectorAll('[data-action="open-modal"]').forEach(el => {
         el.addEventListener('click', () => openModal(el.dataset.code));
