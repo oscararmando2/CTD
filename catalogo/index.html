@@ -14,20 +14,20 @@
   <!-- Open Graph — preview de WhatsApp / Facebook / LinkedIn -->
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Central Trade Distribution" />
-  <meta property="og:title" content="Flash Sale · Frijol Rojo de Seda La Finca a $39.99 · CTD" />
-  <meta property="og:description" content="Oferta especial: La Finca Frijol Rojo de Seda 6/64 oz a $39.99. Precios de mayoreo — cotiza por WhatsApp." />
+  <meta property="og:title" content="¡Nuevo! Snacks Delicias Yeya + Promociones · CTD" />
+  <meta property="og:description" content="Llegaron los snacks Delicias Yeya (Duros, Mini Rings, Mini Wheels, Mini Squares) y promos: AMP Gold $16.99, arroz jazmín y frijol rojo 5+1 gratis. Cotiza por WhatsApp." />
   <meta property="og:url" content="https://www.centraltradedist.com/catalogo/" />
-  <meta property="og:image" content="https://www.centraltradedist.com/catalogo/og-frijol.jpg" />
+  <meta property="og:image" content="https://www.centraltradedist.com/catalogo/og-yeya.jpg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="Flash Sale — La Finca Frijol Rojo de Seda 6/64 oz a $39.99" />
+  <meta property="og:image:alt" content="Nuevos snacks Delicias Yeya en Central Trade Distribution" />
   <meta property="og:locale" content="es_MX" />
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Flash Sale · Frijol Rojo de Seda La Finca a $39.99 · CTD" />
-  <meta name="twitter:description" content="Oferta especial: La Finca Frijol Rojo de Seda 6/64 oz a $39.99. Precios de mayoreo — cotiza por WhatsApp." />
-  <meta name="twitter:image" content="https://www.centraltradedist.com/catalogo/og-frijol.jpg" />
+  <meta name="twitter:title" content="¡Nuevo! Snacks Delicias Yeya + Promociones · CTD" />
+  <meta name="twitter:description" content="Llegaron los snacks Delicias Yeya y promos: AMP Gold $16.99, arroz jazmín y frijol rojo 5+1 gratis. Cotiza por WhatsApp." />
+  <meta name="twitter:image" content="https://www.centraltradedist.com/catalogo/og-yeya.jpg" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -325,6 +325,11 @@
       border-radius: 999px;
       box-shadow: 0 2px 6px rgba(219,44,26,0.35);
       z-index: 2;
+    }
+    .new-card-ribbon.promo {
+      background: var(--orange);
+      color: #5a3000;
+      box-shadow: 0 2px 6px rgba(248,148,41,0.4);
     }
     .new-card-icon {
       position: relative;
@@ -1191,40 +1196,38 @@
           <span class="time" data-i18n="intro.now">ahora</span>
         </div>
       </div>
-      <div class="intro-title" id="introTitle" data-i18n="intro.title">🫘 ¡Frijol Rojo de Seda a $39.99!</div>
-      <div class="intro-body" data-i18n="intro.body">Flash Sale en La Finca Frijol Rojo de Seda 6/64 oz. ¡Aprovecha y cotiza!</div>
-      <img class="intro-img" src="./nuevos.jpg" alt="" data-i18n-attr="alt=new.bannerAlt" />
+      <div class="intro-title" id="introTitle" data-i18n="intro.title">🎉 ¡Llegaron los snacks Delicias Yeya!</div>
+      <div class="intro-body" data-i18n="intro.body">Duros, Mini Rings, Mini Wheels y Mini Squares — ya en CTD. Cotiza por WhatsApp.</div>
+      <img class="intro-img" src="./yeya-banner.jpg" alt="" data-i18n-attr="alt=new.bannerAlt" />
       <button class="intro-btn" id="introOk" data-i18n="intro.ok">Listo</button>
     </div>
   </div>
 
-  <!-- ══════════ PROMO ACTUAL: FLASH SALE FRIJOL (más reciente → arriba) ══════════ -->
-  <!-- Convención: la promo más nueva va PRIMERO. Las anteriores quedan debajo. -->
-  <section class="new-section" id="newProducts" aria-label="Oferta Flash Sale">
+  <!-- ══════════ RECIÉN LLEGADOS: DELICIAS YEYA (galería, cotizar por WhatsApp) ══════════ -->
+  <!-- Convención: la promo/novedad más reciente va PRIMERO. -->
+  <section class="new-section" id="newArrivals" aria-label="Recién llegados">
     <div class="new-inner">
       <div class="new-head">
-        <span class="new-badge" data-i18n="new.badge">⚡ Flash Sale</span>
-        <h2 data-i18n="new.title">Oferta especial</h2>
-        <p data-i18n="new.sub">Frijol Rojo de Seda La Finca 6/64 oz — oferta a $39.99.</p>
+        <span class="new-badge" data-i18n="new.badge">✨ Nuevos</span>
+        <h2 data-i18n="new.title">Recién llegados</h2>
+        <p data-i18n="new.sub">Llegaron los snacks Delicias Yeya — cotiza por WhatsApp.</p>
       </div>
       <div class="new-banner">
-        <img src="./nuevos.jpg" alt="" data-i18n-attr="alt=new.bannerAlt" loading="eager" />
+        <img src="./yeya-banner.jpg" alt="" data-i18n-attr="alt=new.bannerAlt" loading="eager" />
       </div>
-      <div class="new-track" id="newTrack"></div>
+      <div class="new-track" id="yeyaTrack"></div>
     </div>
   </section>
 
-  <!-- ══════════ PROMO ANTERIOR: DON JULIO ══════════ -->
-  <section class="new-section" id="promoDJ" aria-label="Promoción Don Julio">
+  <!-- ══════════ PROMOCIONES (por código del CSV) ══════════ -->
+  <section class="new-section" id="promos" aria-label="Promociones">
     <div class="new-inner">
       <div class="new-head">
-        <span class="new-badge" data-i18n="promo.dj.badge">✨ Nuevo</span>
-        <h2 data-i18n="promo.dj.title">Nuevo: Don Julio Salsa Ranchera y Sofrito</h2>
-        <p data-i18n="promo.dj.sub">Nuevas presentaciones de Don Julio, ya disponibles en CTD. Listas para cotizar.</p>
+        <span class="new-badge" data-i18n="promo.badge">🔥 Promociones</span>
+        <h2 data-i18n="promo.title">Ofertas de la semana</h2>
+        <p data-i18n="promo.sub">Aprovecha estos precios — cotiza por WhatsApp.</p>
       </div>
-      <div class="new-banner" style="aspect-ratio:2/1">
-        <img src="./don-julio-display.jpg" alt="" data-i18n-attr="alt=promo.dj.bannerAlt" loading="eager" />
-      </div>
+      <div class="new-track" id="promoTrack"></div>
     </div>
   </section>
 
@@ -1335,9 +1338,20 @@
     const WHATSAPP_NUMBER = '19133688814'; // Tomado del index.html principal
     const SECTION_LIMIT = 12;
 
-    // Productos NUEVOS destacados (por código del CSV) + emoji y precio de promo
-    const NEW_PRODUCTS = [
-      { code: '68', emoji: '🫘', price: '$39.99' }, // LA FINCA FRIJOL ROJO DE SEDA 6/64 OZ
+    // Snacks NUEVOS Delicias Yeya — galería con "Cotizar por WhatsApp" (no están en el CSV)
+    const YEYA_PRODUCTS = [
+      { name: 'Delicias Yeya Duros 10/10 oz',                img: './yeya/duros.jpeg' },
+      { name: 'Delicias Yeya Mini Rings 3.5 oz',            img: './yeya/mini-rings.jpeg' },
+      { name: 'Delicias Yeya Mini Wheels 2.5 oz',           img: './yeya/mini-wheels.jpeg' },
+      { name: 'Delicias Yeya Mini Wheels Chili Lime 2.5 oz', img: './yeya/mini-wheels-chile.jpeg' },
+      { name: 'Delicias Yeya Mini Squares 3.5 oz',          img: './yeya/mini-squares.jpeg' },
+      { name: 'Delicias Yeya Mini Squares Chili Lime 3.5 oz', img: './yeya/mini-squares-chile.jpeg' },
+    ];
+    // PROMOS (por código del CSV) — etiqueta de promo en vez de precio
+    const PROMOS = [
+      { code: '134', emoji: '🥤', promo: { es: '$16.99', en: '$16.99' } },          // AMP GOLD 12/20 OZ
+      { code: '63',  emoji: '🍚', promo: { es: '5 + 1 gratis', en: '5 + 1 free' } }, // LA FINCA JASMINE RICE 6/5 LB
+      { code: '68',  emoji: '🫘', promo: { es: '5 + 1 gratis', en: '5 + 1 free' } }, // LA FINCA FRIJOL ROJO DE SEDA 6/64 OZ
     ];
     const STORAGE_KEYS = {
       list: 'ctd_catalog_list_v1',
@@ -1358,21 +1372,19 @@
         'hero.sub': 'Productos latinos auténticos para tu negocio. Calidad y variedad en cada categoría — desde bebidas refrescantes hasta panadería tradicional, salsas y especias.',
         'hero.stat.products': 'Productos',
         'hero.stat.categories': 'Categorías',
-        'new.badge': '⚡ Flash Sale',
-        'new.title': 'Oferta especial',
-        'new.sub': 'Frijol Rojo de Seda La Finca 6/64 oz — oferta a $39.99.',
-        'new.bannerAlt': 'Flash Sale: La Finca Frijol Rojo de Seda 6/64 oz a $39.99',
-        'new.tag': 'OFERTA',
+        'new.badge': '✨ Nuevos',
+        'new.title': 'Recién llegados',
+        'new.sub': 'Llegaron los snacks Delicias Yeya — cotiza por WhatsApp.',
+        'new.bannerAlt': 'Nuevos snacks Delicias Yeya: Duros, Mini Rings, Mini Wheels y Mini Squares',
+        'new.tag': 'NUEVO',
         'new.cta': 'Cotizar',
-        'promo.dj.badge': '✨ Nuevo',
-        'promo.dj.title': 'Nuevo: Don Julio Salsa Ranchera y Sofrito',
-        'promo.dj.sub': 'Nuevas presentaciones de Don Julio, ya disponibles en CTD. Listas para cotizar.',
-        'promo.dj.bannerAlt': 'Don Julio Salsa Ranchera y Sofrito — nuevos productos en CTD',
-        'promo.dj.intro.title': '¡Nuevo: Don Julio! 🎉',
-        'promo.dj.intro.body': 'Llegaron Don Julio Salsa Ranchera y Sofrito a CTD. Míralos en el catálogo.',
+        'promo.badge': '🔥 Promociones',
+        'promo.title': 'Ofertas de la semana',
+        'promo.sub': 'Aprovecha estos precios — cotiza por WhatsApp.',
+        'promo.tag': 'OFERTA',
         'intro.now': 'ahora',
-        'intro.title': '🫘 ¡Frijol Rojo de Seda a $39.99!',
-        'intro.body': 'Flash Sale en La Finca Frijol Rojo de Seda 6/64 oz. ¡Aprovecha y cotiza!',
+        'intro.title': '🎉 ¡Llegaron los snacks Delicias Yeya!',
+        'intro.body': 'Duros, Mini Rings, Mini Wheels y Mini Squares — ya en CTD. Cotiza por WhatsApp.',
         'intro.ok': 'Listo',
         'search.placeholder': 'Buscar producto (nombre, marca, código…)',
         'filter.allBrands': 'Todas las marcas',
@@ -1417,21 +1429,19 @@
         'hero.sub': 'Authentic Latin products for your business. Quality and variety across every category — from refreshing drinks to traditional bakery, sauces and spices.',
         'hero.stat.products': 'Products',
         'hero.stat.categories': 'Categories',
-        'new.badge': '⚡ Flash Sale',
-        'new.title': 'Special Offer',
-        'new.sub': 'La Finca Red Beans (Silk) 6/64 oz — now $39.99.',
-        'new.bannerAlt': 'Flash Sale: La Finca Red Beans (Silk) 6/64 oz at $39.99',
-        'new.tag': 'DEAL',
+        'new.badge': '✨ New',
+        'new.title': 'Just Arrived',
+        'new.sub': 'New Delicias Yeya snacks just arrived — quote on WhatsApp.',
+        'new.bannerAlt': 'New Delicias Yeya snacks: Duros, Mini Rings, Mini Wheels and Mini Squares',
+        'new.tag': 'NEW',
         'new.cta': 'Get a quote',
-        'promo.dj.badge': '✨ New',
-        'promo.dj.title': 'New: Don Julio Salsa Ranchera & Sofrito',
-        'promo.dj.sub': 'New Don Julio products, now available at CTD. Ready to quote.',
-        'promo.dj.bannerAlt': 'Don Julio Salsa Ranchera and Sofrito — new products at CTD',
-        'promo.dj.intro.title': 'New: Don Julio! 🎉',
-        'promo.dj.intro.body': 'Don Julio Salsa Ranchera & Sofrito just arrived at CTD. Check them in the catalog.',
+        'promo.badge': '🔥 Deals',
+        'promo.title': 'Weekly Deals',
+        'promo.sub': 'Grab these deals — quote on WhatsApp.',
+        'promo.tag': 'DEAL',
         'intro.now': 'now',
-        'intro.title': '🫘 Red Beans now $39.99!',
-        'intro.body': 'Flash Sale on La Finca Red Beans (Silk) 6/64 oz. Grab it and quote!',
+        'intro.title': '🎉 Delicias Yeya snacks are here!',
+        'intro.body': 'Duros, Mini Rings, Mini Wheels and Mini Squares — now at CTD. Quote on WhatsApp.',
         'intro.ok': 'Got it',
         'search.placeholder': 'Search product (name, brand, code…)',
         'filter.allBrands': 'All brands',
@@ -1627,25 +1637,47 @@
     }
 
     // ============================================================
-    // RENDER — Nuevos productos (sección destacada)
+    // RENDER — Recién llegados: Delicias Yeya (galería → WhatsApp)
     // ============================================================
-    function renderNewProducts() {
-      const track = $('#newTrack');
+    function renderYeya() {
+      const track = $('#yeyaTrack');
       if (!track) return;
-      const items = NEW_PRODUCTS
+      track.innerHTML = YEYA_PRODUCTS.map(p => {
+        const waMsg = encodeURIComponent(`${t('wa.singleIntro')}\n\n• ${p.name}`);
+        const href = `https://wa.me/${WHATSAPP_NUMBER}?text=${waMsg}`;
+        return `
+        <a class="new-card" href="${href}" target="_blank" rel="noopener">
+          <span class="new-card-ribbon">${esc(t('new.tag'))}</span>
+          <div class="new-card-icon"><img src="${esc(p.img)}" alt="${esc(p.name)}" loading="lazy"></div>
+          <div class="new-card-body">
+            <div class="new-card-name">${esc(p.name)}</div>
+            <div class="new-card-foot">
+              <span class="new-card-cta">💬 ${esc(t('new.cta'))}</span>
+            </div>
+          </div>
+        </a>`;
+      }).join('');
+    }
+
+    // ============================================================
+    // RENDER — Promociones (por código del CSV, con etiqueta de promo)
+    // ============================================================
+    function renderPromos() {
+      const track = $('#promoTrack');
+      if (!track) return;
+      const items = PROMOS
         .map(n => ({ ...n, p: TODOS.find(x => x.code === n.code) }))
         .filter(n => n.p);
 
-      if (!items.length) {
-        $('#newProducts')?.classList.add('hidden');
-        return;
-      }
-      $('#newProducts')?.classList.remove('hidden');
+      if (!items.length) { $('#promos')?.classList.add('hidden'); return; }
+      $('#promos')?.classList.remove('hidden');
 
       track.classList.toggle('single', items.length === 1);
-      track.innerHTML = items.map(({ p, emoji, price }) => `
+      track.innerHTML = items.map(({ p, emoji, promo }) => {
+        const label = typeof promo === 'string' ? promo : (promo[CURRENT_LANG] || promo.es);
+        return `
         <button class="new-card" type="button" data-action="open-modal" data-code="${esc(p.code)}">
-          <span class="new-card-ribbon">${esc(t('new.tag'))}</span>
+          <span class="new-card-ribbon promo">${esc(t('promo.tag'))}</span>
           <div class="new-card-icon">${p.image
             ? `<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy" onerror="this.outerHTML='${emoji}'">`
             : emoji}</div>
@@ -1653,12 +1685,12 @@
             <div class="new-card-name">${esc(p.name)}</div>
             <div class="new-card-pkg">${esc([p.brand, p.pkg].filter(Boolean).join(' · '))}</div>
             <div class="new-card-foot">
-              ${price ? `<span class="new-card-price">${esc(price)}</span>` : ''}
+              <span class="new-card-price">${esc(label)}</span>
               <span class="new-card-cta">${esc(t('new.cta'))} →</span>
             </div>
           </div>
-        </button>
-      `).join('');
+        </button>`;
+      }).join('');
 
       track.querySelectorAll('[data-action="open-modal"]').forEach(el => {
         el.addEventListener('click', () => openModal(el.dataset.code));
@@ -2067,7 +2099,8 @@
         b.classList.toggle('active', b.dataset.langBtn === CURRENT_LANG);
       });
       // Re-render lo dinámico
-      renderNewProducts();
+      renderYeya();
+      renderPromos();
       renderBrandFilter();
       renderCatNav();
       renderCatalog();
@@ -2089,10 +2122,10 @@
         introOverlay.classList.remove('visible');
         introOverlay.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = '';
-        try { sessionStorage.setItem('ctd_intro_seen_v2', '1'); } catch (e) {}
+        try { sessionStorage.setItem('ctd_intro_seen_v3', '1'); } catch (e) {}
       }
       let introSeen = null;
-      try { introSeen = sessionStorage.getItem('ctd_intro_seen_v2'); } catch (e) {}
+      try { introSeen = sessionStorage.getItem('ctd_intro_seen_v3'); } catch (e) {}
       if (introOverlay && !introSeen) {
         // Traducir textos del intro al idioma actual antes de mostrar
         introOverlay.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
