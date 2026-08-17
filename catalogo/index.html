@@ -1261,6 +1261,21 @@
     </div>
   </section>
 
+  <!-- ══════════ SNACKS DIANA (toda la línea a $34.99) ══════════ -->
+  <section class="new-section" id="promosDiana" aria-label="Snacks Diana">
+    <div class="new-inner">
+      <div class="new-head">
+        <span class="new-badge" data-i18n="diana.badge">🌽 Snacks Diana</span>
+        <h2 data-i18n="diana.title">Toda la línea Diana a $34.99</h2>
+        <p data-i18n="diana.sub">12 sabores — cotiza por WhatsApp.</p>
+      </div>
+      <div class="new-banner">
+        <img src="./promo-diana.jpg" alt="" data-i18n-attr="alt=diana.bannerAlt" loading="lazy" />
+      </div>
+      <div class="new-track" id="dianaTrack"></div>
+    </div>
+  </section>
+
   <!-- ══════════ CONTROLS ══════════ -->
   <div class="controls">
     <div class="controls-inner">
@@ -1379,10 +1394,14 @@
     ];
     // PROMOS (por código del CSV) — cada una con su banner; abre el modal del producto
     const PROMOS = [
+      { code: '133', banner: './promo-mirinda.jpg' }, // MIRINDA 6/1.25 LT PET — $11.99
       { code: '134', banner: './promo-amp.jpg' },     // AMP GOLD 12/20 OZ — $16.99
       { code: '63',  banner: './promo-jasmine.jpg' }, // LA FINCA JASMINE RICE 6/5 LB — 5+1 gratis
       { code: '68',  banner: './promo-frijol.jpg' },  // LA FINCA FRIJOL ROJO DE SEDA 6/64 OZ — 5+1 gratis
     ];
+    // SNACKS DIANA — toda la línea al mismo precio de promo
+    const DIANA_PRICE = '$34.99';
+    const DIANA = ['242','243','244','245','246','247','248','249','250','251','252','253'];
     const STORAGE_KEYS = {
       list: 'ctd_catalog_list_v1',
       lang: 'ctd_catalog_lang_v1',
@@ -1412,6 +1431,10 @@
         'promo.title': 'Ofertas de la semana',
         'promo.sub': 'Aprovecha estos precios — cotiza por WhatsApp.',
         'promo.tag': 'OFERTA',
+        'diana.badge': '🌽 Snacks Diana',
+        'diana.title': 'Toda la línea Diana a $34.99',
+        'diana.sub': '12 sabores — cotiza por WhatsApp.',
+        'diana.bannerAlt': 'Promo: snacks Diana, toda la línea a $34.99',
         'intro.now': 'ahora',
         'intro.title': '🎉 ¡Llegaron los snacks Delicias Yeya!',
         'intro.body': 'Duros, Mini Rings, Mini Wheels y Mini Squares — ya en CTD. Cotiza por WhatsApp.',
@@ -1469,6 +1492,10 @@
         'promo.title': 'Weekly Deals',
         'promo.sub': 'Grab these deals — quote on WhatsApp.',
         'promo.tag': 'DEAL',
+        'diana.badge': '🌽 Diana Snacks',
+        'diana.title': 'All Diana snacks at $34.99',
+        'diana.sub': '12 flavors — quote on WhatsApp.',
+        'diana.bannerAlt': 'Deal: Diana snacks, whole line at $34.99',
         'intro.now': 'now',
         'intro.title': '🎉 Delicias Yeya snacks are here!',
         'intro.body': 'Duros, Mini Rings, Mini Wheels and Mini Squares — now at CTD. Quote on WhatsApp.',
@@ -1705,6 +1732,37 @@
       track.innerHTML = items.map(({ p, banner }) => `
         <button class="promo-banner" type="button" data-action="open-modal" data-code="${esc(p.code)}" aria-label="${esc(p.name)}">
           <img src="${esc(banner)}" alt="${esc(p.name)}" loading="lazy">
+        </button>`).join('');
+
+      track.querySelectorAll('[data-action="open-modal"]').forEach(el => {
+        el.addEventListener('click', () => openModal(el.dataset.code));
+      });
+    }
+
+    // ============================================================
+    // RENDER — Snacks Diana (12 sabores, todos al mismo precio de promo)
+    // ============================================================
+    function renderDiana() {
+      const track = $('#dianaTrack');
+      if (!track) return;
+      const items = DIANA.map(c => TODOS.find(x => x.code === c)).filter(Boolean);
+      if (!items.length) { $('#promosDiana')?.classList.add('hidden'); return; }
+      $('#promosDiana')?.classList.remove('hidden');
+
+      track.innerHTML = items.map(p => `
+        <button class="new-card" type="button" data-action="open-modal" data-code="${esc(p.code)}">
+          <span class="new-card-ribbon promo">${esc(t('promo.tag'))}</span>
+          <div class="new-card-icon">${p.image
+            ? `<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy" onerror="this.outerHTML='🌽'">`
+            : '🌽'}</div>
+          <div class="new-card-body">
+            <div class="new-card-name">${esc(p.name)}</div>
+            <div class="new-card-pkg">${esc(p.brand || 'Diana')}</div>
+            <div class="new-card-foot">
+              <span class="new-card-price">${esc(DIANA_PRICE)}</span>
+              <span class="new-card-cta">${esc(t('new.cta'))} →</span>
+            </div>
+          </div>
         </button>`).join('');
 
       track.querySelectorAll('[data-action="open-modal"]').forEach(el => {
@@ -2116,6 +2174,7 @@
       // Re-render lo dinámico
       renderYeya();
       renderPromos();
+      renderDiana();
       renderBrandFilter();
       renderCatNav();
       renderCatalog();
