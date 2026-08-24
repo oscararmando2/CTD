@@ -17,8 +17,8 @@
   var cue   = sec.querySelector('.cine-cue');
   var idx   = sec.querySelector('.cine-hud-idx');
 
-  var dur   = [6, 6, 6, 6];
-  var ready = [false, false, false, false];
+  var dur   = clips.map(function () { return 6; });
+  var ready = clips.map(function () { return false; });
 
   clips.forEach(function (v, i) {
     var meta = function () { if (v.duration) dur[i] = v.duration; };
@@ -69,8 +69,10 @@
   // Reveal (fade-in) monotónico: cada clip aparece ENCIMA del anterior, que se
   // queda debajo a opacidad 1. Así nunca se ve la imagen base del camión entre
   // transiciones (solo al inicio, como hero).
-  var IN = [[0.00, 0.03], [0.35, 0.44], [0.585, 0.64], [0.80, 0.855]];
-  var SC = [[0.02, 0.30], [0.37, 0.585], [0.60, 0.80], [0.83, 1.00]];
+  // 5 clips: v2 → v4 → v5 → v6 → v7 (acercamiento al logo). Ventanas repartidas
+  // parejo para conservar el mismo ritmo con el pin más largo.
+  var IN = [[0.00, 0.03], [0.26, 0.32], [0.44, 0.49], [0.62, 0.67], [0.80, 0.85]];
+  var SC = [[0.02, 0.22], [0.28, 0.44], [0.46, 0.62], [0.64, 0.80], [0.82, 1.00]];
 
   function setCT(v, i, lp) {
     var t = clamp(lp, 0, 1) * (dur[i] - 0.06);
@@ -110,26 +112,21 @@
     // Reveal monotónico (sin fade-out): el clip de encima aparece sobre el de
     // abajo, que se queda a opacidad 1 → el camión base no se asoma en las
     // transiciones. Gate: si un clip no está listo, no se revela (se queda el anterior).
-    var rev = [
-      smooth((p - IN[0][0]) / (IN[0][1] - IN[0][0])),
-      smooth((p - IN[1][0]) / (IN[1][1] - IN[1][0])),
-      smooth((p - IN[2][0]) / (IN[2][1] - IN[2][0])),
-      smooth((p - IN[3][0]) / (IN[3][1] - IN[3][0]))
-    ];
     var topi = 0;
-    for (var i = 0; i < 4; i++) {
-      if (i > 0 && !ready[i]) rev[i] = 0;
-      clips[i].style.opacity = rev[i];
-      if (rev[i] > 0.02) topi = i;
+    for (var i = 0; i < clips.length; i++) {
+      var rv = smooth((p - IN[i][0]) / (IN[i][1] - IN[i][0]));
+      if (i > 0 && !ready[i]) rv = 0;               // si no está listo, no aparece (se queda el anterior)
+      clips[i].style.opacity = rv;
+      if (rv > 0.02) topi = i;                       // el revelado más alto es el que se ve
     }
     if (ready[topi]) setCT(clips[topi], topi, local(p, SC[topi][0], SC[topi][1]));
 
     // Refuerzo de negro en el empalme 2→4 (o sostén si v4 aún no está listo)
-    var bl = op(p, 0.29, 0.32, 0.35, 0.40);
-    if (!ready[1] && p > 0.30 && p < 0.52) bl = 1;
+    var bl = op(p, 0.205, 0.235, 0.27, 0.33);
+    if (!ready[1] && p > 0.22 && p < 0.40) bl = 1;
     if (black) black.style.opacity = bl;
-    if (idx) idx.textContent = ('0' + (topi + 1)) + ' / 04';
-    if (cue) cue.style.opacity = smooth((p - 0.9) / 0.07).toFixed(2);
+    if (idx) idx.textContent = ('0' + (topi + 1)) + ' / 0' + clips.length;
+    if (cue) cue.style.opacity = smooth((p - 0.93) / 0.05).toFixed(2);
   }
 
   window.addEventListener('scroll', onScroll, { passive: true });
