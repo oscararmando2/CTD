@@ -69,10 +69,10 @@
   // Reveal (fade-in) monotónico: cada clip aparece ENCIMA del anterior, que se
   // queda debajo a opacidad 1. Así nunca se ve la imagen base del camión entre
   // transiciones (solo al inicio, como hero).
-  // 5 clips: v2 → v4 → v5 → v6 → v7 (acercamiento al logo). Ventanas repartidas
+  // 6 clips: v2 → v4 → v5 → v6 → v7 (logo) → v8 (carretera). Ventanas repartidas
   // parejo para conservar el mismo ritmo con el pin más largo.
-  var IN = [[0.00, 0.03], [0.26, 0.32], [0.44, 0.49], [0.62, 0.67], [0.80, 0.85]];
-  var SC = [[0.02, 0.22], [0.28, 0.44], [0.46, 0.62], [0.64, 0.80], [0.82, 1.00]];
+  var IN = [[0.00, 0.03], [0.22, 0.27], [0.38, 0.42], [0.54, 0.58], [0.70, 0.74], [0.86, 0.90]];
+  var SC = [[0.02, 0.18], [0.24, 0.38], [0.40, 0.54], [0.56, 0.70], [0.72, 0.86], [0.88, 1.00]];
 
   function setCT(v, i, lp) {
     var t = clamp(lp, 0, 1) * (dur[i] - 0.06);
@@ -122,8 +122,8 @@
     if (ready[topi]) setCT(clips[topi], topi, local(p, SC[topi][0], SC[topi][1]));
 
     // Refuerzo de negro en el empalme 2→4 (o sostén si v4 aún no está listo)
-    var bl = op(p, 0.205, 0.235, 0.27, 0.33);
-    if (!ready[1] && p > 0.22 && p < 0.40) bl = 1;
+    var bl = op(p, 0.165, 0.195, 0.235, 0.295);
+    if (!ready[1] && p > 0.18 && p < 0.34) bl = 1;
     if (black) black.style.opacity = bl;
     if (idx) idx.textContent = ('0' + (topi + 1)) + ' / 0' + clips.length;
     if (cue) cue.style.opacity = smooth((p - 0.93) / 0.05).toFixed(2);
