@@ -11,7 +11,7 @@
 .cine:not(.is-ready){ height:auto; }
 .cine:not(.is-ready) .cine-pin{ position:relative; height:88svh; }
 /* Con JS: sección alta; el pin se queda fijo y el scroll scrubbea la secuencia */
-.cine.is-ready{ height:780vh; }  /* 6 clips × ~130vh — mismo ritmo que con 4/5 */
+.cine.is-ready{ height:1140vh; }  /* 6 clips (~130vh) + cierre de marcas (3 revelados ~120vh) — mismo ritmo */
 .cine .cine-pin{
   position:sticky; top:0; height:100svh; overflow:hidden;
   display:flex; align-items:flex-end;
@@ -62,24 +62,66 @@
 .cine-btn:focus-visible{ outline:3px solid var(--cine-oro); outline-offset:3px; }
 /* HUD tipo "operación logística" */
 .cine-hud{
-  position:absolute; left:clamp(22px,6vw,92px); right:clamp(22px,6vw,92px); bottom:22px; z-index:4;
+  position:absolute; left:clamp(22px,6vw,92px); right:clamp(22px,6vw,92px); bottom:22px; z-index:5;
   display:flex; justify-content:space-between; gap:12px; pointer-events:none;
   font-family:'IBM Plex Mono',ui-monospace,monospace; font-size:.66rem;
   letter-spacing:.2em; text-transform:uppercase; color:rgba(246,242,233,.55);
 }
-.cine-prog{ position:absolute; left:0; bottom:0; height:2px; width:0; background:var(--cine-oro); z-index:5; }
+.cine-prog{ position:absolute; left:0; bottom:0; height:2px; width:0; background:var(--cine-oro); z-index:6; }
 .cine-cue{
-  position:absolute; left:50%; bottom:30px; z-index:6; opacity:0;
+  position:absolute; left:50%; bottom:30px; z-index:7; opacity:0;
   color:var(--cine-hueso); font-size:1.15rem; pointer-events:none;
   animation:cineCue 1.8s ease-in-out infinite;
 }
 @keyframes cineCue{ 0%,100%{ transform:translate(-50%,0); } 50%{ transform:translate(-50%,8px); } }
 
+/* ---- Cierre de marcas: carretera en loop + revelados sobre el mismo pin ---- */
+.cine-road{ z-index:1; opacity:0; will-change:opacity; }   /* corre sola; se funde al final de la secuencia */
+.cine-marca-scrim{
+  position:absolute; inset:0; z-index:2; opacity:0; pointer-events:none; will-change:opacity;
+  background:
+    radial-gradient(125% 92% at 50% 52%, rgba(15,13,10,.24) 0%, rgba(15,13,10,.60) 58%, rgba(15,13,10,.84) 100%),
+    linear-gradient(180deg, rgba(15,13,10,.34), rgba(15,13,10,.10) 32%, rgba(15,13,10,.38));
+}
+.cine-marcas{ position:absolute; inset:0; z-index:4; pointer-events:none; }
+.cine-marca{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:min(92vw,60rem); text-align:center; opacity:0;
+  padding:0 clamp(18px,5vw,40px); will-change:opacity,transform;
+}
+.cine-marca-title{
+  font-family:'Bricolage Grotesque','Archivo',system-ui,sans-serif;
+  font-weight:800; line-height:1.02; letter-spacing:-.02em;
+  font-size:clamp(2rem,5.4vw,4.2rem); text-wrap:balance; margin:0;
+  color:var(--cine-hueso); text-shadow:0 4px 42px rgba(0,0,0,.6);
+}
+.cine-marca-logo{
+  display:block; margin:0 auto; width:auto;
+  height:clamp(120px,23vh,248px); max-width:82vw; object-fit:contain;
+  filter:drop-shadow(0 12px 44px rgba(0,0,0,.5));
+}
+.cine-marca-frase{
+  font-family:'Bricolage Grotesque','Archivo',system-ui,sans-serif;
+  font-weight:600; letter-spacing:-.01em; line-height:1.1;
+  font-size:clamp(1.3rem,3.2vw,2.25rem); margin:clamp(18px,3.4vh,34px) 0 0;
+  color:var(--cine-hueso); text-shadow:0 3px 28px rgba(0,0,0,.6);
+}
+
 @media (prefers-reduced-motion:reduce){
   .cine.is-ready{ height:auto; }
-  .cine .cine-pin{ position:relative; height:88svh; }
-  .cine-clip,.cine-black{ display:none !important; }
-  .cine-cue{ animation:none; }
+  .cine .cine-pin{ position:relative; height:auto; display:block; overflow:visible; }
+  .cine-clip,.cine-black,.cine-road,.cine-marca-scrim{ display:none !important; }
+  .cine-poster{ position:absolute; top:0; left:0; right:0; bottom:auto; height:88svh; }  /* solo la banda del hero */
+  .cine-copy{ position:relative; z-index:4; min-height:88svh; display:flex; flex-direction:column; justify-content:flex-end; }
+  /* Marcas: apiladas, visibles, sobre fondo sólido (sin video en movimiento) */
+  .cine-marcas{ position:relative; inset:auto; display:flex; flex-direction:column; align-items:center;
+    gap:clamp(48px,10vh,110px); padding:clamp(56px,12vh,120px) clamp(22px,6vw,60px); background:var(--cine-negro); }
+  .cine-marca{ position:relative; left:auto; top:auto; transform:none; opacity:1; width:100%; }
+  .cine-hud,.cine-prog,.cine-cue{ display:none; }
+}
+@media (max-width:640px){
+  .cine-marca-logo{ height:clamp(100px,19vh,190px); }
+  .cine-marca-title{ font-size:clamp(1.9rem,7.4vw,3rem); }
 }
 @media (max-width:640px){
   .cine-copy{ padding-bottom:clamp(64px,14vh,120px); }

@@ -34,8 +34,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/hero/cine.css">
     <link rel="preload" as="image" href="assets/hero/hero-01-camion.jpg">
-    <!-- Sección marcas (fondo carretera) -->
-    <link rel="stylesheet" href="assets/brands/brands.css">
+    <!-- Cierre de marcas (fondo carretera, mismo hero cinemático) -->
     <link rel="preload" as="image" href="assets/brands/carretera-poster.jpg">
     
     <style>
@@ -1527,8 +1526,15 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                 <video class="cine-media cine-clip" muted playsinline preload="none" aria-hidden="true"><source src="assets/hero/hero-08-carretera.mp4" type="video/mp4"></video>
                 <div class="cine-black"></div>
                 <div class="cine-scrim"></div>
-                <div class="cine-hud"><span>CTD · Overland Park, KS</span><span class="cine-hud-idx">01 / 06</span></div>
             </div>
+            <!-- Carretera en loop: fondo del cierre de marcas (corre sola, no ligada al scroll) -->
+            <video class="cine-media cine-road" muted loop playsinline preload="none"
+                   poster="assets/brands/carretera-poster.jpg"
+                   data-src="assets/brands/carretera-bg.mp4"
+                   data-src-mobile="assets/brands/carretera-bg-mobile.mp4"
+                   aria-hidden="true"></video>
+            <div class="cine-marca-scrim" aria-hidden="true"></div>
+            <div class="cine-hud"><span>CTD · Overland Park, KS</span><span class="cine-hud-idx">01 / 07</span></div>
             <div class="cine-copy">
                 <h1 class="cine-h1" data-lang-es="Distribuidora Mayorista de Alimentos Latinos" data-lang-en="Wholesale Latino Food Distributor">Distribuidora Mayorista de Alimentos Latinos</h1>
                 <p class="cine-sub" data-lang-es="Conectando los auténticos sabores latinos con tiendas y supermercados en Kansas City y el Midwest. Calidad, variedad y servicio excepcional." data-lang-en="Connecting authentic Latino flavors with stores and supermarkets in Kansas City and the Midwest. Quality, variety, and exceptional service.">Conectando los auténticos sabores latinos con tiendas y supermercados en Kansas City y el Midwest. Calidad, variedad y servicio excepcional.</p>
@@ -1537,44 +1543,28 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
                     <a href="#contacto" class="cine-btn cine-btn-ghost" data-lang-es="Contáctanos" data-lang-en="Contact Us">Contáctanos</a>
                 </div>
             </div>
-            <div class="cine-prog"></div>
-            <div class="cine-cue" aria-hidden="true">↓</div>
-        </div>
-    </section>
-
-    <!-- ===== Sección de marcas · fondo carretera en loop ===== -->
-    <section class="brands" aria-label="Marcas líderes en productos latinos">
-        <div class="brands-pin">
-            <video class="brands-bg" muted loop playsinline preload="none"
-                   poster="assets/brands/carretera-poster.jpg"
-                   data-src="assets/brands/carretera-bg.mp4"
-                   data-src-mobile="assets/brands/carretera-bg-mobile.mp4"
-                   aria-hidden="true"></video>
-            <div class="brands-scrim" aria-hidden="true"></div>
-
-            <div class="brands-stage">
-                <div class="brands-block" data-block="0">
-                    <h2 class="brands-title"
+            <!-- Cierre · presentación de marcas (mismo pin, HUD 07/07, sobre la carretera en loop) -->
+            <div class="cine-marcas" aria-label="Marcas líderes en productos latinos">
+                <div class="cine-marca" data-marca="0">
+                    <h2 class="cine-marca-title"
                         data-lang-es="Trabajamos con las marcas líderes en productos latinos"
                         data-lang-en="We work with the leading brands in Latino products">Trabajamos con las marcas líderes en productos latinos</h2>
                 </div>
-
-                <div class="brands-block" data-block="1">
-                    <img class="brands-logo" src="assets/brands/lafinca-logo.png" alt="La Finca" loading="lazy" decoding="async">
-                    <p class="brands-phrase"
+                <div class="cine-marca" data-marca="1">
+                    <img class="cine-marca-logo" src="assets/brands/lafinca-logo.png" alt="La Finca" loading="lazy" decoding="async">
+                    <p class="cine-marca-frase"
                        data-lang-es="Sabores que traen recuerdos"
                        data-lang-en="Flavors that bring back memories">Sabores que traen recuerdos</p>
                 </div>
-
-                <div class="brands-block" data-block="2">
-                    <img class="brands-logo" src="assets/brands/yeya-logo.png" alt="Delicias Yeya" loading="lazy" decoding="async">
-                    <p class="brands-phrase"
+                <div class="cine-marca" data-marca="2">
+                    <img class="cine-marca-logo" src="assets/brands/yeya-logo.png" alt="Delicias Yeya" loading="lazy" decoding="async">
+                    <p class="cine-marca-frase"
                        data-lang-es="La Reina del Sabor"
                        data-lang-en="The Queen of Flavor">La Reina del Sabor</p>
                 </div>
             </div>
-
-            <div class="brands-prog" aria-hidden="true"></div>
+            <div class="cine-prog"></div>
+            <div class="cine-cue" aria-hidden="true">↓</div>
         </div>
     </section>
 
@@ -2969,6 +2959,5 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         })();
     </script>
     <script src="assets/hero/cine.js"></script>
-    <script src="assets/brands/brands.js"></script>
 </body>
 </html>
