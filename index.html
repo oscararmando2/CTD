@@ -34,6 +34,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="assets/hero/cine.css">
     <link rel="preload" as="image" href="assets/hero/hero-01-camion.jpg">
+    <!-- Sección marcas (fondo carretera) -->
+    <link rel="stylesheet" href="assets/brands/brands.css">
+    <link rel="preload" as="image" href="assets/brands/carretera-poster.jpg">
     
     <style>
         /* ============================
@@ -1539,6 +1542,42 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         </div>
     </section>
 
+    <!-- ===== Sección de marcas · fondo carretera en loop ===== -->
+    <section class="brands" aria-label="Marcas líderes en productos latinos">
+        <div class="brands-pin">
+            <video class="brands-bg" muted loop playsinline preload="none"
+                   poster="assets/brands/carretera-poster.jpg"
+                   data-src="assets/brands/carretera-bg.mp4"
+                   data-src-mobile="assets/brands/carretera-bg-mobile.mp4"
+                   aria-hidden="true"></video>
+            <div class="brands-scrim" aria-hidden="true"></div>
+
+            <div class="brands-stage">
+                <div class="brands-block" data-block="0">
+                    <h2 class="brands-title"
+                        data-lang-es="Trabajamos con las marcas líderes en productos latinos"
+                        data-lang-en="We work with the leading brands in Latino products">Trabajamos con las marcas líderes en productos latinos</h2>
+                </div>
+
+                <div class="brands-block" data-block="1">
+                    <img class="brands-logo" src="assets/brands/lafinca-logo.png" alt="La Finca" loading="lazy" decoding="async">
+                    <p class="brands-phrase"
+                       data-lang-es="Sabores que traen recuerdos"
+                       data-lang-en="Flavors that bring back memories">Sabores que traen recuerdos</p>
+                </div>
+
+                <div class="brands-block" data-block="2">
+                    <img class="brands-logo" src="assets/brands/yeya-logo.png" alt="Delicias Yeya" loading="lazy" decoding="async">
+                    <p class="brands-phrase"
+                       data-lang-es="La Reina del Sabor"
+                       data-lang-en="The Queen of Flavor">La Reina del Sabor</p>
+                </div>
+            </div>
+
+            <div class="brands-prog" aria-hidden="true"></div>
+        </div>
+    </section>
+
     <!-- CurvedLoop Text Section -->
     <section class="w-full py-4 md:py-8 flex items-center justify-center">
         <div id="curved-loop-container"></div>
@@ -2930,5 +2969,6 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
         })();
     </script>
     <script src="assets/hero/cine.js"></script>
+    <script src="assets/brands/brands.js"></script>
 </body>
 </html>

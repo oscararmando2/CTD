@@ -1,0 +1,75 @@
+/* ============================================================
+   CTD · Sección de marcas — fondo carretera en loop (scope .brands)
+   El video corre solo (no ligado al scroll); el scroll revela los
+   bloques encima. Mismo lenguaje visual que el hero cinemático.
+   ============================================================ */
+.brands{
+  --b-negro:#0F0D0A; --b-oro:#F2A31E; --b-hueso:#F6F2E9;
+  --b-ease:cubic-bezier(0.23,1,0.32,1);
+  position:relative; background:var(--b-negro); color:var(--b-hueso);
+}
+/* Con JS: sección alta; el pin se queda fijo y el scroll revela los bloques */
+.brands.is-ready{ height:360vh; }            /* 3 bloques × ~120vh — mismo ritmo del hero */
+.brands .brands-pin{
+  position:sticky; top:0; height:100svh; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--b-negro);                 /* fondo sólido si el video/póster no cargan */
+}
+.brands-bg{
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+  z-index:0; background:var(--b-negro);
+}
+/* Oscurecimiento suave: viñeta central para el contraste del texto blanco */
+.brands-scrim{
+  position:absolute; inset:0; z-index:1; pointer-events:none;
+  background:
+    radial-gradient(125% 92% at 50% 52%, rgba(15,13,10,.24) 0%, rgba(15,13,10,.60) 58%, rgba(15,13,10,.84) 100%),
+    linear-gradient(180deg, rgba(15,13,10,.34), rgba(15,13,10,.10) 32%, rgba(15,13,10,.38));
+}
+.brands-stage{ position:relative; z-index:2; width:100%; }
+.brands-block{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:min(92vw,60rem); text-align:center; opacity:0;
+  will-change:opacity,transform; padding:0 clamp(18px,5vw,40px);
+}
+.brands-title{
+  font-family:'Bricolage Grotesque','Archivo',system-ui,sans-serif;
+  font-weight:800; line-height:1.02; letter-spacing:-.02em;
+  font-size:clamp(2rem,5.4vw,4.2rem); text-wrap:balance; margin:0;
+  color:var(--b-hueso); text-shadow:0 4px 42px rgba(0,0,0,.6);
+}
+.brands-logo{
+  display:block; margin:0 auto; width:auto;
+  height:clamp(120px,23vh,248px); max-width:82vw; object-fit:contain;
+  filter:drop-shadow(0 12px 44px rgba(0,0,0,.5));
+}
+.brands-phrase{
+  font-family:'Bricolage Grotesque','Archivo',system-ui,sans-serif;
+  font-weight:600; letter-spacing:-.01em; line-height:1.1;
+  font-size:clamp(1.3rem,3.2vw,2.25rem); margin:clamp(18px,3.4vh,34px) 0 0;
+  color:var(--b-hueso); text-shadow:0 3px 28px rgba(0,0,0,.6);
+}
+.brands-prog{ position:absolute; left:0; bottom:0; height:2px; width:0; background:var(--b-oro); z-index:3; }
+
+/* ---- Fallback sin JS (o reduced-motion): sin pin, bloques apilados y
+        visibles, video estático mostrando el póster ---- */
+.brands:not(.is-ready){ height:auto; }
+.brands:not(.is-ready) .brands-pin{
+  position:relative; height:auto; display:block; padding:clamp(48px,12vh,120px) 0;
+}
+.brands:not(.is-ready) .brands-stage{
+  display:flex; flex-direction:column; align-items:center; gap:clamp(56px,12vh,120px);
+}
+.brands:not(.is-ready) .brands-block{
+  position:relative; left:auto; top:auto; transform:none; opacity:1;
+}
+@media (prefers-reduced-motion:reduce){
+  .brands.is-ready{ height:auto; }
+  .brands .brands-pin{ position:relative; height:auto; display:block; padding:clamp(48px,12vh,120px) 0; }
+  .brands-stage{ display:flex; flex-direction:column; align-items:center; gap:clamp(56px,12vh,120px); }
+  .brands-block{ position:relative; left:auto; top:auto; transform:none; opacity:1; }
+}
+@media (max-width:640px){
+  .brands-logo{ height:clamp(100px,19vh,190px); }
+  .brands-title{ font-size:clamp(1.9rem,7.4vw,3rem); }
+}
