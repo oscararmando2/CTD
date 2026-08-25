@@ -86,19 +86,23 @@
   function local(p, a, b) { return clamp((p - a) / (b - a), 0, 1); }
 
   // La fase de clips ocupa la primera fracción del pin; el cierre de marcas, el resto.
-  var CS = 0.684;                 // 780vh de clips / 1140vh totales
-  var RIN0 = 0.685, RIN1 = 0.745; // fundido de la carretera sobre el clip 8
+  var CS = 0.557;                 // 780vh de clips / 1400vh totales
+  var RIN0 = CS, RIN1 = CS + 0.045; // fundido de la carretera sobre el clip 8
 
   // Reveal monotónico de los clips (en progreso de clips pc = p/CS)
   var IN = [[0.00, 0.03], [0.22, 0.27], [0.38, 0.42], [0.54, 0.58], [0.70, 0.74], [0.86, 0.90]];
   var SC = [[0.02, 0.18], [0.24, 0.38], [0.40, 0.54], [0.56, 0.70], [0.72, 0.86], [0.88, 1.00]];
 
-  // Ventanas de las 3 marcas (en progreso global p): entra/sostiene/sale, con huecos
-  var MW = [
-    [0.705, 0.740, 0.770, 0.800],  // 07 · Titular
-    [0.825, 0.860, 0.890, 0.915],  // La Finca
-    [0.940, 0.970, 1.020, 1.030]   // Delicias Yeya (se sostiene hasta soltar el pin)
-  ];
+  // Ventanas de las marcas (progreso global p), repartidas parejo en [MS0,1]:
+  // cada bloque entra, se sostiene y sale, con un hueco antes del siguiente.
+  // El último se sostiene hasta soltar el pin. Escala solo con N marcas.
+  var MS0 = CS + 0.03;                       // pequeño respiro para que la carretera se asiente
+  var seg = (1 - MS0) / marcas.length;
+  var MW = marcas.map(function (_, k) {
+    var a = MS0 + k * seg;
+    var last = (k === marcas.length - 1);
+    return [a + seg * 0.06, a + seg * 0.42, last ? 1.5 : a + seg * 0.66, last ? 1.6 : a + seg * 0.96];
+  });
 
   function setCT(v, i, lp) {
     var t = clamp(lp, 0, 1) * (dur[i] - 0.06);

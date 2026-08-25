@@ -11,7 +11,7 @@
 .cine:not(.is-ready){ height:auto; }
 .cine:not(.is-ready) .cine-pin{ position:relative; height:88svh; }
 /* Con JS: sección alta; el pin se queda fijo y el scroll scrubbea la secuencia */
-.cine.is-ready{ height:1140vh; }  /* 6 clips (~130vh) + cierre de marcas (3 revelados ~120vh) — mismo ritmo */
+.cine.is-ready{ height:1400vh; }  /* 6 clips (~130vh) + cierre de marcas (5 revelados ~120vh) — mismo ritmo */
 .cine .cine-pin{
   position:sticky; top:0; height:100svh; overflow:hidden;
   display:flex; align-items:flex-end;
