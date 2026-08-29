@@ -99,7 +99,8 @@
   // entra / plena / sale. Orden = orden de aparición en la secuencia.
   var COVW = [
     [0.105, 0.145, 0.175, 0.200],  // 1 · Cobertura (transición 1→2, camión que avanza)
-    [0.300, 0.335, 0.375, 0.400]   // 2 · Productos importados (inicio del beat 2, interior con luz)
+    [0.300, 0.335, 0.375, 0.400],  // 2 · Productos importados (inicio del beat 2, interior con luz)
+    [0.455, 0.495, 0.565, 0.595]   // 3 · Precios mayoristas (transición 3→4, caja → bodega)
   ];
 
   // Ventanas de las marcas (progreso global p), repartidas parejo en [MS0,MEND]:
