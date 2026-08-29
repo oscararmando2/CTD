@@ -15,7 +15,7 @@
   if (clips.length < 4) return;
   var black  = sec.querySelector('.cine-black');
   var copy   = sec.querySelector('.cine-copy');
-  var cover  = sec.querySelector('.cine-cover');
+  var covers = [].slice.call(sec.querySelectorAll('.cine-cover'));
   var prog   = sec.querySelector('.cine-prog');
   var cue    = sec.querySelector('.cine-cue');
   var idx    = sec.querySelector('.cine-hud-idx');
@@ -95,9 +95,12 @@
   var IN = [[0.00, 0.03], [0.22, 0.27], [0.38, 0.42], [0.54, 0.58], [0.70, 0.74], [0.86, 0.90]];
   var SC = [[0.02, 0.18], [0.24, 0.38], [0.40, 0.54], [0.56, 0.70], [0.72, 0.86], [0.88, 1.00]];
 
-  // Lower-third de cobertura (en pc): entra mientras el camión avanza (beat 1) y
-  // sale justo antes del corte a negro que lleva al beat 2.
-  var COV = [0.105, 0.145, 0.175, 0.200];
+  // Captions lower-third, cada uno con su ventana en progreso de clips (pc):
+  // entra / plena / sale. Orden = orden de aparición en la secuencia.
+  var COVW = [
+    [0.105, 0.145, 0.175, 0.200],  // 1 · Cobertura (transición 1→2, camión que avanza)
+    [0.300, 0.335, 0.375, 0.400]   // 2 · Productos importados (inicio del beat 2, interior con luz)
+  ];
 
   // Ventanas de las marcas (progreso global p), repartidas parejo en [MS0,MEND]:
   // cada bloque entra, se sostiene y sale, con un hueco antes del siguiente.
@@ -147,13 +150,14 @@
       copy.style.pointerEvents = cf < 0.08 ? 'none' : '';
     }
 
-    // Lower-third de cobertura (transición 1→2, sobre el camión que avanza)
-    if (cover) {
-      var vin = smooth((pc - COV[0]) / (COV[1] - COV[0]));
-      var vout = smooth((pc - COV[2]) / (COV[3] - COV[2]));
+    // Captions lower-third (cada uno con su ventana en pc; solo uno visible a la vez)
+    for (var ci = 0; ci < covers.length; ci++) {
+      var cw = COVW[ci]; if (!cw) continue;
+      var vin = smooth((pc - cw[0]) / (cw[1] - cw[0]));
+      var vout = smooth((pc - cw[2]) / (cw[3] - cw[2]));
       var vopa = clamp(Math.min(vin, 1 - vout), 0, 1);
-      cover.style.opacity = vopa.toFixed(3);
-      cover.style.transform = 'translateY(' + ((1 - vin) * 20 - vout * 20).toFixed(1) + 'px)';
+      covers[ci].style.opacity = vopa.toFixed(3);
+      covers[ci].style.transform = 'translateY(' + ((1 - vin) * 20 - vout * 20).toFixed(1) + 'px)';
     }
 
     // Clips: reveal monotónico (el de encima aparece sobre el anterior, que queda a 1)
