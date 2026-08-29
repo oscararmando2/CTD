@@ -21,6 +21,7 @@
   var road   = sec.querySelector('.cine-road');
   var mscrim = sec.querySelector('.cine-marca-scrim');
   var marcas = [].slice.call(sec.querySelectorAll('.cine-marca'));
+  var contacto = sec.querySelector('.cine-contacto');
 
   var dur   = clips.map(function () { return 6; });
   var ready = clips.map(function () { return false; });
@@ -85,24 +86,24 @@
   }
   function local(p, a, b) { return clamp((p - a) / (b - a), 0, 1); }
 
-  // La fase de clips ocupa la primera fracción del pin; el cierre de marcas, el resto.
-  var CS = 0.557;                 // 780vh de clips / 1400vh totales
-  var RIN0 = CS, RIN1 = CS + 0.045; // fundido de la carretera sobre el clip 8
+  // La fase de clips ocupa la primera fracción del pin; el cierre (marcas + contacto), el resto.
+  var CS = 0.5;                   // 780vh de clips / 1560vh totales
+  var RIN0 = CS, RIN1 = CS + 0.05; // fundido de la carretera sobre el clip 8
 
   // Reveal monotónico de los clips (en progreso de clips pc = p/CS)
   var IN = [[0.00, 0.03], [0.22, 0.27], [0.38, 0.42], [0.54, 0.58], [0.70, 0.74], [0.86, 0.90]];
   var SC = [[0.02, 0.18], [0.24, 0.38], [0.40, 0.54], [0.56, 0.70], [0.72, 0.86], [0.88, 1.00]];
 
-  // Ventanas de las marcas (progreso global p), repartidas parejo en [MS0,1]:
+  // Ventanas de las marcas (progreso global p), repartidas parejo en [MS0,MEND]:
   // cada bloque entra, se sostiene y sale, con un hueco antes del siguiente.
-  // El último se sostiene hasta soltar el pin. Escala solo con N marcas.
-  var MS0 = CS + 0.03;                       // pequeño respiro para que la carretera se asiente
-  var seg = (1 - MS0) / marcas.length;
+  var MS0 = CS + 0.02;                       // respiro para que la carretera se asiente
+  var MEND = 0.85;                           // fin de marcas → inicio del contacto (08)
+  var seg = (MEND - MS0) / marcas.length;
   var MW = marcas.map(function (_, k) {
     var a = MS0 + k * seg;
-    var last = (k === marcas.length - 1);
-    return [a + seg * 0.06, a + seg * 0.42, last ? 1.5 : a + seg * 0.66, last ? 1.6 : a + seg * 0.96];
+    return [a + seg * 0.08, a + seg * 0.46, a + seg * 0.62, a + seg * 0.94];
   });
+  var CW = [0.865, 0.905, 1.5, 1.6];         // contacto (08): entra y se sostiene hasta soltar el pin
 
   function setCT(v, i, lp) {
     var t = clamp(lp, 0, 1) * (dur[i] - 0.06);
@@ -175,8 +176,20 @@
       marcas[m].style.transform = 'translate(-50%,-50%) translateY(' + ty.toFixed(1) + 'px)';
     }
 
-    // HUD: clips 0X / 07, cierre de marcas 07 / 07
-    if (idx) idx.textContent = (p >= CS ? '07' : ('0' + (topi + 1))) + ' / 07';
+    // Contacto (08): panel final sobre la carretera, entra y se sostiene
+    if (contacto) {
+      var cin = smooth((p - CW[0]) / (CW[1] - CW[0]));
+      var cout = smooth((p - CW[2]) / (CW[3] - CW[2]));
+      var copa = clamp(Math.min(cin, 1 - cout), 0, 1);
+      var cty = (1 - cin) * 24 - cout * 24;
+      contacto.style.opacity = copa.toFixed(3);
+      contacto.style.transform = 'translate(-50%,-50%) translateY(' + cty.toFixed(1) + 'px)';
+      contacto.style.visibility = copa > 0.02 ? 'visible' : 'hidden';
+      contacto.style.pointerEvents = copa > 0.5 ? 'auto' : 'none';
+    }
+
+    // HUD: clips 0X / 07, marcas 07 / 07, contacto 08 / 08
+    if (idx) idx.textContent = p >= MEND ? '08 / 08' : (p >= CS ? '07 / 07' : (('0' + (topi + 1)) + ' / 07'));
 
     // Cue al final (invita a soltar el pin)
     if (cue) cue.style.opacity = smooth((p - 0.965) / 0.03).toFixed(2);

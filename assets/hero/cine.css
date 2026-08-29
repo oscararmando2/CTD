@@ -11,7 +11,7 @@
 .cine:not(.is-ready){ height:auto; }
 .cine:not(.is-ready) .cine-pin{ position:relative; height:88svh; }
 /* Con JS: sección alta; el pin se queda fijo y el scroll scrubbea la secuencia */
-.cine.is-ready{ height:1400vh; }  /* 6 clips (~130vh) + cierre de marcas (5 revelados ~120vh) — mismo ritmo */
+.cine.is-ready{ height:1560vh; }  /* 6 clips + marcas (5) + contacto (08) — mismo ritmo por beat */
 .cine .cine-pin{
   position:sticky; top:0; height:100svh; overflow:hidden;
   display:flex; align-items:flex-end;
@@ -107,6 +107,50 @@
   color:var(--cine-hueso); text-shadow:0 3px 28px rgba(0,0,0,.6);
 }
 
+/* ---- Cierre 08 · contacto sobre la carretera (mismo lenguaje) ---- */
+.cine-contacto{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:min(92vw,64rem); text-align:center; opacity:0; visibility:hidden;
+  z-index:4; padding:0 clamp(18px,5vw,44px); will-change:opacity,transform;
+}
+.cine-c-eyebrow{
+  font-family:'IBM Plex Mono',ui-monospace,monospace;
+  font-size:.72rem; letter-spacing:.28em; text-transform:uppercase;
+  color:var(--cine-oro); margin:0 0 14px;
+}
+.cine-c-title{
+  font-family:'Bricolage Grotesque','Archivo',system-ui,sans-serif;
+  font-weight:800; line-height:1; letter-spacing:-.02em;
+  font-size:clamp(2.2rem,5.6vw,4.2rem); margin:0; color:var(--cine-hueso);
+  text-shadow:0 4px 42px rgba(0,0,0,.6);
+}
+.cine-c-sub{
+  font-family:'Hanken Grotesk',system-ui,sans-serif;
+  font-size:clamp(1rem,1.7vw,1.24rem); line-height:1.5; margin:16px auto 0;
+  max-width:44ch; color:rgba(246,242,233,.86); text-shadow:0 2px 20px rgba(0,0,0,.5);
+}
+.cine-c-grid{
+  display:flex; flex-wrap:wrap; justify-content:center; align-items:flex-start;
+  gap:clamp(20px,4vw,56px); margin:clamp(28px,5vh,48px) 0 clamp(26px,4.5vh,42px);
+}
+.cine-c-item{ display:flex; flex-direction:column; gap:8px; min-width:0; }
+.cine-c-label{
+  font-family:'IBM Plex Mono',ui-monospace,monospace;
+  font-size:.66rem; letter-spacing:.2em; text-transform:uppercase; color:var(--cine-oro);
+}
+.cine-c-value{
+  font-family:'Bricolage Grotesque','Archivo',system-ui,sans-serif;
+  font-weight:600; font-size:clamp(1.05rem,2vw,1.5rem); color:var(--cine-hueso);
+  text-decoration:none; text-shadow:0 2px 20px rgba(0,0,0,.5);
+}
+a.cine-c-value{ transition:color .18s ease; }
+@media (hover:hover){ a.cine-c-value:hover{ color:var(--cine-oro); } }
+a.cine-c-value:focus-visible{ outline:3px solid var(--cine-oro); outline-offset:3px; border-radius:4px; }
+.cine-c-cta{ display:flex; justify-content:center; }
+@media (max-width:720px){
+  .cine-c-grid{ flex-direction:column; gap:22px; align-items:center; }
+}
+
 @media (prefers-reduced-motion:reduce){
   .cine.is-ready{ height:auto; }
   .cine .cine-pin{ position:relative; height:auto; display:block; overflow:visible; }
@@ -117,6 +161,8 @@
   .cine-marcas{ position:relative; inset:auto; display:flex; flex-direction:column; align-items:center;
     gap:clamp(48px,10vh,110px); padding:clamp(56px,12vh,120px) clamp(22px,6vw,60px); background:var(--cine-negro); }
   .cine-marca{ position:relative; left:auto; top:auto; transform:none; opacity:1; width:100%; }
+  .cine-contacto{ position:relative; left:auto; top:auto; transform:none; opacity:1; visibility:visible;
+    width:100%; background:var(--cine-negro); padding:clamp(48px,10vh,110px) clamp(22px,6vw,60px); }
   .cine-hud,.cine-prog,.cine-cue{ display:none; }
 }
 @media (max-width:640px){
