@@ -106,6 +106,9 @@
   font-size:clamp(1.3rem,3.2vw,2.25rem); margin:clamp(18px,3.4vh,34px) 0 0;
   color:var(--cine-hueso); text-shadow:0 3px 28px rgba(0,0,0,.6);
 }
+/* Diana: banner ancho y bajo → más grande y más pegado a la frase */
+.cine-marca[data-marca="4"] .cine-marca-logo{ height:clamp(150px,29vh,300px); }
+.cine-marca[data-marca="4"] .cine-marca-frase{ margin-top:clamp(4px,1.2vh,14px); }
 
 /* ---- Cierre 08 · contacto sobre la carretera (mismo lenguaje) ---- */
 .cine-contacto{
