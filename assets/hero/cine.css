@@ -151,6 +151,8 @@ html, body { overflow-x: hidden; }
 /* Diana: banner ancho y bajo → más grande y más pegado a la frase */
 .cine-marca[data-marca="4"] .cine-marca-logo{ height:clamp(150px,29vh,300px); }
 .cine-marca[data-marca="4"] .cine-marca-frase{ margin-top:clamp(4px,1.2vh,14px); }
+/* Yeya: logo protagonista (retrato) → más grande (sobre todo en móvil) */
+.cine-marca[data-marca="2"] .cine-marca-logo{ height:clamp(200px,36vh,360px); }
 
 /* ---- Cierre 08 · contacto sobre la carretera (mismo lenguaje) ---- */
 .cine-contacto{
@@ -213,6 +215,8 @@ a.cine-c-value:focus-visible{ outline:3px solid var(--cine-oro); outline-offset:
 @media (max-width:640px){
   .cine-marca-logo{ height:clamp(100px,19vh,190px); }
   .cine-marca-title{ font-size:clamp(1.9rem,7.4vw,3rem); }
+  /* Yeya protagonista en móvil */
+  .cine-marca[data-marca="2"] .cine-marca-logo{ height:clamp(220px,40vh,320px); }
 }
 @media (max-width:640px){
   .cine-copy{ padding-bottom:clamp(64px,14vh,120px); }
