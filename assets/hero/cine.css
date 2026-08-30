@@ -1,0 +1,294 @@
+/* Solo scroll vertical: sin desplazamiento horizontal (sobre todo en móvil).
+   `clip` no crea contenedor de scroll → no rompe el position:sticky del hero. */
+html, body { overflow-x: hidden; }
+@supports (overflow-x: clip) { html, body { overflow-x: clip; } }
+
+/* Pantalla completa: sin header (barra de navegación fija + hamburguer + menú móvil).
+   El logo y las acciones ya viven dentro de la propia película. */
+nav.fixed.z-50 { display: none !important; }
+
+/* ============================================================
+   CTD · Hero cinemático (scope .cine — sin colisiones globales)
+   ============================================================ */
+.cine{
+  --cine-negro:#0F0D0A; --cine-carton:#BE8A4F; --cine-rojo:#D8331B;
+  --cine-verde:#2E8B3D; --cine-oro:#F2A31E; --cine-hueso:#F6F2E9;
+  --cine-ease:cubic-bezier(0.23,1,0.32,1);
+  position:relative; background:var(--cine-negro); color:var(--cine-hueso);
+}
+/* Sin JS / reduced-motion: hero normal (una pantalla), nunca un pin roto */
+.cine:not(.is-ready){ height:auto; }
+.cine:not(.is-ready) .cine-pin{ position:relative; height:88svh; }
+/* Con JS: sección alta; el pin se queda fijo y el scroll scrubbea la secuencia */
+.cine.is-ready{ height:1850vh; }  /* 6 clips + marcas (5) + contacto (08) + form (09) — mismo ritmo */
+.cine .cine-pin{
+  position:sticky; top:0; height:100vh; height:100dvh; overflow:hidden;
+  display:flex; align-items:flex-end;
+}
+.cine-stage{ position:absolute; inset:0; z-index:0; }
+.cine-media{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.cine-poster{ object-position:72% 50%; }        /* favorece el camión a la derecha */
+.cine-clip{ opacity:0; will-change:opacity; }    /* se revelan por scroll */
+.cine-black{ position:absolute; inset:0; background:#000; opacity:0; z-index:3; pointer-events:none; }
+.cine-scrim{
+  position:absolute; inset:0; z-index:2; pointer-events:none;
+  background:
+    linear-gradient(90deg, rgba(15,13,10,.88) 0%, rgba(15,13,10,.56) 34%, rgba(15,13,10,.12) 62%, rgba(15,13,10,0) 100%),
+    linear-gradient(0deg, rgba(15,13,10,.55), rgba(15,13,10,0) 42%);
+}
+/* Copy del hero (se desvanece pronto) */
+.cine-copy{
+  position:relative; z-index:4; will-change:opacity,transform;
+  padding:0 clamp(22px,6vw,92px) clamp(52px,10vh,120px); max-width:54rem;
+}
+.cine-eyebrow{
+  font-family:'IBM Plex Mono',ui-monospace,monospace;
+  font-size:.72rem; letter-spacing:.28em; text-transform:uppercase;
+  color:var(--cine-oro); margin-bottom:14px;
+}
+.cine-h1{
+  font-family:'Bricolage Grotesque','Archivo',system-ui,sans-serif;
+  font-weight:800; line-height:.98; letter-spacing:-.02em;
+  font-size:clamp(2.3rem,6vw,4.7rem); text-wrap:balance; margin:0;
+  text-shadow:0 4px 40px rgba(0,0,0,.4);
+}
+.cine-sub{
+  font-family:'Hanken Grotesk',system-ui,sans-serif;
+  font-size:clamp(1rem,1.65vw,1.22rem); line-height:1.5;
+  color:rgba(246,242,233,.84); margin-top:18px; max-width:42ch;
+}
+.cine-cta{ display:flex; flex-wrap:wrap; gap:14px; margin-top:30px; }
+.cine-btn{
+  font-family:'Hanken Grotesk',system-ui,sans-serif; font-weight:700; font-size:.98rem;
+  border-radius:12px; padding:13px 24px; text-decoration:none; display:inline-flex; align-items:center;
+  transition:transform .18s var(--cine-ease), background .18s ease, color .18s ease;
+}
+@media (hover:hover) and (pointer:fine){ .cine-btn:hover{ transform:translateY(-2px); } }
+.cine-btn-solid{ background:var(--cine-hueso); color:var(--cine-negro); }
+.cine-btn-solid:hover{ background:#fff; }
+.cine-btn-ghost{ border:1.5px solid rgba(246,242,233,.42); color:var(--cine-hueso); }
+.cine-btn-ghost:hover{ border-color:var(--cine-hueso); }
+.cine-btn-verde{ background:var(--cine-verde); color:#fff; }
+.cine-btn-verde:hover{ background:#256f31; }
+.cine-btn:focus-visible{ outline:3px solid var(--cine-oro); outline-offset:3px; }
+/* Lower-third de transición 1→2 · promesa de cobertura (mismo lugar que el H1) */
+.cine-cover{
+  position:absolute; left:0; bottom:0; z-index:4; opacity:0; pointer-events:none;
+  padding:0 clamp(22px,6vw,92px) clamp(52px,10vh,120px); max-width:46rem;
+  will-change:opacity,transform;
+}
+.cine-cover-label{
+  font-family:'IBM Plex Mono',ui-monospace,monospace;
+  font-size:.72rem; letter-spacing:.28em; text-transform:uppercase;
+  color:var(--cine-oro); margin:0 0 12px;
+}
+.cine-cover-title{
+  font-family:'Bricolage Grotesque','Archivo',system-ui,sans-serif;
+  font-weight:800; line-height:1; letter-spacing:-.02em;
+  font-size:clamp(2rem,5vw,3.7rem); margin:0; color:var(--cine-hueso);
+  text-shadow:0 4px 40px rgba(0,0,0,.5);
+}
+.cine-cover-sub{
+  font-family:'Hanken Grotesk',system-ui,sans-serif;
+  font-size:clamp(1rem,1.6vw,1.2rem); line-height:1.5; margin:14px 0 0;
+  max-width:40ch; color:rgba(246,242,233,.9); text-shadow:0 2px 20px rgba(0,0,0,.5);
+}
+/* Variante statement (frase completa, p. ej. la misión) */
+.cine-cover-statement{
+  font-family:'Bricolage Grotesque','Archivo',system-ui,sans-serif;
+  font-weight:600; letter-spacing:-.012em; line-height:1.22; margin:6px 0 0;
+  font-size:clamp(1.35rem,2.6vw,2.05rem); max-width:40ch;
+  color:var(--cine-hueso); text-shadow:0 3px 30px rgba(0,0,0,.55);
+}
+/* Variante lista de categorías */
+.cine-cover-cats{ list-style:none; margin:8px 0 0; padding:0; display:flex; flex-direction:column; gap:6px; }
+.cine-cover-cats li{
+  font-family:'Bricolage Grotesque','Archivo',system-ui,sans-serif;
+  font-weight:800; letter-spacing:-.018em; line-height:1.1;
+  font-size:clamp(1.5rem,3.4vw,2.6rem); color:var(--cine-hueso);
+  text-shadow:0 3px 30px rgba(0,0,0,.55);
+}
+/* HUD tipo "operación logística" */
+.cine-hud{
+  position:absolute; left:clamp(22px,6vw,92px); right:clamp(22px,6vw,92px); bottom:22px; z-index:5;
+  display:flex; justify-content:space-between; gap:12px; pointer-events:none;
+  font-family:'IBM Plex Mono',ui-monospace,monospace; font-size:.66rem;
+  letter-spacing:.2em; text-transform:uppercase; color:rgba(246,242,233,.55);
+}
+.cine-prog{ position:absolute; left:0; bottom:0; height:2px; width:0; background:var(--cine-oro); z-index:6; }
+.cine-cue{
+  position:absolute; left:50%; bottom:30px; z-index:7; opacity:0;
+  color:var(--cine-hueso); font-size:1.15rem; pointer-events:none;
+  animation:cineCue 1.8s ease-in-out infinite;
+}
+@keyframes cineCue{ 0%,100%{ transform:translate(-50%,0); } 50%{ transform:translate(-50%,8px); } }
+
+/* ---- Cierre de marcas: carretera en loop + revelados sobre el mismo pin ---- */
+.cine-road{ z-index:1; opacity:0; will-change:opacity; }   /* corre sola; se funde al final de la secuencia */
+.cine-marca-scrim{
+  position:absolute; inset:0; z-index:2; opacity:0; pointer-events:none; will-change:opacity;
+  background:
+    radial-gradient(125% 92% at 50% 52%, rgba(15,13,10,.24) 0%, rgba(15,13,10,.60) 58%, rgba(15,13,10,.84) 100%),
+    linear-gradient(180deg, rgba(15,13,10,.34), rgba(15,13,10,.10) 32%, rgba(15,13,10,.38));
+}
+.cine-marcas{ position:absolute; inset:0; z-index:4; pointer-events:none; }
+.cine-marca{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:min(92vw,60rem); text-align:center; opacity:0;
+  padding:0 clamp(18px,5vw,40px); will-change:opacity,transform;
+}
+.cine-marca-title{
+  font-family:'Bricolage Grotesque','Archivo',system-ui,sans-serif;
+  font-weight:800; line-height:1.02; letter-spacing:-.02em;
+  font-size:clamp(2rem,5.4vw,4.2rem); text-wrap:balance; margin:0;
+  color:var(--cine-hueso); text-shadow:0 4px 42px rgba(0,0,0,.6);
+}
+.cine-marca-logo{
+  display:block; margin:0 auto; width:auto;
+  height:clamp(120px,23vh,248px); max-width:82vw; object-fit:contain;
+  filter:drop-shadow(0 12px 44px rgba(0,0,0,.5));
+}
+.cine-marca-frase{
+  font-family:'Bricolage Grotesque','Archivo',system-ui,sans-serif;
+  font-weight:600; letter-spacing:-.01em; line-height:1.1;
+  font-size:clamp(1.3rem,3.2vw,2.25rem); margin:clamp(18px,3.4vh,34px) 0 0;
+  color:var(--cine-hueso); text-shadow:0 3px 28px rgba(0,0,0,.6);
+}
+/* Diana: banner ancho y bajo → más grande y más pegado a la frase */
+.cine-marca[data-marca="4"] .cine-marca-logo{ height:clamp(150px,29vh,300px); }
+.cine-marca[data-marca="4"] .cine-marca-frase{ margin-top:clamp(4px,1.2vh,14px); }
+/* Yeya: logo protagonista (retrato) → más grande (sobre todo en móvil) */
+.cine-marca[data-marca="2"] .cine-marca-logo{ height:clamp(200px,36vh,360px); }
+
+/* ---- Cierre 08 · contacto sobre la carretera (mismo lenguaje) ---- */
+.cine-contacto{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:min(92vw,64rem); text-align:center; opacity:0; visibility:hidden;
+  z-index:4; padding:0 clamp(18px,5vw,44px); will-change:opacity,transform;
+}
+.cine-c-eyebrow{
+  font-family:'IBM Plex Mono',ui-monospace,monospace;
+  font-size:.72rem; letter-spacing:.28em; text-transform:uppercase;
+  color:var(--cine-oro); margin:0 0 14px;
+}
+.cine-c-title{
+  font-family:'Bricolage Grotesque','Archivo',system-ui,sans-serif;
+  font-weight:800; line-height:1; letter-spacing:-.02em;
+  font-size:clamp(2.2rem,5.6vw,4.2rem); margin:0; color:var(--cine-hueso);
+  text-shadow:0 4px 42px rgba(0,0,0,.6);
+}
+.cine-c-sub{
+  font-family:'Hanken Grotesk',system-ui,sans-serif;
+  font-size:clamp(1rem,1.7vw,1.24rem); line-height:1.5; margin:16px auto 0;
+  max-width:44ch; color:rgba(246,242,233,.86); text-shadow:0 2px 20px rgba(0,0,0,.5);
+}
+.cine-c-grid{
+  display:flex; flex-wrap:wrap; justify-content:center; align-items:flex-start;
+  gap:clamp(20px,4vw,56px); margin:clamp(28px,5vh,48px) 0 clamp(26px,4.5vh,42px);
+}
+.cine-c-item{ display:flex; flex-direction:column; gap:8px; min-width:0; }
+.cine-c-label{
+  font-family:'IBM Plex Mono',ui-monospace,monospace;
+  font-size:.66rem; letter-spacing:.2em; text-transform:uppercase; color:var(--cine-oro);
+}
+.cine-c-value{
+  font-family:'Bricolage Grotesque','Archivo',system-ui,sans-serif;
+  font-weight:600; font-size:clamp(1.05rem,2vw,1.5rem); color:var(--cine-hueso);
+  text-decoration:none; text-shadow:0 2px 20px rgba(0,0,0,.5);
+}
+a.cine-c-value{ transition:color .18s ease; }
+@media (hover:hover){ a.cine-c-value:hover{ color:var(--cine-oro); } }
+a.cine-c-value:focus-visible{ outline:3px solid var(--cine-oro); outline-offset:3px; border-radius:4px; }
+.cine-c-cta{ display:flex; flex-direction:column; align-items:center; gap:14px; }
+@media (max-width:720px){
+  .cine-c-grid{ flex-direction:column; gap:22px; align-items:center; }
+}
+
+/* ---- Beat 09 · contacto interactivo (cajones transparentes sobre la carretera) ---- */
+.cine-form-beat{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:min(94vw,70rem); opacity:0; visibility:hidden; z-index:4;
+  padding:0 clamp(14px,4vw,30px); will-change:opacity,transform;
+}
+.cine-fb-grid{ display:grid; grid-template-columns:1.15fr .85fr; gap:clamp(16px,2.4vw,28px); align-items:start; }
+.cine-fb-card{
+  background:rgba(15,13,10,.32); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  border:1px solid rgba(246,242,233,.22); border-radius:16px; padding:clamp(18px,2.4vw,26px);
+}
+.cine-fb-title{
+  font-family:'Bricolage Grotesque','Archivo',system-ui,sans-serif; font-weight:800;
+  font-size:clamp(1.25rem,2.1vw,1.6rem); margin:0 0 14px; color:var(--cine-hueso);
+}
+.cine-fb-field{ margin-bottom:11px; }
+.cine-fb-field label{
+  display:block; font-family:'IBM Plex Mono',ui-monospace,monospace; font-size:.62rem;
+  letter-spacing:.18em; text-transform:uppercase; color:rgba(246,242,233,.72); margin-bottom:5px;
+}
+.cine-fb-input,.cine-fb-textarea{
+  width:100%; box-sizing:border-box; background:rgba(255,255,255,.07);
+  border:1px solid rgba(246,242,233,.26); border-radius:10px; padding:10px 13px;
+  color:var(--cine-hueso); font-family:'Hanken Grotesk',system-ui,sans-serif; font-size:.96rem;
+}
+.cine-fb-input::placeholder,.cine-fb-textarea::placeholder{ color:rgba(246,242,233,.42); }
+.cine-fb-input:focus,.cine-fb-textarea:focus{ outline:none; border-color:var(--cine-oro); background:rgba(255,255,255,.11); }
+.cine-fb-textarea{ resize:none; min-height:70px; }
+.cine-fb-submit{
+  width:100%; margin-top:4px; background:var(--cine-hueso); color:var(--cine-negro); border:0;
+  border-radius:10px; padding:12px 18px; font-weight:800; font-size:1rem;
+  font-family:'Hanken Grotesk',system-ui,sans-serif; cursor:pointer; transition:background .18s ease;
+}
+.cine-fb-submit:hover{ background:#fff; }
+.cine-fb-submit:focus-visible{ outline:3px solid var(--cine-oro); outline-offset:3px; }
+.cine-fb-side{ display:flex; flex-direction:column; gap:clamp(14px,2vw,18px); }
+.cine-fb-info{ display:flex; flex-direction:column; gap:13px; }
+.cine-fb-item{ display:flex; flex-direction:column; gap:3px; }
+.cine-fb-label{ font-family:'IBM Plex Mono',ui-monospace,monospace; font-size:.62rem; letter-spacing:.2em; text-transform:uppercase; color:var(--cine-oro); }
+.cine-fb-value{ font-family:'Bricolage Grotesque','Archivo',system-ui,sans-serif; font-weight:600; font-size:clamp(1rem,1.5vw,1.2rem); color:var(--cine-hueso); text-decoration:none; }
+a.cine-fb-value:hover{ color:var(--cine-oro); }
+.cine-fb-social{ display:flex; gap:11px; }
+.cine-fb-social a{
+  width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  border:1px solid rgba(246,242,233,.34); color:var(--cine-hueso); text-decoration:none; font-weight:700;
+  font-family:'Hanken Grotesk',system-ui,sans-serif; font-size:.9rem; transition:background .18s,border-color .18s;
+}
+.cine-fb-social a:hover{ background:rgba(246,242,233,.14); border-color:var(--cine-hueso); }
+@media (max-width:720px){
+  .cine-fb-grid{ grid-template-columns:1fr; gap:14px; }
+  /* Cajón bien centrado en móvil: compacto para que quepa y no lo tape la barra */
+  .cine-form-beat{ top:50%; width:min(92vw,34rem); }
+  .cine-fb-card{ padding:16px; }
+  .cine-fb-title{ font-size:1.2rem; margin-bottom:10px; }
+  .cine-fb-field{ margin-bottom:9px; }
+  .cine-fb-input,.cine-fb-textarea{ padding:9px 12px; }
+  .cine-fb-textarea{ min-height:54px; }
+  .cine-fb-submit{ padding:11px 16px; }
+  .cine-fb-info{ gap:10px; }
+  .cine-fb-social a{ width:38px; height:38px; }
+}
+
+@media (prefers-reduced-motion:reduce){
+  .cine.is-ready{ height:auto; }
+  .cine .cine-pin{ position:relative; height:auto; display:block; overflow:visible; }
+  .cine-clip,.cine-black,.cine-road,.cine-marca-scrim,.cine-cover{ display:none !important; }
+  .cine-poster{ position:absolute; top:0; left:0; right:0; bottom:auto; height:88svh; }  /* solo la banda del hero */
+  .cine-copy{ position:relative; z-index:4; min-height:88svh; display:flex; flex-direction:column; justify-content:flex-end; }
+  /* Marcas: apiladas, visibles, sobre fondo sólido (sin video en movimiento) */
+  .cine-marcas{ position:relative; inset:auto; display:flex; flex-direction:column; align-items:center;
+    gap:clamp(48px,10vh,110px); padding:clamp(56px,12vh,120px) clamp(22px,6vw,60px); background:var(--cine-negro); }
+  .cine-marca{ position:relative; left:auto; top:auto; transform:none; opacity:1; width:100%; }
+  .cine-contacto{ position:relative; left:auto; top:auto; transform:none; opacity:1; visibility:visible;
+    width:100%; background:var(--cine-negro); padding:clamp(48px,10vh,110px) clamp(22px,6vw,60px); }
+  .cine-form-beat{ position:relative; left:auto; top:auto; transform:none; opacity:1; visibility:visible;
+    width:100%; background:var(--cine-negro); padding:clamp(48px,10vh,110px) clamp(22px,6vw,60px); }
+  .cine-hud,.cine-prog,.cine-cue{ display:none; }
+}
+@media (max-width:640px){
+  .cine-marca-logo{ height:clamp(100px,19vh,190px); }
+  .cine-marca-title{ font-size:clamp(1.9rem,7.4vw,3rem); }
+  /* Yeya protagonista en móvil */
+  .cine-marca[data-marca="2"] .cine-marca-logo{ height:clamp(220px,40vh,320px); }
+}
+@media (max-width:640px){
+  .cine-copy{ padding-bottom:clamp(64px,14vh,120px); }
+  .cine-sub{ max-width:34ch; }
+}

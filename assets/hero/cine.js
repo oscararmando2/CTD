@@ -1,0 +1,247 @@
+/* ============================================================
+   CTD · Hero cinemático — una sola película (vanilla)
+   Secuencia: camión → oscuro → carga → caja → bodega → logo →
+   carretera, y CIERRE con las marcas sobre la carretera en loop.
+   Todo en el mismo pin; el HUD sigue contando hasta 07 / 07.
+   Carga progresiva: solo el clip 2 precarga; 4→5→6→7→8 y la
+   carretera se descargan en cadena mientras se ve el anterior.
+   ============================================================ */
+(function () {
+  var sec = document.getElementById('inicio');
+  if (!sec || !sec.classList.contains('cine')) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+
+  var clips = [].slice.call(sec.querySelectorAll('.cine-clip'));
+  if (clips.length < 4) return;
+  var black  = sec.querySelector('.cine-black');
+  var copy   = sec.querySelector('.cine-copy');
+  var covers = [].slice.call(sec.querySelectorAll('.cine-cover'));
+  var prog   = sec.querySelector('.cine-prog');
+  var cue    = sec.querySelector('.cine-cue');
+  var idx    = sec.querySelector('.cine-hud-idx');
+  var road   = sec.querySelector('.cine-road');
+  var mscrim = sec.querySelector('.cine-marca-scrim');
+  var marcas = [].slice.call(sec.querySelectorAll('.cine-marca'));
+  var contacto = sec.querySelector('.cine-contacto');
+  var formBeat = sec.querySelector('.cine-form-beat');
+
+  var dur   = clips.map(function () { return 6; });
+  var ready = clips.map(function () { return false; });
+
+  clips.forEach(function (v, i) {
+    var meta = function () { if (v.duration) dur[i] = v.duration; };
+    var mark = function () { meta(); if (v.readyState >= 3) ready[i] = true; };
+    v.addEventListener('loadedmetadata', meta);
+    v.addEventListener('loadeddata', meta);
+    v.addEventListener('canplay', mark);
+    v.addEventListener('canplaythrough', function () { meta(); ready[i] = true; });
+    if (v.readyState >= 3) ready[i] = true;
+  });
+
+  // Solo el clip 0 (video 2) precarga de inmediato (preload=auto).
+  try { clips[0].load(); } catch (e) {}
+
+  // Cadena de carga en segundo plano: clips 1..5 y, al final, la carretera.
+  function chain(i) {
+    if (i >= clips.length) { loadRoad(); return; }   // tras el último clip, precarga la carretera
+    var v = clips[i];
+    v.preload = 'auto';
+    var advanced = false;
+    var next = function () { if (advanced) return; advanced = true; chain(i + 1); };
+    v.addEventListener('canplaythrough', next, { once: true });
+    v.addEventListener('canplay', next, { once: true });
+    v.addEventListener('loadeddata', next, { once: true });
+    try { v.load(); } catch (e) {}
+    setTimeout(next, 6000);
+  }
+  var chainStarted = false;
+  function kickChain() { if (chainStarted) return; chainStarted = true; chain(1); }
+  if (clips[0].readyState >= 2) kickChain();
+  else clips[0].addEventListener('loadeddata', kickChain, { once: true });
+  window.addEventListener('load', function () { setTimeout(kickChain, 800); });
+  if ('requestIdleCallback' in window) requestIdleCallback(kickChain, { timeout: 2500 });
+
+  // ---- Carretera en loop (fondo del cierre; corre sola, no ligada al scroll) ----
+  var roadLoaded = false, roadPlaying = false;
+  function loadRoad() {
+    if (roadLoaded || !road) return; roadLoaded = true;
+    var mobile = window.matchMedia('(max-width:768px)').matches;
+    var src = road.getAttribute(mobile ? 'data-src-mobile' : 'data-src');
+    if (src) { road.src = src; try { road.load(); } catch (e) {} }
+  }
+  function playRoad() {
+    if (roadPlaying || !road) return; roadPlaying = true;
+    var pr = road.play();
+    if (pr && pr.catch) pr.catch(function () {
+      var once = function () { road.play().catch(function () {}); window.removeEventListener('pointerdown', once); window.removeEventListener('touchstart', once); };
+      window.addEventListener('pointerdown', once, { passive: true });
+      window.addEventListener('touchstart', once, { passive: true });
+    });
+  }
+
+  sec.classList.add('is-ready');
+
+  // Form 09: mismo comportamiento que el formulario principal (agradece y reinicia)
+  var cform = document.getElementById('cine-contact-form');
+  if (cform) cform.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var es = (typeof currentLanguage !== 'undefined') ? currentLanguage === 'es' : true;
+    alert(es ? '¡Gracias por su interés! Nos pondremos en contacto con usted pronto.'
+             : 'Thank you for your interest! We will contact you soon.');
+    cform.reset();
+  });
+
+  var clamp  = function (v, a, b) { return v < a ? a : v > b ? b : v; };
+  var smooth = function (t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
+  function op(p, ia, ib, oa, ob) {
+    return clamp(Math.min(smooth((p - ia) / (ib - ia)), 1 - smooth((p - oa) / (ob - oa))), 0, 1);
+  }
+  function local(p, a, b) { return clamp((p - a) / (b - a), 0, 1); }
+
+  // La fase de clips ocupa la primera fracción del pin; el cierre (marcas + contacto), el resto.
+  var CS = 0.422;                  // 780vh de clips / 1850vh totales
+  var RIN0 = CS, RIN1 = CS + 0.048; // fundido de la carretera sobre el clip 8
+
+  // Reveal monotónico de los clips (en progreso de clips pc = p/CS)
+  var IN = [[0.00, 0.03], [0.22, 0.27], [0.38, 0.42], [0.54, 0.58], [0.70, 0.74], [0.86, 0.90]];
+  var SC = [[0.02, 0.18], [0.24, 0.38], [0.40, 0.54], [0.56, 0.70], [0.72, 0.86], [0.88, 1.00]];
+
+  // Captions lower-third, cada uno con su ventana en progreso de clips (pc):
+  // entra / plena / sale. Orden = orden de aparición en la secuencia.
+  var COVW = [
+    [0.105, 0.145, 0.175, 0.200],  // 1 · Cobertura (transición 1→2, camión que avanza)
+    [0.300, 0.335, 0.375, 0.400],  // 2 · Productos importados (inicio del beat 2, interior con luz)
+    [0.455, 0.495, 0.565, 0.595],  // 3 · Precios mayoristas (transición 3→4, caja → bodega)
+    [0.615, 0.655, 0.695, 0.725],  // 4 · Nuestra misión (beat 4, reveal de la bodega)
+    [0.755, 0.790, 0.830, 0.855],  // 5 · Categorías (beat 5, logo de la bodega)
+    [0.900, 0.935, 0.965, 0.990]   // 6 · Especiales (beat 6, logo del camión antes de la carretera)
+  ];
+
+  // Ventanas de las marcas (progreso global p), repartidas parejo en [MS0,MEND]:
+  // cada bloque entra, se sostiene y sale, con un hueco antes del siguiente.
+  var MS0 = CS + 0.02;                       // respiro para que la carretera se asiente
+  var MEND = 0.72;                           // fin de marcas → contacto (08)
+  var CEND = 0.855;                          // fin de contacto → form (09)
+  var seg = (MEND - MS0) / marcas.length;
+  var MW = marcas.map(function (_, k) {
+    var a = MS0 + k * seg;
+    return [a + seg * 0.08, a + seg * 0.46, a + seg * 0.62, a + seg * 0.94];
+  });
+  var CW = [0.735, 0.775, 0.830, 0.855];     // contacto (08): entra, sostiene y sale antes del form
+  var FW = [0.865, 0.905, 1.5, 1.6];         // form (09): entra y se sostiene hasta soltar el pin
+
+  function setCT(v, i, lp) {
+    var t = clamp(lp, 0, 1) * (dur[i] - 0.06);
+    if (isFinite(t) && Math.abs(v.currentTime - t) > 0.033) { try { v.currentTime = t; } catch (e) {} }
+  }
+
+  // Priming para seek en iOS: play+pause en el primer gesto.
+  var primed = false;
+  function prime() {
+    if (primed) return; primed = true;
+    clips.forEach(function (v) {
+      var pr = v.play(); if (pr && pr.then) pr.then(function () { v.pause(); }).catch(function () {});
+      else { try { v.pause(); } catch (e) {} }
+    });
+  }
+  ['scroll', 'pointerdown', 'touchstart'].forEach(function (ev) {
+    window.addEventListener(ev, prime, { once: true, passive: true });
+  });
+
+  var ticking = false;
+  function onScroll() { if (!ticking) { ticking = true; requestAnimationFrame(apply); } }
+
+  function apply() {
+    ticking = false;
+    var r = sec.getBoundingClientRect();
+    var h = sec.offsetHeight - window.innerHeight;
+    var p = h <= 0 ? 0 : clamp(-r.top / h, 0, 1);
+    if (prog) prog.style.width = (p * 100) + '%';
+
+    var pc = clamp(p / CS, 0, 1);   // progreso dentro de la fase de clips
+
+    if (copy) {
+      var cf = 1 - smooth(pc / 0.14);
+      copy.style.opacity = cf;
+      copy.style.transform = 'translateY(' + ((1 - cf) * -26).toFixed(1) + 'px)';
+      copy.style.pointerEvents = cf < 0.08 ? 'none' : '';
+    }
+
+    // Captions lower-third (cada uno con su ventana en pc; solo uno visible a la vez)
+    for (var ci = 0; ci < covers.length; ci++) {
+      var cw = COVW[ci]; if (!cw) continue;
+      var vin = smooth((pc - cw[0]) / (cw[1] - cw[0]));
+      var vout = smooth((pc - cw[2]) / (cw[3] - cw[2]));
+      var vopa = clamp(Math.min(vin, 1 - vout), 0, 1);
+      covers[ci].style.opacity = vopa.toFixed(3);
+      covers[ci].style.transform = 'translateY(' + ((1 - vin) * 20 - vout * 20).toFixed(1) + 'px)';
+    }
+
+    // Clips: reveal monotónico (el de encima aparece sobre el anterior, que queda a 1)
+    var topi = 0;
+    for (var i = 0; i < clips.length; i++) {
+      var rv = smooth((pc - IN[i][0]) / (IN[i][1] - IN[i][0]));
+      if (i > 0 && !ready[i]) rv = 0;
+      clips[i].style.opacity = rv;
+      if (rv > 0.02) topi = i;
+    }
+    if (ready[topi]) setCT(clips[topi], topi, local(pc, SC[topi][0], SC[topi][1]));
+
+    // Negro de empalme 2→4
+    var bl = op(pc, 0.165, 0.195, 0.235, 0.295);
+    if (!ready[1] && pc > 0.18 && pc < 0.34) bl = 1;
+    if (black) black.style.opacity = bl;
+
+    // ---- Cierre de marcas ----
+    // Carretera en loop: se carga al acercarse y se funde sobre el clip 8.
+    if (p > CS - 0.18) loadRoad();
+    var roadOp = smooth((p - RIN0) / (RIN1 - RIN0));
+    if (road) road.style.opacity = roadOp;
+    if (mscrim) mscrim.style.opacity = roadOp;
+    if (roadOp > 0.2) playRoad();
+
+    // Bloques de marca: entran, se sostienen y salen (misma curva; desplazamiento corto)
+    for (var m = 0; m < marcas.length; m++) {
+      var w = MW[m];
+      var ein = smooth((p - w[0]) / (w[1] - w[0]));
+      var eout = smooth((p - w[2]) / (w[3] - w[2]));
+      var opa = clamp(Math.min(ein, 1 - eout), 0, 1);
+      var ty = (1 - ein) * 22 - eout * 22;
+      marcas[m].style.opacity = opa.toFixed(3);
+      marcas[m].style.transform = 'translate(-50%,-50%) translateY(' + ty.toFixed(1) + 'px)';
+    }
+
+    // Contacto (08): panel final sobre la carretera, entra y se sostiene
+    if (contacto) {
+      var cin = smooth((p - CW[0]) / (CW[1] - CW[0]));
+      var cout = smooth((p - CW[2]) / (CW[3] - CW[2]));
+      var copa = clamp(Math.min(cin, 1 - cout), 0, 1);
+      var cty = (1 - cin) * 24 - cout * 24;
+      contacto.style.opacity = copa.toFixed(3);
+      contacto.style.transform = 'translate(-50%,-50%) translateY(' + cty.toFixed(1) + 'px)';
+      contacto.style.visibility = copa > 0.02 ? 'visible' : 'hidden';
+      contacto.style.pointerEvents = copa > 0.5 ? 'auto' : 'none';
+    }
+
+    // Form (09): cajones transparentes, entra y se sostiene hasta soltar el pin
+    if (formBeat) {
+      var fin = smooth((p - FW[0]) / (FW[1] - FW[0]));
+      var fout = smooth((p - FW[2]) / (FW[3] - FW[2]));
+      var fopa = clamp(Math.min(fin, 1 - fout), 0, 1);
+      formBeat.style.opacity = fopa.toFixed(3);
+      formBeat.style.transform = 'translate(-50%,-50%) translateY(' + ((1 - fin) * 24 - fout * 24).toFixed(1) + 'px)';
+      formBeat.style.visibility = fopa > 0.02 ? 'visible' : 'hidden';
+      formBeat.style.pointerEvents = fopa > 0.5 ? 'auto' : 'none';
+    }
+
+    // HUD: clips 0X/07, marcas 07/07, contacto 08/08, form 09/09
+    if (idx) idx.textContent = p >= CEND ? '09 / 09' : (p >= MEND ? '08 / 08' : (p >= CS ? '07 / 07' : (('0' + (topi + 1)) + ' / 07')));
+
+    // Cue al final (invita a soltar el pin)
+    if (cue) cue.style.opacity = smooth((p - 0.965) / 0.03).toFixed(2);
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', apply);
+  apply();
+})();
