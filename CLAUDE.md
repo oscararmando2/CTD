@@ -17,8 +17,8 @@ Sitio web de **Central Trade Distribution (CTD)** — distribuidora mayorista de
 ## Repo y despliegue
 
 - Repo: **`oscararmando2/CTD`** (local en `/Users/oscar/Desktop/CTD`). Los PRs de CTD van a este repo, no a XELA.
-- **Producción**: `centraltradedist.com` publica desde **`main`** vía Vercel. Para que algo salga en vivo, **hay que mergear a `main`** (ojo con cachés del host).
-- Preview: cada rama tiene su deploy de Vercel (detrás del login de Vercel del dueño).
+- **Producción**: `centraltradedist.com` publica desde **`main`** vía **GitHub Pages** (workflow "pages build and deployment"). Para que algo salga en vivo, **hay que mergear a `main`** (ojo con cachés).
+- Preview: cada rama tiene su deploy de **Vercel** (`ctd-git-<rama>-…vercel.app`, detrás del login de Vercel del dueño).
 - Commits: mensajes en español, imperativo, con `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
 
 ## Estructura de carpetas
