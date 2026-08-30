@@ -1,3 +1,8 @@
+/* Solo scroll vertical: sin desplazamiento horizontal (sobre todo en móvil).
+   `clip` no crea contenedor de scroll → no rompe el position:sticky del hero. */
+html, body { overflow-x: hidden; }
+@supports (overflow-x: clip) { html, body { overflow-x: clip; } }
+
 /* ============================================================
    CTD · Hero cinemático (scope .cine — sin colisiones globales)
    ============================================================ */
