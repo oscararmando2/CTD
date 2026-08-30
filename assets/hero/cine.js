@@ -102,7 +102,8 @@
     [0.300, 0.335, 0.375, 0.400],  // 2 · Productos importados (inicio del beat 2, interior con luz)
     [0.455, 0.495, 0.565, 0.595],  // 3 · Precios mayoristas (transición 3→4, caja → bodega)
     [0.615, 0.655, 0.695, 0.725],  // 4 · Nuestra misión (beat 4, reveal de la bodega)
-    [0.755, 0.790, 0.830, 0.855]   // 5 · Categorías (beat 5, logo de la bodega)
+    [0.755, 0.790, 0.830, 0.855],  // 5 · Categorías (beat 5, logo de la bodega)
+    [0.900, 0.935, 0.965, 0.990]   // 6 · Especiales (beat 6, logo del camión antes de la carretera)
   ];
 
   // Ventanas de las marcas (progreso global p), repartidas parejo en [MS0,MEND]:
