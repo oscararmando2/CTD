@@ -3,6 +3,10 @@
 html, body { overflow-x: hidden; }
 @supports (overflow-x: clip) { html, body { overflow-x: clip; } }
 
+/* Pantalla completa: sin header (barra de navegación fija + hamburguer + menú móvil).
+   El logo y las acciones ya viven dentro de la propia película. */
+nav.fixed.z-50 { display: none !important; }
+
 /* ============================================================
    CTD · Hero cinemático (scope .cine — sin colisiones globales)
    ============================================================ */
