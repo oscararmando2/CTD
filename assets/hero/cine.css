@@ -16,7 +16,7 @@ html, body { overflow-x: hidden; }
 .cine:not(.is-ready){ height:auto; }
 .cine:not(.is-ready) .cine-pin{ position:relative; height:88svh; }
 /* Con JS: sección alta; el pin se queda fijo y el scroll scrubbea la secuencia */
-.cine.is-ready{ height:1560vh; }  /* 6 clips + marcas (5) + contacto (08) — mismo ritmo por beat */
+.cine.is-ready{ height:1850vh; }  /* 6 clips + marcas (5) + contacto (08) + form (09) — mismo ritmo */
 .cine .cine-pin{
   position:sticky; top:0; height:100svh; overflow:hidden;
   display:flex; align-items:flex-end;
@@ -198,6 +198,59 @@ a.cine-c-value:focus-visible{ outline:3px solid var(--cine-oro); outline-offset:
   .cine-c-grid{ flex-direction:column; gap:22px; align-items:center; }
 }
 
+/* ---- Beat 09 · contacto interactivo (cajones transparentes sobre la carretera) ---- */
+.cine-form-beat{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:min(94vw,70rem); opacity:0; visibility:hidden; z-index:4;
+  padding:0 clamp(14px,4vw,30px); will-change:opacity,transform;
+}
+.cine-fb-grid{ display:grid; grid-template-columns:1.15fr .85fr; gap:clamp(16px,2.4vw,28px); align-items:start; }
+.cine-fb-card{
+  background:rgba(15,13,10,.32); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  border:1px solid rgba(246,242,233,.22); border-radius:16px; padding:clamp(18px,2.4vw,26px);
+}
+.cine-fb-title{
+  font-family:'Bricolage Grotesque','Archivo',system-ui,sans-serif; font-weight:800;
+  font-size:clamp(1.25rem,2.1vw,1.6rem); margin:0 0 14px; color:var(--cine-hueso);
+}
+.cine-fb-field{ margin-bottom:11px; }
+.cine-fb-field label{
+  display:block; font-family:'IBM Plex Mono',ui-monospace,monospace; font-size:.62rem;
+  letter-spacing:.18em; text-transform:uppercase; color:rgba(246,242,233,.72); margin-bottom:5px;
+}
+.cine-fb-input,.cine-fb-textarea{
+  width:100%; box-sizing:border-box; background:rgba(255,255,255,.07);
+  border:1px solid rgba(246,242,233,.26); border-radius:10px; padding:10px 13px;
+  color:var(--cine-hueso); font-family:'Hanken Grotesk',system-ui,sans-serif; font-size:.96rem;
+}
+.cine-fb-input::placeholder,.cine-fb-textarea::placeholder{ color:rgba(246,242,233,.42); }
+.cine-fb-input:focus,.cine-fb-textarea:focus{ outline:none; border-color:var(--cine-oro); background:rgba(255,255,255,.11); }
+.cine-fb-textarea{ resize:none; min-height:70px; }
+.cine-fb-submit{
+  width:100%; margin-top:4px; background:var(--cine-hueso); color:var(--cine-negro); border:0;
+  border-radius:10px; padding:12px 18px; font-weight:800; font-size:1rem;
+  font-family:'Hanken Grotesk',system-ui,sans-serif; cursor:pointer; transition:background .18s ease;
+}
+.cine-fb-submit:hover{ background:#fff; }
+.cine-fb-submit:focus-visible{ outline:3px solid var(--cine-oro); outline-offset:3px; }
+.cine-fb-side{ display:flex; flex-direction:column; gap:clamp(14px,2vw,18px); }
+.cine-fb-info{ display:flex; flex-direction:column; gap:13px; }
+.cine-fb-item{ display:flex; flex-direction:column; gap:3px; }
+.cine-fb-label{ font-family:'IBM Plex Mono',ui-monospace,monospace; font-size:.62rem; letter-spacing:.2em; text-transform:uppercase; color:var(--cine-oro); }
+.cine-fb-value{ font-family:'Bricolage Grotesque','Archivo',system-ui,sans-serif; font-weight:600; font-size:clamp(1rem,1.5vw,1.2rem); color:var(--cine-hueso); text-decoration:none; }
+a.cine-fb-value:hover{ color:var(--cine-oro); }
+.cine-fb-social{ display:flex; gap:11px; }
+.cine-fb-social a{
+  width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  border:1px solid rgba(246,242,233,.34); color:var(--cine-hueso); text-decoration:none; font-weight:700;
+  font-family:'Hanken Grotesk',system-ui,sans-serif; font-size:.9rem; transition:background .18s,border-color .18s;
+}
+.cine-fb-social a:hover{ background:rgba(246,242,233,.14); border-color:var(--cine-hueso); }
+@media (max-width:720px){
+  .cine-fb-grid{ grid-template-columns:1fr; }
+  .cine-form-beat{ top:52%; }
+}
+
 @media (prefers-reduced-motion:reduce){
   .cine.is-ready{ height:auto; }
   .cine .cine-pin{ position:relative; height:auto; display:block; overflow:visible; }
@@ -209,6 +262,8 @@ a.cine-c-value:focus-visible{ outline:3px solid var(--cine-oro); outline-offset:
     gap:clamp(48px,10vh,110px); padding:clamp(56px,12vh,120px) clamp(22px,6vw,60px); background:var(--cine-negro); }
   .cine-marca{ position:relative; left:auto; top:auto; transform:none; opacity:1; width:100%; }
   .cine-contacto{ position:relative; left:auto; top:auto; transform:none; opacity:1; visibility:visible;
+    width:100%; background:var(--cine-negro); padding:clamp(48px,10vh,110px) clamp(22px,6vw,60px); }
+  .cine-form-beat{ position:relative; left:auto; top:auto; transform:none; opacity:1; visibility:visible;
     width:100%; background:var(--cine-negro); padding:clamp(48px,10vh,110px) clamp(22px,6vw,60px); }
   .cine-hud,.cine-prog,.cine-cue{ display:none; }
 }

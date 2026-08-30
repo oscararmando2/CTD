@@ -23,6 +23,7 @@
   var mscrim = sec.querySelector('.cine-marca-scrim');
   var marcas = [].slice.call(sec.querySelectorAll('.cine-marca'));
   var contacto = sec.querySelector('.cine-contacto');
+  var formBeat = sec.querySelector('.cine-form-beat');
 
   var dur   = clips.map(function () { return 6; });
   var ready = clips.map(function () { return false; });
@@ -80,6 +81,16 @@
 
   sec.classList.add('is-ready');
 
+  // Form 09: mismo comportamiento que el formulario principal (agradece y reinicia)
+  var cform = document.getElementById('cine-contact-form');
+  if (cform) cform.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var es = (typeof currentLanguage !== 'undefined') ? currentLanguage === 'es' : true;
+    alert(es ? '¡Gracias por su interés! Nos pondremos en contacto con usted pronto.'
+             : 'Thank you for your interest! We will contact you soon.');
+    cform.reset();
+  });
+
   var clamp  = function (v, a, b) { return v < a ? a : v > b ? b : v; };
   var smooth = function (t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
   function op(p, ia, ib, oa, ob) {
@@ -88,8 +99,8 @@
   function local(p, a, b) { return clamp((p - a) / (b - a), 0, 1); }
 
   // La fase de clips ocupa la primera fracción del pin; el cierre (marcas + contacto), el resto.
-  var CS = 0.5;                   // 780vh de clips / 1560vh totales
-  var RIN0 = CS, RIN1 = CS + 0.05; // fundido de la carretera sobre el clip 8
+  var CS = 0.422;                  // 780vh de clips / 1850vh totales
+  var RIN0 = CS, RIN1 = CS + 0.048; // fundido de la carretera sobre el clip 8
 
   // Reveal monotónico de los clips (en progreso de clips pc = p/CS)
   var IN = [[0.00, 0.03], [0.22, 0.27], [0.38, 0.42], [0.54, 0.58], [0.70, 0.74], [0.86, 0.90]];
@@ -109,13 +120,15 @@
   // Ventanas de las marcas (progreso global p), repartidas parejo en [MS0,MEND]:
   // cada bloque entra, se sostiene y sale, con un hueco antes del siguiente.
   var MS0 = CS + 0.02;                       // respiro para que la carretera se asiente
-  var MEND = 0.85;                           // fin de marcas → inicio del contacto (08)
+  var MEND = 0.72;                           // fin de marcas → contacto (08)
+  var CEND = 0.855;                          // fin de contacto → form (09)
   var seg = (MEND - MS0) / marcas.length;
   var MW = marcas.map(function (_, k) {
     var a = MS0 + k * seg;
     return [a + seg * 0.08, a + seg * 0.46, a + seg * 0.62, a + seg * 0.94];
   });
-  var CW = [0.865, 0.905, 1.5, 1.6];         // contacto (08): entra y se sostiene hasta soltar el pin
+  var CW = [0.735, 0.775, 0.830, 0.855];     // contacto (08): entra, sostiene y sale antes del form
+  var FW = [0.865, 0.905, 1.5, 1.6];         // form (09): entra y se sostiene hasta soltar el pin
 
   function setCT(v, i, lp) {
     var t = clamp(lp, 0, 1) * (dur[i] - 0.06);
@@ -210,8 +223,19 @@
       contacto.style.pointerEvents = copa > 0.5 ? 'auto' : 'none';
     }
 
-    // HUD: clips 0X / 07, marcas 07 / 07, contacto 08 / 08
-    if (idx) idx.textContent = p >= MEND ? '08 / 08' : (p >= CS ? '07 / 07' : (('0' + (topi + 1)) + ' / 07'));
+    // Form (09): cajones transparentes, entra y se sostiene hasta soltar el pin
+    if (formBeat) {
+      var fin = smooth((p - FW[0]) / (FW[1] - FW[0]));
+      var fout = smooth((p - FW[2]) / (FW[3] - FW[2]));
+      var fopa = clamp(Math.min(fin, 1 - fout), 0, 1);
+      formBeat.style.opacity = fopa.toFixed(3);
+      formBeat.style.transform = 'translate(-50%,-50%) translateY(' + ((1 - fin) * 24 - fout * 24).toFixed(1) + 'px)';
+      formBeat.style.visibility = fopa > 0.02 ? 'visible' : 'hidden';
+      formBeat.style.pointerEvents = fopa > 0.5 ? 'auto' : 'none';
+    }
+
+    // HUD: clips 0X/07, marcas 07/07, contacto 08/08, form 09/09
+    if (idx) idx.textContent = p >= CEND ? '09 / 09' : (p >= MEND ? '08 / 08' : (p >= CS ? '07 / 07' : (('0' + (topi + 1)) + ' / 07')));
 
     // Cue al final (invita a soltar el pin)
     if (cue) cue.style.opacity = smooth((p - 0.965) / 0.03).toFixed(2);
