@@ -22,7 +22,7 @@ nav.fixed.z-50 { display: none !important; }
 /* Con JS: sección alta; el pin se queda fijo y el scroll scrubbea la secuencia */
 .cine.is-ready{ height:1850vh; }  /* 6 clips + marcas (5) + contacto (08) + form (09) — mismo ritmo */
 .cine .cine-pin{
-  position:sticky; top:0; height:100svh; overflow:hidden;
+  position:sticky; top:0; height:100vh; height:100dvh; overflow:hidden;
   display:flex; align-items:flex-end;
 }
 .cine-stage{ position:absolute; inset:0; z-index:0; }
@@ -68,6 +68,8 @@ nav.fixed.z-50 { display: none !important; }
 .cine-btn-solid:hover{ background:#fff; }
 .cine-btn-ghost{ border:1.5px solid rgba(246,242,233,.42); color:var(--cine-hueso); }
 .cine-btn-ghost:hover{ border-color:var(--cine-hueso); }
+.cine-btn-verde{ background:var(--cine-verde); color:#fff; }
+.cine-btn-verde:hover{ background:#256f31; }
 .cine-btn:focus-visible{ outline:3px solid var(--cine-oro); outline-offset:3px; }
 /* Lower-third de transición 1→2 · promesa de cobertura (mismo lugar que el H1) */
 .cine-cover{
