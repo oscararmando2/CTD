@@ -395,6 +395,29 @@
       .new-track.single { grid-template-columns: minmax(0, 460px); }
     }
 
+    /* Especiales: banners verticales 2:3, en rejilla */
+    .esp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 18px;
+      align-items: start;
+      max-width: 1000px;
+    }
+    .esp-card {
+      border: none; padding: 0; background: none; cursor: pointer;
+      border-radius: var(--radio); overflow: hidden;
+      box-shadow: var(--sombra);
+      transition: transform .15s, box-shadow .15s;
+      display: block; width: 100%;
+    }
+    .esp-card:hover, .esp-card:focus-visible {
+      transform: translateY(-3px); box-shadow: var(--sombra-hover);
+    }
+    .esp-card img { display: block; width: 100%; height: auto; }
+    @media (max-width: 640px) {
+      .esp-grid { grid-template-columns: 1fr; gap: 14px; max-width: 420px; }
+    }
+
     /* Banners de promoción (uno por oferta) */
     .promo-stack {
       display: flex;
@@ -1248,6 +1271,18 @@
     </div>
   </section>
 
+  <!-- ══════════ ESPECIALES DEL MES (banners verticales, abren el producto) ══════════ -->
+  <section class="new-section" id="especiales" aria-label="Especiales">
+    <div class="new-inner">
+      <div class="new-head">
+        <span class="new-badge" data-i18n="esp.badge">🔥 Especiales</span>
+        <h2 data-i18n="esp.title">Especiales de septiembre</h2>
+        <p data-i18n="esp.sub">Vigentes hasta agotar existencias — cotiza por WhatsApp.</p>
+      </div>
+      <div class="esp-grid" id="espTrack"></div>
+    </div>
+  </section>
+
   <!-- ══════════ RECIÉN LLEGADOS: DELICIAS YEYA (galería, cotizar por WhatsApp) ══════════ -->
   <!-- Convención: la promo/novedad más reciente va PRIMERO. -->
   <section class="new-section" id="newArrivals" aria-label="Recién llegados">
@@ -1395,6 +1430,15 @@
       { name: 'Delicias Yeya Mini Squares 3.5 oz',          img: './yeya/mini-squares.jpeg' },
       { name: 'Delicias Yeya Mini Squares Chili Lime 3.5 oz', img: './yeya/mini-squares-chile.jpeg' },
     ];
+    // ESPECIALES del mes — cada banner abre el producto del CSV; el de Diana
+    // lleva a su propia sección porque la oferta es de toda la línea.
+    const ESPECIALES = [
+      { img: './especiales/tajadas-platano.jpg', code: '317' }, // LA FINCA TAJADAS PLATANO DULCE 12/12.7 OZ — 5+1
+      { img: './especiales/jugo-naranja.jpg',    code: '300' }, // DE LA GRANJA JUGO NARANJA 12/500 ML — $18.99
+      { img: './especiales/jasmine-rice.jpg',    code: '63'  }, // LA FINCA JASMINE RICE 6/5 LB — 5+1
+      { img: './especiales/nata-mix.jpg',        code: '34'  }, // REFRESHING NATA 12/490 ML — 5+1 mix and match
+      { img: './especiales/diana-snacks.jpg',    ancla: '#promosDiana' },
+    ];
     // Hojas de maíz Delicias Yeya — lo más nuevo, aún no está en el CSV
     const TAMAL_PRODUCTS = [
       { name: 'Delicias Yeya Hojas de Maíz 1 LB (16 oz)', img: './tamal/hojas-maiz.jpg' },
@@ -1428,6 +1472,9 @@
         'new.tag': 'NUEVO',
         'new.cta': 'Cotizar',
         'promo.tag': 'OFERTA',
+        'esp.badge': '🔥 Especiales',
+        'esp.title': 'Especiales de septiembre',
+        'esp.sub': 'Vigentes hasta agotar existencias — cotiza por WhatsApp.',
         'tamal.badge': '🌽 ¡Nuevo!',
         'tamal.title': 'Hojas de Maíz Delicias Yeya',
         'tamal.sub': 'Perfectas para tamales — cotiza por WhatsApp.',
@@ -1490,6 +1537,9 @@
         'new.tag': 'NEW',
         'new.cta': 'Get a quote',
         'promo.tag': 'DEAL',
+        'esp.badge': '🔥 Specials',
+        'esp.title': 'September Specials',
+        'esp.sub': 'While supplies last — quote on WhatsApp.',
         'tamal.badge': '🌽 New!',
         'tamal.title': 'Delicias Yeya Corn Husks',
         'tamal.sub': 'Perfect for tamales — quote on WhatsApp.',
@@ -1693,6 +1743,38 @@
             <div class="skeleton-line short"></div>
           </div>
         </div>`).join('');
+    }
+
+    // ============================================================
+    // RENDER — Especiales del mes (banner → producto o sección)
+    // ============================================================
+    function renderEspeciales() {
+      const track = $('#espTrack');
+      if (!track) return;
+      const items = ESPECIALES.filter(e => e.ancla || TODOS.find(x => x.code === e.code));
+      if (!items.length) { $('#especiales')?.classList.add('hidden'); return; }
+      $('#especiales')?.classList.remove('hidden');
+
+      track.innerHTML = items.map(e => {
+        const p = e.code ? TODOS.find(x => x.code === e.code) : null;
+        const etiqueta = p ? p.name : t('esp.title');
+        return `
+        <button class="esp-card" type="button"
+                data-code="${esc(e.code || '')}" data-ancla="${esc(e.ancla || '')}"
+                aria-label="${esc(etiqueta)}">
+          <img src="${esc(e.img)}" alt="${esc(etiqueta)}" loading="lazy">
+        </button>`;
+      }).join('');
+
+      track.querySelectorAll('.esp-card').forEach(el => {
+        el.addEventListener('click', () => {
+          if (el.dataset.ancla) {
+            document.querySelector(el.dataset.ancla)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else {
+            openModal(el.dataset.code);
+          }
+        });
+      });
     }
 
     // ============================================================
@@ -2175,6 +2257,7 @@
       });
       // Re-render lo dinámico
       renderTamal();
+      renderEspeciales();
       renderYeya();
       renderDiana();
       renderBrandFilter();
