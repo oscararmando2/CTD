@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="theme-color" content="#0F0D0A">
+<title>CTD · IA de Especiales</title>
+<link rel="icon" href="ctd-logo.png">
+<script>if (self !== top) top.location = self.location;</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Hanken+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ia.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" defer></script>
+<script src="ia.js" defer></script>
+</head>
+<body>
+
+<!-- ============ ACCESO (SMS) ============ -->
+<section id="gate" class="gate">
+  <div class="gate-card">
+    <img src="ctd-logo.png" alt="CTD" class="gate-logo">
+    <p class="hud">Central Trade Distribution · Uso interno</p>
+    <h1 class="gate-title">Laboratorio de Especiales</h1>
+    <p class="gate-sub">Entra con tu número de teléfono. Te llega un código por mensaje.</p>
+
+    <form id="phoneForm" class="gate-form" autocomplete="on">
+      <label class="lbl" for="phoneInput">Teléfono</label>
+      <div class="phone-row">
+        <span class="phone-cc">+1</span>
+        <input id="phoneInput" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="314 000 0000" required>
+      </div>
+      <button id="sendBtn" class="btn btn-oro btn-block" type="submit">Enviar código</button>
+    </form>
+
+    <form id="codeForm" class="gate-form" hidden>
+      <label class="lbl" for="codeInput">Código de 6 dígitos</label>
+      <input id="codeInput" class="code-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" required>
+      <button id="verifyBtn" class="btn btn-oro btn-block" type="submit">Entrar</button>
+      <button id="backBtn" class="btn-link" type="button">Cambiar número</button>
+    </form>
+
+    <p id="gateMsg" class="gate-msg" role="status" aria-live="polite"></p>
+    <div id="recaptcha"></div>
+  </div>
+</section>
+
+<!-- ============ APP ============ -->
+<div id="app" class="app" hidden>
+  <header class="topbar">
+    <div class="topbar-l">
+      <img src="ctd-logo.png" alt="CTD" class="topbar-logo">
+      <div>
+        <p class="hud">IA de Especiales</p>
+        <p class="topbar-title">Propuestas de la semana</p>
+      </div>
+    </div>
+    <div class="topbar-r">
+      <button id="histBtn" class="btn btn-ghost btn-sm" type="button">Historial</button>
+      <span id="whoami" class="whoami"></span>
+      <button id="logoutBtn" class="btn btn-ghost btn-sm" type="button">Salir</button>
+    </div>
+  </header>
+
+  <!-- Carga de datos -->
+  <section id="dropzone" class="dropzone" hidden>
+    <div class="drop-inner">
+      <p class="hud">Paso 1</p>
+      <h2 class="drop-title">Arrastra tu Excel de productos</h2>
+      <p class="drop-sub">El export de InSitu (<code>Products.xlsx</code>). Se procesa aquí en tu navegador: los costos <b>no se suben</b> a ningún lado.</p>
+      <label class="btn btn-oro">
+        Elegir archivo
+        <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" hidden>
+      </label>
+      <p id="dropMsg" class="drop-msg"></p>
+    </div>
+  </section>
+
+  <main id="workspace" hidden>
+    <!-- Controles -->
+    <section class="controls">
+      <div class="ctrl-grid">
+        <div class="ctrl">
+          <span class="lbl">Especiales</span>
+          <div class="seg" id="segCount">
+            <button type="button" data-v="4">4</button>
+            <button type="button" data-v="8" class="on">8</button>
+            <button type="button" data-v="12">12</button>
+          </div>
+        </div>
+        <div class="ctrl">
+          <span class="lbl">Modo</span>
+          <div class="seg" id="segMode">
+            <button type="button" data-v="equilibrado" class="on">Equilibrado</button>
+            <button type="button" data-v="agresivo">Agresivo</button>
+            <button type="button" data-v="cuidar">Cuidar margen</button>
+          </div>
+        </div>
+        <div class="ctrl ctrl-sm">
+          <span class="lbl">Descuento %</span>
+          <div class="pair">
+            <input id="dMin" type="number" min="0" max="60" step="1" value="6" aria-label="Descuento mínimo">
+            <span>a</span>
+            <input id="dMax" type="number" min="0" max="60" step="1" value="12" aria-label="Descuento máximo">
+          </div>
+        </div>
+        <div class="ctrl ctrl-sm">
+          <span class="lbl">Margen mínimo %</span>
+          <input id="floor" type="number" min="0" max="60" step="0.5" value="5">
+        </div>
+        <div class="ctrl ctrl-sm">
+          <span class="lbl">Vigencia</span>
+          <div class="pair">
+            <input id="dFrom" type="date" aria-label="Desde">
+            <input id="dTo" type="date" aria-label="Hasta">
+          </div>
+        </div>
+      </div>
+
+      <div class="ctrl-grid ctrl-grid-2">
+        <div class="ctrl">
+          <span class="lbl">Proveedor</span>
+          <select id="fVendor"><option value="">Todos</option></select>
+        </div>
+        <div class="ctrl">
+          <span class="lbl">Marca</span>
+          <select id="fBrand"><option value="">Todas</option></select>
+        </div>
+        <label class="ctrl toggle">
+          <input id="fCombo" type="checkbox" checked>
+          <span>Incluir 1 combo</span>
+        </label>
+      </div>
+
+      <div class="ctrl">
+        <span class="lbl">Categorías <button id="catAll" type="button" class="btn-link sm">todas</button> · <button id="catNone" type="button" class="btn-link sm">ninguna</button></span>
+        <div id="catChips" class="chips"></div>
+      </div>
+
+      <div class="ctrl-actions">
+        <button id="genBtn" class="btn btn-oro btn-lg" type="button">🎲 Generar propuesta</button>
+        <p id="dataInfo" class="data-info"></p>
+      </div>
+    </section>
+
+    <!-- Resumen -->
+    <section id="summary" class="summary" hidden></section>
+
+    <!-- Tarjetas -->
+    <section id="grid" class="grid" aria-live="polite"></section>
+
+    <div id="bottomBar" class="bottombar" hidden>
+      <button id="saveBtn" class="btn btn-ghost" type="button">💾 Guardar propuesta</button>
+      <button id="clientBtn" class="btn btn-oro" type="button">🖨️ Vista cliente / PDF</button>
+    </div>
+  </main>
+</div>
+
+<!-- Historial -->
+<div id="histModal" class="modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>Propuestas guardadas</h3>
+      <button class="btn-x" data-close aria-label="Cerrar">✕</button>
+    </div>
+    <div id="histList" class="hist-list"></div>
+  </div>
+</div>
+
+<!-- Vista cliente (sin costos) -->
+<div id="clientModal" class="modal modal-client" hidden>
+  <div class="modal-card modal-wide">
+    <div class="modal-head no-print">
+      <h3>Vista para clientes <small>(sin costos ni márgenes)</small></h3>
+      <div>
+        <button id="printBtn" class="btn btn-oro btn-sm" type="button">Imprimir / Guardar PDF</button>
+        <button class="btn-x" data-close aria-label="Cerrar">✕</button>
+      </div>
+    </div>
+    <div id="clientSheet" class="sheet"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
