@@ -1304,7 +1304,7 @@
     <div class="new-inner">
       <div class="new-head">
         <span class="new-badge" data-i18n="diana.badge">🌽 Snacks Diana</span>
-        <h2 data-i18n="diana.title">Toda la línea Diana a $34.99</h2>
+        <h2 data-i18n="diana.title">Toda la línea Diana a $35.99</h2>
         <p data-i18n="diana.sub">12 sabores — cotiza por WhatsApp.</p>
       </div>
       <div class="new-banner">
@@ -1438,13 +1438,16 @@
       { img: './especiales/jasmine-rice.jpg',    code: '63'  }, // LA FINCA JASMINE RICE 6/5 LB — 5+1
       { img: './especiales/nata-mix.jpg',        code: '34'  }, // REFRESHING NATA 12/490 ML — 5+1 mix and match
       { img: './especiales/diana-snacks.jpg',    ancla: '#promosDiana' },
+      // Estos dos todavía no están en el CSV: no hay ficha que abrir, van a WhatsApp.
+      { img: './especiales/zambos-chile-limon.jpg', wa: 'Zambos Chile Limón 24 PZ — $58.99' },
+      { img: './especiales/cueritos-yeya.jpg',      wa: 'Las Delicias de Yeya Cueritos 12/16 oz — $36.00' },
     ];
     // Hojas de maíz Delicias Yeya — lo más nuevo, aún no está en el CSV
     const TAMAL_PRODUCTS = [
       { name: 'Delicias Yeya Hojas de Maíz 1 LB (16 oz)', img: './tamal/hojas-maiz.jpg' },
     ];
     // SNACKS DIANA — toda la línea al mismo precio de promo
-    const DIANA_PRICE = '$34.99';
+    const DIANA_PRICE = '$35.99';
     const DIANA = ['242','243','244','245','246','247','248','249','250','251','252','253'];
     const STORAGE_KEYS = {
       list: 'ctd_catalog_list_v1',
@@ -1480,9 +1483,9 @@
         'tamal.sub': 'Perfectas para tamales — cotiza por WhatsApp.',
         'tamal.bannerAlt': 'Hojas de maíz Delicias Yeya, 1 LB — perfectas para tamales',
         'diana.badge': '🌽 Snacks Diana',
-        'diana.title': 'Toda la línea Diana a $34.99',
+        'diana.title': 'Toda la línea Diana a $35.99',
         'diana.sub': '12 sabores — cotiza por WhatsApp.',
-        'diana.bannerAlt': 'Promo: snacks Diana, toda la línea a $34.99',
+        'diana.bannerAlt': 'Promo: snacks Diana, toda la línea a $35.99',
         'intro.now': 'ahora',
         'intro.title': '🌽 ¡Llegaron las Hojas de Maíz Delicias Yeya!',
         'intro.body': 'Perfectas para tamales — 1 LB, producto de México. Cotiza por WhatsApp.',
@@ -1545,9 +1548,9 @@
         'tamal.sub': 'Perfect for tamales — quote on WhatsApp.',
         'tamal.bannerAlt': 'Delicias Yeya corn husks, 1 LB — perfect for tamales',
         'diana.badge': '🌽 Diana Snacks',
-        'diana.title': 'All Diana snacks at $34.99',
+        'diana.title': 'All Diana snacks at $35.99',
         'diana.sub': '12 flavors — quote on WhatsApp.',
-        'diana.bannerAlt': 'Deal: Diana snacks, whole line at $34.99',
+        'diana.bannerAlt': 'Deal: Diana snacks, whole line at $35.99',
         'intro.now': 'now',
         'intro.title': '🌽 Delicias Yeya Corn Husks are here!',
         'intro.body': 'Perfect for tamales — 1 LB, product of Mexico. Quote on WhatsApp.',
@@ -1751,13 +1754,22 @@
     function renderEspeciales() {
       const track = $('#espTrack');
       if (!track) return;
-      const items = ESPECIALES.filter(e => e.ancla || TODOS.find(x => x.code === e.code));
+      const items = ESPECIALES.filter(e => e.ancla || e.wa || TODOS.find(x => x.code === e.code));
       if (!items.length) { $('#especiales')?.classList.add('hidden'); return; }
       $('#especiales')?.classList.remove('hidden');
 
       track.innerHTML = items.map(e => {
         const p = e.code ? TODOS.find(x => x.code === e.code) : null;
-        const etiqueta = p ? p.name : t('esp.title');
+        const etiqueta = p ? p.name : (e.wa || t('esp.title'));
+        // Los que no están en el CSV no tienen ficha: se cotizan por WhatsApp.
+        if (e.wa) {
+          const waMsg = encodeURIComponent(`${t('wa.singleIntro')}\n\n• ${e.wa}`);
+          return `
+        <a class="esp-card" href="https://wa.me/${WHATSAPP_NUMBER}?text=${waMsg}"
+           target="_blank" rel="noopener" aria-label="${esc(etiqueta)}">
+          <img src="${esc(e.img)}" alt="${esc(etiqueta)}" loading="lazy">
+        </a>`;
+        }
         return `
         <button class="esp-card" type="button"
                 data-code="${esc(e.code || '')}" data-ancla="${esc(e.ancla || '')}"
@@ -1766,7 +1778,7 @@
         </button>`;
       }).join('');
 
-      track.querySelectorAll('.esp-card').forEach(el => {
+      track.querySelectorAll('button.esp-card').forEach(el => {
         el.addEventListener('click', () => {
           if (el.dataset.ancla) {
             document.querySelector(el.dataset.ancla)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
