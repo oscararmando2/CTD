@@ -16,6 +16,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js" defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js" defer></script>
 <script src="ia.js" defer></script>
 </head>
 <body>
@@ -71,7 +72,7 @@
     <div class="drop-inner">
       <p class="hud">Paso 1</p>
       <h2 class="drop-title">Arrastra tu Excel de productos</h2>
-      <p class="drop-sub">El export de InSitu (<code>Products.xlsx</code>). Se procesa aquí en tu navegador: los costos <b>no se suben</b> a ningún lado.</p>
+      <p class="drop-sub">El export de InSitu (<code>Products.xlsx</code>). Se guarda en la base privada de CTD: solo Oscar y Luis la pueden ver. Lo carga uno y el otro ya lo tiene.</p>
       <label class="btn btn-oro">
         Elegir archivo
         <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" hidden>
@@ -164,7 +165,7 @@
 <div id="histModal" class="modal" hidden>
   <div class="modal-card">
     <div class="modal-head">
-      <h3>Propuestas guardadas</h3>
+      <h3>Propuestas guardadas <small>(Oscar y Luis ven lo mismo)</small></h3>
       <button class="btn-x" data-close aria-label="Cerrar">✕</button>
     </div>
     <div id="histList" class="hist-list"></div>

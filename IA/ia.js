@@ -1,7 +1,8 @@
 /* CTD · IA de Especiales
  * - Acceso: Firebase Phone Auth (SMS). Solo los números de la lista pueden entrar.
- * - Datos: el Excel de productos se procesa en el navegador y se guarda solo en este
- *   dispositivo (localStorage). Nada de costos se sube al sitio.
+ * - Datos compartidos (Firestore, proyecto ctd-ia): el Excel ya procesado y el historial
+ *   de propuestas. Las reglas de Firestore solo dejan leer/escribir a esos dos teléfonos.
+ *   El código del sitio no lleva costos; viven en Firestore detrás del login.
  */
 (function () {
   'use strict';
@@ -9,10 +10,12 @@
   /* ================= CONFIG ================= */
   // Pegar aquí la config web del proyecto de Firebase (Consola → Configuración del proyecto → Tus apps → Web).
   const FIREBASE_CONFIG = {
-    apiKey: '',
-    authDomain: '',
-    projectId: '',
-    appId: '',
+    apiKey: 'AIzaSyBhJuY0Wdh_UeZL0KHNn5WofWYPhQiVTuU',
+    authDomain: 'ctd-ia.firebaseapp.com',
+    projectId: 'ctd-ia',
+    storageBucket: 'ctd-ia.firebasestorage.app',
+    messagingSenderId: '914488691883',
+    appId: '1:914488691883:web:57d809a1e899c6b0be3bee',
   };
 
   // Números permitidos, guardados como SHA-256 del número en formato E.164 (no se publican en claro).
@@ -24,6 +27,7 @@
   const EXCLUDE_CATS = ['Spoilage', 'Shipping', 'TEST'];
   const MODES = { equilibrado: [6, 12], agresivo: [12, 22], cuidar: [3, 7] };
   const K_DATA = 'ctdIA.data', K_SET = 'ctdIA.settings', K_HIST = 'ctdIA.hist';
+  const CHUNK = 400; // productos por documento (Firestore: máx 1 MB por doc)
 
   const DEV = ['localhost', '127.0.0.1'].includes(location.hostname) && new URLSearchParams(location.search).has('dev');
 
@@ -103,7 +107,7 @@
   const saveSettings = () => { const { from, to, ...rest } = S.set; store.set(K_SET, rest); };
 
   /* ================= ACCESO ================= */
-  let auth = null, verifier = null, confirmation = null;
+  let auth = null, db = null, verifier = null, confirmation = null;
 
   function gateMsg(txt, kind) {
     const m = $('#gateMsg');
@@ -149,6 +153,7 @@
     firebase.initializeApp(FIREBASE_CONFIG);
     auth = firebase.auth();
     auth.languageCode = 'es';
+    db = firebase.firestore();
     auth.onAuthStateChanged(async (u) => {
       if (!u) { showGate(); return; }
       const name = await allowedName(u.phoneNumber);
@@ -204,17 +209,23 @@
   }
 
   $('#logoutBtn').addEventListener('click', async () => {
+    if (unHist) { unHist(); unHist = null; }
+    S.user = null;
     if (auth) await auth.signOut();
     else location.reload();
   });
 
   /* ================= ENTRAR ================= */
-  function enterApp(name) {
+  async function enterApp(name) {
+    if (S.user === name) return;
     S.user = name;
     $('#whoami').innerHTML = 'Hola, <b>' + esc(name) + '</b>';
     $('#gate').hidden = true;
     $('#app').hidden = false;
-    const data = store.get(K_DATA, null);
+    listenHist();
+    let data = null;
+    try { data = await Cloud.loadProducts(); } catch (e) { toast('No se pudo leer la base compartida'); }
+    if (!data) data = store.get(K_DATA, null); // respaldo local
     if (data && Array.isArray(data.items) && data.items.length) {
       S.products = data.items;
       S.meta = data.meta;
@@ -223,6 +234,59 @@
       $('#dropzone').hidden = false;
       $('#workspace').hidden = true;
     }
+  }
+
+  /* ================= NUBE (Firestore) =================
+   * datos/meta            {file, at, by, total, chunks}
+   * datos/chunk_N         {items:[...]}
+   * propuestas/{id}       {ts, by, from, to, m1, cards}
+   * Sin Firebase (modo dev local) todo cae a localStorage. */
+  const Cloud = {
+    async loadProducts() {
+      if (!db) return null;
+      const meta = await db.doc('datos/meta').get();
+      if (!meta.exists) return null;
+      const m = meta.data();
+      const parts = await Promise.all(Array.from({ length: m.chunks }, (_, i) => db.doc('datos/chunk_' + i).get()));
+      const items = parts.flatMap((d) => (d.exists ? d.data().items || [] : []));
+      store.set(K_DATA, { meta: m, items });
+      return { meta: m, items };
+    },
+    async saveProducts(meta, items) {
+      store.set(K_DATA, { meta, items });
+      if (!db) return;
+      const chunks = Math.ceil(items.length / CHUNK);
+      const old = await db.doc('datos/meta').get();
+      const oldChunks = old.exists ? old.data().chunks || 0 : 0;
+      const batch = db.batch();
+      for (let i = 0; i < chunks; i++) batch.set(db.doc('datos/chunk_' + i), { items: items.slice(i * CHUNK, (i + 1) * CHUNK) });
+      for (let i = chunks; i < oldChunks; i++) batch.delete(db.doc('datos/chunk_' + i));
+      batch.set(db.doc('datos/meta'), { ...meta, chunks });
+      await batch.commit();
+    },
+    async addProposal(p) {
+      if (!db) { const h = store.get(K_HIST, []); h.unshift(p); store.set(K_HIST, h.slice(0, 60)); S.hist = h; return; }
+      const { id, ...rest } = p;
+      await db.collection('propuestas').doc(id).set(rest);
+    },
+    async delProposal(id) {
+      if (!db) { S.hist = store.get(K_HIST, []).filter((x) => x.id !== id); store.set(K_HIST, S.hist); return; }
+      await db.collection('propuestas').doc(id).delete();
+    },
+  };
+
+  S.hist = [];
+  let unHist = null;
+  function listenHist() {
+    if (!db) { S.hist = store.get(K_HIST, []); return; }
+    if (unHist) unHist();
+    unHist = db.collection('propuestas').orderBy('ts', 'desc').limit(60).onSnapshot(
+      (snap) => {
+        S.hist = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        if (!$('#histModal').hidden) renderHist();
+      },
+      () => toast('No se pudo leer el historial compartido')
+    );
   }
 
   /* ================= EXCEL ================= */
@@ -241,8 +305,10 @@
       const items = parseRows(rows);
       if (!items.length) throw new Error('No encontré productos con precio y costo. ¿Es el export de InSitu?');
       S.products = items;
-      S.meta = { file: file.name, at: Date.now(), total: rows.length - 1 };
-      if (!store.set(K_DATA, { meta: S.meta, items })) toast('Aviso: no se pudo guardar en este dispositivo.');
+      S.meta = { file: file.name, at: Date.now(), total: rows.length - 1, by: S.user || '' };
+      msg.textContent = 'Guardando en la base compartida…';
+      try { await Cloud.saveProducts(S.meta, items); }
+      catch (e) { toast('Aviso: no se pudo compartir el Excel (' + (e.code || e.message) + ')'); }
       S.set.cats = null; // nuevas categorías → todas activas
       S.cards = S.cards.filter((c) => c.pinned);
       msg.textContent = '';
@@ -306,7 +372,7 @@
     const m = S.meta || {};
     const d = m.at ? new Date(m.at) : null;
     $('#dataInfo').innerHTML =
-      `<b>${S.products.length}</b> productos · ${esc(m.file || 'Excel')}${d ? ' · ' + d.getDate() + ' ' + MES[d.getMonth()] : ''} · ` +
+      `<b>${S.products.length}</b> productos · ${esc(m.file || 'Excel')}${d ? ' · ' + d.getDate() + ' ' + MES[d.getMonth()] : ''}${m.by ? ' por ' + esc(m.by) : ''} · ` +
       `<button id="changeXls" class="btn-link" type="button">cambiar Excel</button>`;
     $('#changeXls').addEventListener('click', () => $('#fileInput').click());
     render();
@@ -717,22 +783,28 @@
   $$('.modal').forEach((m) => m.addEventListener('click', (e) => { if (e.target === m || e.target.closest('[data-close]')) m.hidden = true; }));
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $$('.modal').forEach((m) => (m.hidden = true)); });
 
-  $('#saveBtn').addEventListener('click', () => {
+  $('#saveBtn').addEventListener('click', async () => {
     if (!S.cards.length) return;
-    const hist = store.get(K_HIST, []);
+    const btn = $('#saveBtn');
+    btn.disabled = true;
     const all = S.cards.map(stats);
-    hist.unshift({
-      id: uid(), ts: Date.now(), by: S.user,
-      from: S.set.from, to: S.set.to,
-      m1: all.reduce((a, s) => a + s.m1, 0) / all.length,
-      cards: S.cards.map(({ open, ...c }) => c),
-    });
-    if (!store.set(K_HIST, hist.slice(0, 60))) { toast('No se pudo guardar en este dispositivo'); return; }
-    toast('Propuesta guardada 💾');
+    try {
+      await Cloud.addProposal({
+        id: Date.now().toString(36) + uid(), ts: Date.now(), by: S.user,
+        from: S.set.from, to: S.set.to,
+        m1: all.reduce((a, s) => a + s.m1, 0) / all.length,
+        cards: S.cards.map(({ open, ...c }) => JSON.parse(JSON.stringify(c))),
+      });
+      toast('Propuesta guardada 💾');
+    } catch (e) {
+      toast('No se pudo guardar (' + (e.code || e.message) + ')');
+    } finally {
+      btn.disabled = false;
+    }
   });
 
   function renderHist() {
-    const hist = store.get(K_HIST, []);
+    const hist = S.hist || [];
     $('#histList').innerHTML = hist.length ? hist.map((h) => {
       const d = new Date(h.ts);
       const thumbs = h.cards.slice(0, 5).map((c) => `<img src="${esc(c.items[0].photo)}" alt="">`).join('');
@@ -749,8 +821,7 @@
   $('#histList').addEventListener('click', (e) => {
     const b = e.target.closest('[data-h]'); if (!b) return;
     const id = b.closest('.hist-item').dataset.id;
-    const hist = store.get(K_HIST, []);
-    const h = hist.find((x) => x.id === id); if (!h) return;
+    const h = (S.hist || []).find((x) => x.id === id); if (!h) return;
     if (b.dataset.h === 'open') {
       S.cards = h.cards.map((c) => ({ ...c, uid: uid(), open: false }));
       S.set.from = h.from; S.set.to = h.to;
@@ -758,9 +829,8 @@
       syncControls();
       render(true);
       $('#histModal').hidden = true;
-    } else if (confirm('¿Quitar esta propuesta del historial?')) {
-      store.set(K_HIST, hist.filter((x) => x.id !== id));
-      renderHist();
+    } else if (confirm('¿Quitar esta propuesta del historial? (Oscar y Luis dejan de verla)')) {
+      Cloud.delProposal(id).then(renderHist).catch((e) => toast('No se pudo quitar (' + (e.code || e.message) + ')'));
     }
   });
 
