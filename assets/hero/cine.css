@@ -292,3 +292,39 @@ a.cine-fb-value:hover{ color:var(--cine-oro); }
   .cine-copy{ padding-bottom:clamp(64px,14vh,120px); }
   .cine-sub{ max-width:34ch; }
 }
+
+/* ============================================================
+   SELECTOR DE IDIOMA — glass, fijo sobre la película
+   El header va oculto en la home, así que el toggle del nav no se ve:
+   éste es el único acceso al cambio de idioma. z-index 900: encima de
+   la película (máx. 5) y debajo del flotante de WhatsApp (1000) y del
+   loader (9999).
+   ============================================================ */
+.cine-lang{
+  position:fixed; top:clamp(14px,2.2vw,22px); right:clamp(14px,2.2vw,22px);
+  z-index:900; display:flex; gap:2px; padding:4px;
+  background:rgba(15,13,10,.32);
+  backdrop-filter:blur(8px) saturate(140%);
+  -webkit-backdrop-filter:blur(8px) saturate(140%);
+  border:1px solid rgba(246,242,233,.22); border-radius:999px;
+  box-shadow:0 6px 22px rgba(0,0,0,.3);
+}
+.cine-lang button{
+  appearance:none; -webkit-appearance:none; border:0; background:transparent;
+  cursor:pointer; font-family:'IBM Plex Mono',ui-monospace,monospace; font-weight:500;
+  font-size:.66rem; letter-spacing:.16em; text-transform:uppercase;
+  color:rgba(246,242,233,.7); padding:7px 13px; border-radius:999px;
+  transition:color .3s var(--cine-ease), background-color .3s var(--cine-ease);
+}
+.cine-lang button:hover{ color:var(--cine-hueso); }
+.cine-lang button.is-active{ background:rgba(246,242,233,.16); color:var(--cine-hueso); }
+.cine-lang button:focus-visible{ outline:2px solid var(--cine-oro); outline-offset:3px; }
+
+/* Si el navegador no soporta backdrop-filter, se opaca el fondo para
+   que el texto no se pierda sobre el video. */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .cine-lang{ background:rgba(15,13,10,.72); }
+}
+@media (prefers-reduced-motion:reduce){
+  .cine-lang button{ transition:none; }
+}

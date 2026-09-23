@@ -1512,6 +1512,14 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
     </nav>
 
     <!-- Hero cinemático — secuencia CTD (camión → carga → caja → bodega) -->
+    <!-- Selector de idioma: el header va oculto, así que éste es el único acceso -->
+    <div class="cine-lang" role="group" aria-label="Idioma / Language">
+        <button type="button" id="lang-es" class="is-active" aria-pressed="true"
+                onclick="switchLanguage('es')">ES</button>
+        <button type="button" id="lang-en" aria-pressed="false"
+                onclick="switchLanguage('en')">EN</button>
+    </div>
+
     <section id="inicio" class="cine" aria-label="Central Trade Distribution: flota propia, bodega y marcas">
         <div class="cine-pin">
             <div class="cine-stage">
@@ -1909,14 +1917,27 @@ h78.747C231.693,100.736,232.77,106.162,232.77,111.694z"
             });
             
             // Update copyright text
+            // El pie se retiró cuando la home pasó a terminar en el beat 09/09,
+            // así que este nodo puede no existir: sin la guarda, switchLanguage
+            // truena aquí y todo lo que sigue nunca corre.
             const year = new Date().getFullYear();
             const copyrightText = document.getElementById('copyright-text');
-            if (lang === 'es') {
-                copyrightText.innerHTML = `&copy; ${year} Central Trade Distribution. Todos los derechos reservados.`;
-            } else {
-                copyrightText.innerHTML = `&copy; ${year} Central Trade Distribution. All rights reserved.`;
+            if (copyrightText) {
+                copyrightText.innerHTML = lang === 'es'
+                    ? `&copy; ${year} Central Trade Distribution. Todos los derechos reservados.`
+                    : `&copy; ${year} Central Trade Distribution. All rights reserved.`;
             }
             
+            // Selector glass de la película (el del nav va oculto en la home)
+            const gEs = document.getElementById('lang-es');
+            const gEn = document.getElementById('lang-en');
+            if (gEs && gEn) {
+                gEs.classList.toggle('is-active', lang === 'es');
+                gEn.classList.toggle('is-active', lang === 'en');
+                gEs.setAttribute('aria-pressed', String(lang === 'es'));
+                gEn.setAttribute('aria-pressed', String(lang === 'en'));
+            }
+
             // Update button styles
             const btnEs = document.getElementById('btn-es');
             const btnEn = document.getElementById('btn-en');
