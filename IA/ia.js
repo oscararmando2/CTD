@@ -222,17 +222,32 @@
         body: JSON.stringify({ email, password }),
       });
       const j = await r.json().catch(() => ({}));
-      const token = j.token || (j.data && j.data.token);
-      if (!r.ok || !token) throw new Error(j.message || j.error || 'Correo o contraseña incorrectos');
-      store.set(K_TOKEN, { token, email, at: Date.now() });
+      const token = String(j.token || (j.data && j.data.token) || (j.user && j.user.token) || '').replace(/^Bearer\s+/i, '');
+      if (!r.ok || !token || j.success === false) throw new Error(j.message || j.error || 'Correo o contraseña incorrectos');
+      store.set(K_TOKEN, { token, email, at: Date.now(), scheme: 'Bearer ' });
       return token;
     },
-    async get(path, params) {
+    async get(path, params, retried) {
+      const saved = store.get(K_TOKEN, null) || {};
       const q = new URLSearchParams(params || {}).toString();
-      const r = await fetch(`${INSITU}${path}${q ? '?' + q : ''}`, { headers: { Authorization: 'Bearer ' + this.token() } });
-      if (r.status === 401 || r.status === 403) { const e = new Error('La sesión de InSitu expiró. Vuelve a conectar.'); e.auth = true; throw e; }
-      if (r.status === 429) { await new Promise((res) => setTimeout(res, 4000)); return this.get(path, params); }
-      if (!r.ok) throw new Error(`InSitu respondió ${r.status} en ${path}`);
+      const r = await fetch(`${INSITU}${path}${q ? '?' + q : ''}`, { headers: { Authorization: (saved.scheme ?? 'Bearer ') + this.token() } });
+      if (r.status === 401 || r.status === 403) {
+        const body = (await r.text().catch(() => '')).slice(0, 160);
+        console.warn('InSitu', r.status, path, body);
+        // Algunos servidores esperan el token sin "Bearer ": se prueba una vez
+        if (!retried && r.status === 401) {
+          store.set(K_TOKEN, { ...saved, scheme: saved.scheme === '' ? 'Bearer ' : '' });
+          return this.get(path, params, true);
+        }
+        store.set(K_TOKEN, { ...saved, scheme: 'Bearer ' });
+        const e = new Error(r.status === 403
+          ? `InSitu no le da permiso de API a este usuario (403 en ${path}). ${body}`
+          : `InSitu rechazó la sesión (401 en ${path}). ${body}`);
+        e.auth = true;
+        throw e;
+      }
+      if (r.status === 429) { await new Promise((res) => setTimeout(res, 4000)); return this.get(path, params, retried); }
+      if (!r.ok) throw new Error(`InSitu respondió ${r.status} en ${path}: ${(await r.text().catch(() => '')).slice(0, 160)}`);
       return r.json();
     },
     // Recorre todas las páginas; `key` = arreglo en la respuesta (products / invoices / warehouse_stocks)
@@ -302,6 +317,7 @@
       else toast(`${items.length} productos · ${invs.length} facturas analizadas`);
     } catch (err) {
       if (err.auth) { store.del(K_TOKEN); showConnect(); }
+      console.warn(err);
       connectMsg(err.message || 'Falló la descarga', true);
       setSync('');
       if (!$('#workspace').hidden) toast(err.message || 'Falló la descarga');
