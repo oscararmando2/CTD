@@ -129,6 +129,11 @@ select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,va
 .ctrl-actions{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
 .data-info{margin:0;color:var(--muted-2);font-size:13px}
 .data-info button{font-size:13px}
+.age{font-family:var(--mono);font-size:12px;letter-spacing:.02em}
+.age.ok{color:var(--verde-2)}
+.age.old{color:var(--oro)}
+#syncInfo.busy{color:var(--oro);font-family:var(--mono);font-size:12px}
+.why-warn{margin:0;font-size:12.5px;line-height:1.35;color:#ff8f7d;background:rgba(216,51,27,.12);border-radius:10px;padding:7px 9px}
 
 /* Resumen */
 .summary{margin:22px 0 6px;display:grid;grid-template-columns:repeat(4,1fr) 2fr;gap:12px}
