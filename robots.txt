@@ -1,3 +1,4 @@
 User-agent: *
 Allow: /
+Disallow: /IA/
 Sitemap: https://www.centraltradedist.com/sitemap.xml
