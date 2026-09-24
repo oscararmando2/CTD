@@ -27,6 +27,7 @@
 
   const EXCLUDE_CATS = ['Spoilage', 'Shipping', 'TEST'];
   const MODES = { equilibrado: [6, 12], agresivo: [12, 22], cuidar: [3, 7] };
+  const STALE_MS = 3 * 36e5; // si los datos tienen más de 3 h, se actualizan solos al abrir
   const K_DATA = 'ctdIA.data', K_SET = 'ctdIA.settings', K_HIST = 'ctdIA.hist', K_TOKEN = 'ctdIA.insitu', K_WHO = 'ctdIA.who';
 
   // Motivos (insights) que salen de las ventas reales
@@ -208,10 +209,21 @@
       S.products = data.items;
       S.meta = data.meta;
       showWorkspace();
+      autoSync();
     } else {
       showConnect();
     }
   }
+
+  // Actualización automática (todo: productos, 12 meses de ventas e inventario)
+  let syncing = false;
+  function autoSync() {
+    if (syncing || !Insitu.token() || !S.meta || S.meta.source !== 'InSitu') return;
+    if (Date.now() - (S.meta.at || 0) < STALE_MS) return;
+    syncInsitu({ silent: true }).catch(() => {});
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && S.who) autoSync(); });
+  setInterval(() => { if (!syncing) renderAge(); }, 60000);
 
   /* ================= INSITU ================= */
   const Insitu = {
@@ -283,9 +295,12 @@
     }
   });
 
-  async function syncInsitu() {
-    const setSync = (t) => { const el = $('#syncInfo'); if (el) el.textContent = t; };
-    const say = (t) => { connectMsg(t); setSync(t); };
+  async function syncInsitu(opts) {
+    const silent = !!(opts && opts.silent);
+    if (syncing) return;
+    syncing = true;
+    const setSync = (t) => { const el = $('#syncInfo'); if (el) { el.textContent = t; el.classList.toggle('busy', !!t); } };
+    const say = (t) => { if (!silent) connectMsg(t); setSync(t ? '⟳ ' + t : ''); };
     try {
       say('Bajando productos…');
       const prods = await Insitu.all('/products', 'products', {}, (n) => say(`Bajando productos… ${n}`));
@@ -310,19 +325,44 @@
         invoices: invs.length, from: ymd(from),
       };
       if (!store.set(K_DATA, { meta: S.meta, items })) toast('Aviso: no se pudo guardar en este dispositivo.');
-      S.set.cats = null;
-      connectMsg('');
-      showWorkspace();
-      if (!withDetail && invs.length) toast('Las facturas llegaron sin detalle de productos: no hay datos de venta.');
-      else toast(`${items.length} productos · ${invs.length} facturas analizadas`);
+      syncing = false;
+      if (silent && !$('#workspace').hidden) {
+        stockTrusted = null;
+        refreshCards();
+        buildFilters();
+        renderDataInfo();
+        render();
+        toast('Datos actualizados de InSitu');
+      } else {
+        S.set.cats = null;
+        connectMsg('');
+        showWorkspace();
+        if (!withDetail && invs.length) toast('Las facturas llegaron sin detalle de productos: no hay datos de venta.');
+        else toast(`${items.length} productos · ${invs.length} facturas analizadas`);
+      }
     } catch (err) {
+      syncing = false;
       if (err.auth) { store.del(K_TOKEN); showConnect(); }
       console.warn(err);
       connectMsg(err.message || 'Falló la descarga', true);
       setSync('');
-      if (!$('#workspace').hidden) toast(err.message || 'Falló la descarga');
+      if (!$('#workspace').hidden) { renderAge(); toast(err.message || 'Falló la descarga'); }
       throw err;
     }
+  }
+
+  // Las tarjetas en pantalla guardan una foto del producto: al actualizar, se les ponen
+  // las ventas/stock nuevos (los precios de la propuesta no se tocan)
+  function refreshCards() {
+    const byId = {};
+    S.products.forEach((p) => { byId[p.id] = p; });
+    S.cards.forEach((c) => {
+      c.items.forEach((it) => {
+        const p = byId[it.id];
+        if (p) Object.assign(it, { why: p.why || 'normal', st: p.st || null, stock: p.stock ?? null, cover: p.cover ?? null, photo: p.photo || it.photo });
+      });
+      c.tag = tagFor(c);
+    });
   }
 
   function buildDataset(prods, invs, stocks, today) {
@@ -404,7 +444,7 @@
       else if (hasStock && st.days == null && p.stock > 0) p.why = 'dormido';
       else if (cover != null && cover >= 12) p.why = 'lento';
       else if (st.uPrev90 >= 3 && st.u90 < st.uPrev90 * 0.6) p.why = 'bajando';
-      else if (st.u90 > 0 && st.u90 >= topCut) p.why = 'gancho';
+      else if (st.u90 > 0 && st.u90 >= topCut && (cover == null || cover >= 3)) p.why = 'gancho'; // sin stock no hay gancho
       else p.why = 'normal';
       p.cover = cover != null ? Math.round(cover) : null;
     }
@@ -426,7 +466,7 @@
       case 'bajando':
         return `Bajó ${Math.round((1 - st.u90 / st.uPrev90) * 100)}% vs los 3 meses anteriores (${cajas(st.uPrev90)} → ${cajas(st.u90)}). Un -${d}% para recuperarlo.`;
       case 'gancho':
-        return `De tus más vendidos: ${cajas(st.u90)} en 90 días con ${st.clients} clientes. Descuento chico (-${d}%) como gancho para jalar pedidos.`;
+        return `De tus más vendidos: ${cajas(st.u90)} en 90 días con ${st.clients} clientes. ${d <= 10 ? `Descuento chico (-${d}%)` : `Un -${d}%`} como gancho para jalar pedidos.`;
       default:
         return st.u90 > 0 ? `Vende ${cajas(st.u90)} en 90 días. Especial de -${d}% para darle movimiento.` : '';
     }
@@ -511,6 +551,7 @@
   }
 
   function showWorkspace() {
+    stockTrusted = null;
     $('#dropzone').hidden = true;
     $('#workspace').hidden = false;
     buildFilters();
@@ -523,21 +564,43 @@
     const m = S.meta || {};
     const conn = !!Insitu.token();
     $('#dataInfo').innerHTML =
-      `<b>${S.products.length}</b> productos · ${esc(m.source || '')}${m.at ? ' · ' + fmtTs(m.at) : ''}` +
+      `<span id="ageInfo" class="age"></span> · <b>${S.products.length}</b> productos · ${esc(m.source || '')}` +
       (m.sales ? ` · ventas desde ${fmtD(m.from)} (${m.invoices} facturas)${m.stock ? ' + inventario' : ''}` : ' · sin datos de venta') +
       ` · ${conn ? '<button id="resync" class="btn-link" type="button">actualizar de InSitu</button> · ' : ''}` +
       `<button id="changeSrc" class="btn-link" type="button">${conn ? 'desconectar' : 'conectar InSitu'}</button> <span id="syncInfo"></span>`;
+    renderAge();
     const rs = $('#resync');
-    if (rs) rs.addEventListener('click', () => { rs.disabled = true; syncInsitu().catch(() => {}).finally(() => { rs.disabled = false; }); });
+    if (rs) rs.addEventListener('click', () => { syncInsitu({ silent: true }).catch(() => {}); });
     $('#changeSrc').addEventListener('click', () => {
       if (conn) { store.del(K_TOKEN); toast('InSitu desconectado en este dispositivo'); renderDataInfo(); }
       else showConnect();
     });
   }
 
+  function renderAge() {
+    const el = $('#ageInfo');
+    if (!el || !S.meta || !S.meta.at) return;
+    const min = Math.floor((Date.now() - S.meta.at) / 60000);
+    const t = min < 1 ? 'hace un momento' : min < 60 ? `hace ${min} min` : min < 1440 ? `hace ${Math.floor(min / 60)} h` : `hace ${Math.floor(min / 1440)} días`;
+    const fresh = S.meta.source === 'InSitu' && Date.now() - S.meta.at < STALE_MS;
+    el.className = 'age' + (fresh ? ' ok' : ' old');
+    el.textContent = (fresh ? '● Datos al día · ' : '● ') + 'actualizado ' + t;
+  }
+
   /* ================= CONTROLES ================= */
+  // Con inventario de InSitu, nunca se propone algo sin stock (salvo que casi todo venga en 0,
+  // señal de que el inventario no se lleva en InSitu y no hay que confiar en él)
+  let stockTrusted = null;
+  function trustStock() {
+    if (stockTrusted !== null) return stockTrusted;
+    const withStock = S.products.filter((p) => p.stock != null);
+    stockTrusted = withStock.length > 0 && withStock.filter((p) => p.stock > 0).length / withStock.length >= 0.1;
+    return stockTrusted;
+  }
   function eligibleBase() {
-    return S.products.filter((p) => p.price > 0 && p.cost > 0 && p.cost < p.price && p.photo && !EXCLUDE_CATS.includes(p.cat));
+    const noStockOut = trustStock();
+    return S.products.filter((p) => p.price > 0 && p.cost > 0 && p.cost < p.price && p.photo && !EXCLUDE_CATS.includes(p.cat) &&
+      !(noStockOut && p.stock != null && p.stock <= 0));
   }
 
   function buildFilters() {
@@ -817,6 +880,18 @@
     return `<div class="spark" title="Cajas vendidas por mes (últimos 12)">${bars}</div>`;
   }
 
+  // Aviso si no alcanza el inventario para aguantar una promo (menos de 3 semanas de venta)
+  function stockWarn(it) {
+    if (it.stock == null || !it.st) return '';
+    const weekly = it.st.u90 / 13;
+    if (it.stock <= 0) return '<p class="why-warn">⚠️ Sin stock. Resurte antes de lanzarla.</p>';
+    if (weekly > 0 && it.stock / weekly < 3) {
+      const w = it.stock / weekly;
+      return `<p class="why-warn">⚠️ Solo quedan ${cajas(it.stock)} (~${w < 1 ? 'menos de 1 semana' : Math.round(w) + (Math.round(w) === 1 ? ' semana' : ' semanas')} de venta). Resurte antes de lanzarla.</p>`;
+    }
+    return '';
+  }
+
   function salesHTML(c, off) {
     if (c.kind === 'combo' || !c.items[0].st) return '';
     const it = c.items[0], st = it.st, w = WHY[it.why] || WHY.normal;
@@ -826,6 +901,7 @@
       <div class="why why-${esc(it.why)}">
         <div class="why-h"><span>${w.icon} ${esc(w.label)}</span><span class="why-last">${st.last ? 'última venta ' + fmtD(st.last) : 'sin ventas 12m'}</span></div>
         ${txt ? `<p class="why-t">${esc(txt)}</p>` : ''}
+        ${stockWarn(it)}
         ${sparkHTML(st.m)}
         <div class="why-k">
           <span><b>${nfmt(st.u30)}</b> 30d</span><span><b>${nfmt(st.u90)}</b> 90d</span><span><b>${nfmt(st.u365)}</b> 12m</span>
