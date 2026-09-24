@@ -327,6 +327,7 @@
       if (!store.set(K_DATA, { meta: S.meta, items })) toast('Aviso: no se pudo guardar en este dispositivo.');
       syncing = false;
       if (silent && !$('#workspace').hidden) {
+        stockTrusted = null;
         refreshCards();
         buildFilters();
         renderDataInfo();
@@ -550,6 +551,7 @@
   }
 
   function showWorkspace() {
+    stockTrusted = null;
     $('#dropzone').hidden = true;
     $('#workspace').hidden = false;
     buildFilters();
@@ -586,8 +588,19 @@
   }
 
   /* ================= CONTROLES ================= */
+  // Con inventario de InSitu, nunca se propone algo sin stock (salvo que casi todo venga en 0,
+  // señal de que el inventario no se lleva en InSitu y no hay que confiar en él)
+  let stockTrusted = null;
+  function trustStock() {
+    if (stockTrusted !== null) return stockTrusted;
+    const withStock = S.products.filter((p) => p.stock != null);
+    stockTrusted = withStock.length > 0 && withStock.filter((p) => p.stock > 0).length / withStock.length >= 0.1;
+    return stockTrusted;
+  }
   function eligibleBase() {
-    return S.products.filter((p) => p.price > 0 && p.cost > 0 && p.cost < p.price && p.photo && !EXCLUDE_CATS.includes(p.cat));
+    const noStockOut = trustStock();
+    return S.products.filter((p) => p.price > 0 && p.cost > 0 && p.cost < p.price && p.photo && !EXCLUDE_CATS.includes(p.cat) &&
+      !(noStockOut && p.stock != null && p.stock <= 0));
   }
 
   function buildFilters() {
