@@ -4,7 +4,7 @@
  * - Datos: hay que conectar InSitu (o arrastrar el Excel) en cada dispositivo.
  * - InSitu Sales API (CORS abierto): productos, facturas con detalle (ventas) e inventario.
  *   Solo se guarda el token en este dispositivo; la contraseña nunca se guarda.
- * - Historial de propuestas compartido en Firestore (proyecto ctd-ia, colección `propuestas`).
+ * - Historial de propuestas compartido en Realtime Database (proyecto ctd-ia, nodo `propuestas`).
  */
 (function () {
   'use strict';
@@ -14,6 +14,7 @@
     apiKey: 'AIzaSyBhJuY0Wdh_UeZL0KHNn5WofWYPhQiVTuU',
     authDomain: 'ctd-ia.firebaseapp.com',
     projectId: 'ctd-ia',
+    databaseURL: 'https://ctd-ia-default-rtdb.firebaseio.com',
     storageBucket: 'ctd-ia.firebasestorage.app',
     messagingSenderId: '914488691883',
     appId: '1:914488691883:web:57d809a1e899c6b0be3bee',
@@ -147,8 +148,8 @@
   // ¿Este nombre ya creó su contraseña? (doc público usuarios/{nombre})
   async function knownUser(name) {
     try {
-      const d = await Promise.race([db.doc('usuarios/' + name).get(), new Promise((_, r) => setTimeout(() => r(new Error('t')), 4000))]);
-      return d.exists;
+      const d = await Promise.race([db.ref('usuarios/' + name).get(), new Promise((_, r) => setTimeout(() => r(new Error('t')), 4000))]);
+      return d.exists();
     } catch (e) { return null; }
   }
   $('#whoPick').addEventListener('click', async (e) => {
@@ -172,7 +173,7 @@
     try {
       if (G.create) {
         await auth.createUserWithEmailAndPassword(emailOf(G.name), pw);
-        try { await db.doc('usuarios/' + G.name).set({ creada: Date.now() }); } catch (err) { console.warn(err); }
+        try { await db.ref('usuarios/' + G.name).set({ creada: Date.now() }); } catch (err) { console.warn(err); }
       } else {
         await auth.signInWithEmailAndPassword(emailOf(G.name), pw);
       }
@@ -987,24 +988,24 @@
   });
 
   /* ================= HISTORIAL (Firestore compartido) ================= */
-  // Firestore no rechaza si la base no existe: se queda esperando. Cortamos a los 10 s.
+  // Si la base no responde, no dejamos el botón colgado: cortamos a los 10 s.
   const withTimeout = (pr) => Promise.race([pr, new Promise((_, rej) => setTimeout(() => rej(new Error('sin respuesta de la base compartida')), 10000))]);
   const Cloud = {
     async add(p) {
       if (!db) { const h = store.get(K_HIST, []); h.unshift(p); store.set(K_HIST, h.slice(0, 60)); S.hist = h; return; }
       const { id, ...rest } = p;
-      await withTimeout(db.collection('propuestas').doc(id).set(rest));
+      await withTimeout(db.ref('propuestas/' + id).set(rest));
     },
     async del(id) {
       if (!db) { S.hist = store.get(K_HIST, []).filter((x) => x.id !== id); store.set(K_HIST, S.hist); return; }
-      await withTimeout(db.collection('propuestas').doc(id).delete());
+      await withTimeout(db.ref('propuestas/' + id).remove());
     },
   };
   function initFirebase() {
     if (typeof firebase === 'undefined') { gateMsg('No cargó Firebase. Revisa tu internet y recarga.', 'err'); return; }
     firebase.initializeApp(FIREBASE_CONFIG);
     auth = firebase.auth();
-    db = firebase.firestore();
+    db = firebase.database();
     // La sesión queda guardada en el dispositivo (LOCAL): no vuelve a pedir contraseña hasta "Salir"
     auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
     auth.onAuthStateChanged(async (u) => {
@@ -1017,14 +1018,18 @@
   function listenHist() {
     try {
       if (unHist) unHist();
-      unHist = db.collection('propuestas').orderBy('ts', 'desc').limit(60).onSnapshot(
+      const ref = db.ref('propuestas').orderByChild('ts').limitToLast(60);
+      const onVal = ref.on('value',
         (snap) => {
-          S.hist = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          const arr = [];
+          snap.forEach((c) => { arr.push({ id: c.key, ...c.val() }); });
+          S.hist = arr.reverse();
           $('#histCount').textContent = S.hist.length ? S.hist.length : '';
           if (!$('#histModal').hidden) renderHist();
         },
-        (err) => { console.warn('Firestore', err); $('#histNote').textContent = 'No se pudo leer el historial compartido (' + (err.code || err.message) + ').'; }
+        (err) => { console.warn('Historial', err); $('#histNote').textContent = 'No se pudo leer el historial compartido (' + (err.code || err.message) + ').'; }
       );
+      unHist = () => ref.off('value', onVal);
     } catch (e) {
       console.warn('Historial', e);
     }
