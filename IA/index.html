@@ -21,32 +21,24 @@
 </head>
 <body>
 
-<!-- ============ ACCESO (SMS) ============ -->
+<!-- ============ ACCESO ============ -->
 <section id="gate" class="gate">
   <div class="gate-card">
     <img src="ctd-logo.png" alt="CTD" class="gate-logo">
     <p class="hud">Central Trade Distribution · Uso interno</p>
     <h1 class="gate-title">Laboratorio de Especiales</h1>
-    <p class="gate-sub">Entra con tu número de teléfono. Te llega un código por mensaje.</p>
+    <p class="gate-sub">¿Quién eres?</p>
+    <div class="who-pick" id="whoPick"></div>
 
-    <form id="phoneForm" class="gate-form" autocomplete="on">
-      <label class="lbl" for="phoneInput">Teléfono</label>
-      <div class="phone-row">
-        <span class="phone-cc">+1</span>
-        <input id="phoneInput" type="tel" inputmode="tel" autocomplete="tel-national" placeholder="314 000 0000" required>
-      </div>
-      <button id="sendBtn" class="btn btn-oro btn-block" type="submit">Enviar código</button>
-    </form>
-
-    <form id="codeForm" class="gate-form" hidden>
-      <label class="lbl" for="codeInput">Código de 6 dígitos</label>
-      <input id="codeInput" class="code-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••" required>
-      <button id="verifyBtn" class="btn btn-oro btn-block" type="submit">Entrar</button>
-      <button id="backBtn" class="btn-link" type="button">Cambiar número</button>
+    <form id="passForm" class="gate-form" hidden>
+      <label class="lbl" for="passInput" id="passLbl">Contraseña</label>
+      <input id="passInput" class="pass-input" type="password" autocomplete="current-password" minlength="6" required>
+      <input id="pass2Input" class="pass-input" type="password" autocomplete="new-password" minlength="6" placeholder="Repite la contraseña" hidden>
+      <button id="passBtn" class="btn btn-oro btn-block" type="submit">Entrar</button>
+      <button id="modeBtn" class="btn-link" type="button"></button>
     </form>
 
     <p id="gateMsg" class="gate-msg" role="status" aria-live="polite"></p>
-    <div id="recaptcha"></div>
   </div>
 </section>
 
@@ -61,23 +53,25 @@
       </div>
     </div>
     <div class="topbar-r">
-      <button id="histBtn" class="btn btn-ghost btn-sm" type="button">Historial</button>
+      <button id="histBtn" class="btn btn-ghost btn-sm" type="button">Historial <span id="histCount" class="badge"></span></button>
       <span id="whoami" class="whoami"></span>
       <button id="logoutBtn" class="btn btn-ghost btn-sm" type="button">Salir</button>
     </div>
   </header>
 
-  <!-- Carga de datos -->
+  <!-- Conexión de datos -->
   <section id="dropzone" class="dropzone" hidden>
     <div class="drop-inner">
-      <p class="hud">Paso 1</p>
-      <h2 class="drop-title">Arrastra tu Excel de productos</h2>
-      <p class="drop-sub">El export de InSitu (<code>Products.xlsx</code>). Se guarda en la base privada de CTD: solo Oscar y Luis la pueden ver. Lo carga uno y el otro ya lo tiene.</p>
-      <label class="btn btn-oro">
-        Elegir archivo
-        <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" hidden>
-      </label>
-      <p id="dropMsg" class="drop-msg"></p>
+      <p class="hud">Paso 1 · Datos reales</p>
+      <h2 class="drop-title">Conecta InSitu</h2>
+      <p class="drop-sub">Entra con tu usuario web de InSitu. Se bajan productos, costos, fotos, <b>ventas de los últimos 12 meses</b> e inventario. En este dispositivo solo se guarda la sesión, nunca tu contraseña.</p>
+      <form id="connectForm" class="connect" autocomplete="on">
+        <input id="insEmail" type="email" autocomplete="username" placeholder="correo de InSitu" required>
+        <input id="insPass" type="password" autocomplete="current-password" placeholder="contraseña" required>
+        <button id="connectBtn" class="btn btn-oro" type="submit">Conectar y bajar datos</button>
+      </form>
+      <p id="connectMsg" class="drop-msg" role="status" aria-live="polite"></p>
+      <p class="drop-alt">¿Sin InSitu a la mano? <label class="btn-link">arrastra o elige el Excel de productos<input id="fileInput" type="file" accept=".xlsx,.xls,.csv" hidden></label> (sin datos de venta).</p>
     </div>
   </section>
 
@@ -91,6 +85,16 @@
             <button type="button" data-v="4">4</button>
             <button type="button" data-v="8" class="on">8</button>
             <button type="button" data-v="12">12</button>
+          </div>
+        </div>
+        <div class="ctrl ctrl-full" id="stratCtrl">
+          <span class="lbl">Estrategia (según ventas reales)</span>
+          <div class="seg seg-wrap" id="segStrat">
+            <button type="button" data-v="mixto">✨ Mixto</button>
+            <button type="button" data-v="mover">💤 Mover lo parado</button>
+            <button type="button" data-v="bajando">📉 Recuperar ventas</button>
+            <button type="button" data-v="gancho">🔥 Gancho (más vendidos)</button>
+            <button type="button" data-v="azar">🎲 Al azar</button>
           </div>
         </div>
         <div class="ctrl">
@@ -123,7 +127,7 @@
       </div>
 
       <div class="ctrl-grid ctrl-grid-2">
-        <div class="ctrl">
+        <div class="ctrl" id="vendorCtrl">
           <span class="lbl">Proveedor</span>
           <select id="fVendor"><option value="">Todos</option></select>
         </div>
@@ -168,6 +172,7 @@
       <h3>Propuestas guardadas <small>(Oscar y Luis ven lo mismo)</small></h3>
       <button class="btn-x" data-close aria-label="Cerrar">✕</button>
     </div>
+    <p id="histNote" class="data-info"></p>
     <div id="histList" class="hist-list"></div>
   </div>
 </div>

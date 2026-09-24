@@ -1,14 +1,15 @@
 /* CTD · IA de Especiales
- * - Acceso: Firebase Phone Auth (SMS). Solo los números de la lista pueden entrar.
- * - Datos compartidos (Firestore, proyecto ctd-ia): el Excel ya procesado y el historial
- *   de propuestas. Las reglas de Firestore solo dejan leer/escribir a esos dos teléfonos.
- *   El código del sitio no lleva costos; viven en Firestore detrás del login.
+ * - Acceso: Oscar o Luis con su propia contraseña (Firebase Auth usuario/contraseña, plan
+ *   gratis). La primera vez cada quien crea la suya; la sesión queda abierta en el dispositivo.
+ * - Datos: hay que conectar InSitu (o arrastrar el Excel) en cada dispositivo.
+ * - InSitu Sales API (CORS abierto): productos, facturas con detalle (ventas) e inventario.
+ *   Solo se guarda el token en este dispositivo; la contraseña nunca se guarda.
+ * - Historial de propuestas compartido en Firestore (proyecto ctd-ia, colección `propuestas`).
  */
 (function () {
   'use strict';
 
   /* ================= CONFIG ================= */
-  // Pegar aquí la config web del proyecto de Firebase (Consola → Configuración del proyecto → Tus apps → Web).
   const FIREBASE_CONFIG = {
     apiKey: 'AIzaSyBhJuY0Wdh_UeZL0KHNn5WofWYPhQiVTuU',
     authDomain: 'ctd-ia.firebaseapp.com',
@@ -17,19 +18,31 @@
     messagingSenderId: '914488691883',
     appId: '1:914488691883:web:57d809a1e899c6b0be3bee',
   };
-
-  // Números permitidos, guardados como SHA-256 del número en formato E.164 (no se publican en claro).
-  const ALLOWED = {
-    '4b6e9c232e14b912f231b3e1c4eb40f6c21fb5f82e4c1f2e0630e04e826d8406': 'Oscar', // …96 15
-    '5207ddd6e8b5461f1bc38294e065ba866fa5108e0a936291b3e6cca40b990eee': 'Luis',  // …51 31
-  };
+  const INSITU = 'https://app.b2bmobilesales.com/api/v1';
+  const PEOPLE = ['Oscar', 'Luis'];
+  // Firebase Auth pide un correo: cada nombre usa uno interno (no recibe mensajes)
+  const emailOf = (name) => name.toLowerCase() + '@ctd-ia.firebaseapp.com';
+  const nameOf = (email) => PEOPLE.find((p) => emailOf(p) === String(email || '').toLowerCase()) || null;
 
   const EXCLUDE_CATS = ['Spoilage', 'Shipping', 'TEST'];
   const MODES = { equilibrado: [6, 12], agresivo: [12, 22], cuidar: [3, 7] };
-  const K_DATA = 'ctdIA.data', K_SET = 'ctdIA.settings', K_HIST = 'ctdIA.hist';
-  const CHUNK = 400; // productos por documento (Firestore: máx 1 MB por doc)
+  const K_DATA = 'ctdIA.data', K_SET = 'ctdIA.settings', K_HIST = 'ctdIA.hist', K_TOKEN = 'ctdIA.insitu', K_WHO = 'ctdIA.who';
 
-  const DEV = ['localhost', '127.0.0.1'].includes(location.hostname) && new URLSearchParams(location.search).has('dev');
+  // Motivos (insights) que salen de las ventas reales
+  const WHY = {
+    dormido: { icon: '💤', label: 'Sin venta', w: 3.2, dBoost: [1.35, 1.8] },
+    lento: { icon: '🐢', label: 'Rotación lenta', w: 2.6, dBoost: [1.15, 1.5] },
+    bajando: { icon: '📉', label: 'Ventas a la baja', w: 2.2, dBoost: [1.0, 1.3] },
+    gancho: { icon: '🔥', label: 'Más vendido', w: 1.6, dBoost: [0.45, 0.8] },
+    normal: { icon: '🎲', label: 'Al azar', w: 0.5, dBoost: [1, 1] },
+  };
+  const STRATS = {
+    mixto: ['dormido', 'lento', 'bajando', 'gancho', 'normal'],
+    mover: ['dormido', 'lento'],
+    bajando: ['bajando'],
+    gancho: ['gancho'],
+    azar: null,
+  };
 
   /* ================= HELPERS ================= */
   const $ = (s, r = document) => r.querySelector(s);
@@ -40,43 +53,37 @@
   const r2 = (n) => Math.round(n * 100) / 100;
   const rand = (a, b) => a + Math.random() * (b - a);
   const uid = () => Math.random().toString(36).slice(2, 9);
+  const nfmt = (n) => (Math.round(n * 10) / 10).toLocaleString('en-US');
   const store = {
     get(k, def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch (e) { return def; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
     del(k) { try { localStorage.removeItem(k); } catch (e) {} },
   };
-  async function sha256hex(s) {
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
-    return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
-  }
-  function toE164(raw) {
-    const d = String(raw || '').replace(/\D/g, '');
-    if (d.length === 10) return '+1' + d;
-    if (d.length === 11 && d[0] === '1') return '+' + d;
-    return d ? '+' + d : '';
-  }
-  async function allowedName(phone) {
-    if (!phone) return null;
-    return ALLOWED[await sha256hex(phone)] || null;
-  }
   function toast(msg) {
     const t = $('#toast');
     t.textContent = msg;
     t.classList.add('show');
     clearTimeout(toast._t);
-    toast._t = setTimeout(() => t.classList.remove('show'), 2200);
+    toast._t = setTimeout(() => t.classList.remove('show'), 2600);
   }
-  // Fechas locales YYYY-MM-DD
+  const DAY = 864e5;
   const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const parseYmd = (s) => { const [y, m, d] = String(s).split('-').map(Number); return new Date(y, (m || 1) - 1, d || 1); };
   const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   const fmtD = (s) => { if (!s) return '—'; const d = parseYmd(s); return `${d.getDate()} ${MES[d.getMonth()]}`; };
+  const fmtTs = (ts) => { const d = new Date(ts); return `${d.getDate()} ${MES[d.getMonth()]} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
   function nextWeek() {
     const t = new Date(); t.setHours(0, 0, 0, 0);
     const add = ((8 - t.getDay()) % 7) || 7; // próximo lunes
     const mon = new Date(t); mon.setDate(t.getDate() + add);
     const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
     return [ymd(mon), ymd(sun)];
+  }
+  const cajas = (n) => `${nfmt(n)} ${Math.abs(n - 1) < 1e-9 ? 'caja' : 'cajas'}`;
+  function hace(days) {
+    if (days < 45) return `${days} días`;
+    const m = Math.round(days / 30);
+    return m >= 12 ? 'más de un año' : `${m} meses`;
   }
 
   // Precios "psicológicos": terminan en .99 / .49 (o .x9 abajo de $10)
@@ -94,202 +101,321 @@
   /* ================= ESTADO ================= */
   const [defFrom, defTo] = nextWeek();
   const S = {
-    user: null,
+    who: '',
     products: [],
     meta: null,
     cards: [],
+    hist: [],
     set: Object.assign(
-      { count: 8, mode: 'equilibrado', dMin: 6, dMax: 12, floor: 5, vendor: '', brand: '', combo: true, cats: null },
+      { count: 8, mode: 'equilibrado', strat: 'mixto', dMin: 6, dMax: 12, floor: 5, vendor: '', brand: '', combo: true, cats: null },
       store.get(K_SET, {}),
       { from: defFrom, to: defTo }
     ),
   };
   const saveSettings = () => { const { from, to, ...rest } = S.set; store.set(K_SET, rest); };
+  const hasSales = () => !!(S.meta && S.meta.sales);
 
   /* ================= ACCESO ================= */
-  let auth = null, db = null, verifier = null, confirmation = null;
+  let auth = null, db = null, unHist = null;
+  const G = { name: store.get(K_WHO, ''), create: false };
+  const gateMsg = (t, kind) => { const m = $('#gateMsg'); m.textContent = t || ''; m.className = 'gate-msg' + (kind ? ' ' + kind : ''); };
+  const AUTH_ERR = {
+    'auth/wrong-password': 'Contraseña incorrecta.',
+    'auth/invalid-credential': 'Contraseña incorrecta (o todavía no la creas).',
+    'auth/invalid-login-credentials': 'Contraseña incorrecta (o todavía no la creas).',
+    'auth/user-not-found': 'Todavía no creas tu contraseña.',
+    'auth/email-already-in-use': 'Ya hay contraseña para este nombre. Entra con ella.',
+    'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres.',
+    'auth/too-many-requests': 'Demasiados intentos. Espera unos minutos.',
+    'auth/operation-not-allowed': 'Falta activar "Correo/contraseña" en Firebase Authentication.',
+    'auth/admin-restricted-operation': 'Ya no se pueden crear cuentas nuevas.',
+    'auth/network-request-failed': 'Sin conexión. Revisa tu internet.',
+  };
+  const errText = (e) => AUTH_ERR[e && e.code] || 'No se pudo. ' + ((e && e.message) || '');
 
-  function gateMsg(txt, kind) {
-    const m = $('#gateMsg');
-    m.textContent = txt || '';
-    m.className = 'gate-msg' + (kind ? ' ' + kind : '');
+  function renderGate() {
+    $('#whoPick').innerHTML = PEOPLE.map((p) => `<button type="button" data-v="${p}" class="${G.name === p ? 'on' : ''}">${p}<small>${G.name === p ? (G.create ? 'crear contraseña' : 'entrar') : '&nbsp;'}</small></button>`).join('');
+    $('#passForm').hidden = !G.name;
+    $('#pass2Input').hidden = !G.create;
+    $('#pass2Input').required = G.create;
+    $('#passInput').autocomplete = G.create ? 'new-password' : 'current-password';
+    $('#passInput').placeholder = G.create ? 'Crea tu contraseña (mín. 6)' : 'Tu contraseña';
+    $('#passLbl').textContent = G.create ? `Crear contraseña de ${G.name}` : `Contraseña de ${G.name}`;
+    $('#passBtn').textContent = G.create ? 'Crear y entrar' : 'Entrar';
+    $('#modeBtn').textContent = G.create ? 'Ya tengo contraseña' : '¿Primera vez? Crear contraseña';
   }
+  // ¿Este nombre ya creó su contraseña? (doc público usuarios/{nombre})
+  async function knownUser(name) {
+    try {
+      const d = await Promise.race([db.doc('usuarios/' + name).get(), new Promise((_, r) => setTimeout(() => r(new Error('t')), 4000))]);
+      return d.exists;
+    } catch (e) { return null; }
+  }
+  $('#whoPick').addEventListener('click', async (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    G.name = b.dataset.v; store.set(K_WHO, G.name);
+    gateMsg('');
+    const k = await knownUser(G.name);
+    G.create = k === false;
+    renderGate();
+    $('#passInput').value = ''; $('#pass2Input').value = '';
+    $('#passInput').focus();
+  });
+  $('#modeBtn').addEventListener('click', () => { G.create = !G.create; gateMsg(''); renderGate(); });
+  $('#passForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pw = $('#passInput').value;
+    if (G.create && pw !== $('#pass2Input').value) { gateMsg('Las contraseñas no coinciden.', 'err'); return; }
+    const btn = $('#passBtn');
+    btn.disabled = true;
+    gateMsg(G.create ? 'Creando…' : 'Entrando…');
+    try {
+      if (G.create) {
+        await auth.createUserWithEmailAndPassword(emailOf(G.name), pw);
+        try { await db.doc('usuarios/' + G.name).set({ creada: Date.now() }); } catch (err) { console.warn(err); }
+      } else {
+        await auth.signInWithEmailAndPassword(emailOf(G.name), pw);
+      }
+      $('#passInput').value = ''; $('#pass2Input').value = '';
+      gateMsg('');
+    } catch (err) {
+      gateMsg(errText(err), 'err');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  $('#logoutBtn').addEventListener('click', async () => {
+    if (unHist) { unHist(); unHist = null; }
+    if (auth) await auth.signOut();
+  });
+
   function showGate() {
     $('#app').hidden = true;
     $('#gate').hidden = false;
-    $('#phoneForm').hidden = false;
-    $('#codeForm').hidden = true;
+    renderGate();
+    if (G.name) knownUser(G.name).then((k) => { if (k === false) { G.create = true; renderGate(); } });
   }
-  function freshVerifier() {
-    if (verifier) { try { verifier.clear(); } catch (e) {} }
-    const old = $('#recaptcha');
-    const div = document.createElement('div');
-    div.id = 'recaptcha';
-    old.replaceWith(div);
-    verifier = new firebase.auth.RecaptchaVerifier('recaptcha', { size: 'invisible' });
-    return verifier;
-  }
-  const AUTH_ERR = {
-    'auth/invalid-phone-number': 'Número inválido. Escribe los 10 dígitos.',
-    'auth/too-many-requests': 'Demasiados intentos. Espera unos minutos.',
-    'auth/quota-exceeded': 'Se alcanzó el límite de SMS por hoy.',
-    'auth/operation-not-allowed': 'El acceso por teléfono no está activado en Firebase.',
-    'auth/unauthorized-domain': 'Este dominio no está autorizado en Firebase.',
-    'auth/billing-not-enabled': 'Firebase necesita el plan Blaze para mandar SMS.',
-    'auth/invalid-verification-code': 'Código incorrecto. Revisa el mensaje.',
-    'auth/code-expired': 'El código expiró. Pide uno nuevo.',
-    'auth/captcha-check-failed': 'Falló la verificación anti-robot. Intenta de nuevo.',
-    'auth/network-request-failed': 'Sin conexión. Revisa tu internet.',
-  };
-  const errText = (e) => AUTH_ERR[e && e.code] || 'No se pudo completar. ' + ((e && e.message) || '');
-
-  function initAuth() {
-    if (DEV) { enterApp('Dev'); return; }
-    if (!FIREBASE_CONFIG.apiKey || typeof firebase === 'undefined') {
-      gateMsg('Falta conectar Firebase (config vacía).', 'err');
-      $('#sendBtn').disabled = true;
-      return;
-    }
-    firebase.initializeApp(FIREBASE_CONFIG);
-    auth = firebase.auth();
-    auth.languageCode = 'es';
-    db = firebase.firestore();
-    auth.onAuthStateChanged(async (u) => {
-      if (!u) { showGate(); return; }
-      const name = await allowedName(u.phoneNumber);
-      if (name) { enterApp(name); return; }
-      await auth.signOut();
-      showGate();
-      gateMsg('Este número no tiene acceso.', 'err');
-    });
-
-    $('#phoneForm').addEventListener('submit', async (ev) => {
-      ev.preventDefault();
-      const phone = toE164($('#phoneInput').value);
-      if (!(await allowedName(phone))) { gateMsg('Este número no tiene acceso.', 'err'); return; }
-      const btn = $('#sendBtn');
-      btn.disabled = true;
-      gateMsg('Enviando código…');
-      try {
-        confirmation = await auth.signInWithPhoneNumber(phone, freshVerifier());
-        $('#phoneForm').hidden = true;
-        $('#codeForm').hidden = false;
-        $('#codeInput').value = '';
-        $('#codeInput').focus();
-        gateMsg('Código enviado al número que termina en ' + phone.slice(-4) + '.', 'ok');
-      } catch (e) {
-        gateMsg(errText(e), 'err');
-      } finally {
-        btn.disabled = false;
-      }
-    });
-
-    $('#codeForm').addEventListener('submit', async (ev) => {
-      ev.preventDefault();
-      if (!confirmation) return;
-      const btn = $('#verifyBtn');
-      btn.disabled = true;
-      gateMsg('Verificando…');
-      try {
-        await confirmation.confirm($('#codeInput').value.trim());
-        gateMsg('');
-      } catch (e) {
-        gateMsg(errText(e), 'err');
-      } finally {
-        btn.disabled = false;
-      }
-    });
-
-    $('#backBtn').addEventListener('click', () => {
-      confirmation = null;
-      $('#codeForm').hidden = true;
-      $('#phoneForm').hidden = false;
-      gateMsg('');
-    });
-  }
-
-  $('#logoutBtn').addEventListener('click', async () => {
-    if (unHist) { unHist(); unHist = null; }
-    S.user = null;
-    if (auth) await auth.signOut();
-    else location.reload();
-  });
-
-  /* ================= ENTRAR ================= */
-  async function enterApp(name) {
-    if (S.user === name) return;
-    S.user = name;
+  function enterApp(name) {
+    S.who = name;
     $('#whoami').innerHTML = 'Hola, <b>' + esc(name) + '</b>';
     $('#gate').hidden = true;
     $('#app').hidden = false;
     listenHist();
-    let data = null;
-    try { data = await Cloud.loadProducts(); } catch (e) { toast('No se pudo leer la base compartida'); }
-    if (!data) data = store.get(K_DATA, null); // respaldo local
+    if (S.products.length) return;
+    const data = store.get(K_DATA, null);
     if (data && Array.isArray(data.items) && data.items.length) {
       S.products = data.items;
       S.meta = data.meta;
       showWorkspace();
     } else {
-      $('#dropzone').hidden = false;
-      $('#workspace').hidden = true;
+      showConnect();
     }
   }
 
-  /* ================= NUBE (Firestore) =================
-   * datos/meta            {file, at, by, total, chunks}
-   * datos/chunk_N         {items:[...]}
-   * propuestas/{id}       {ts, by, from, to, m1, cards}
-   * Sin Firebase (modo dev local) todo cae a localStorage. */
-  const Cloud = {
-    async loadProducts() {
-      if (!db) return null;
-      const meta = await db.doc('datos/meta').get();
-      if (!meta.exists) return null;
-      const m = meta.data();
-      const parts = await Promise.all(Array.from({ length: m.chunks }, (_, i) => db.doc('datos/chunk_' + i).get()));
-      const items = parts.flatMap((d) => (d.exists ? d.data().items || [] : []));
-      store.set(K_DATA, { meta: m, items });
-      return { meta: m, items };
+  /* ================= INSITU ================= */
+  const Insitu = {
+    token: () => (store.get(K_TOKEN, null) || {}).token || '',
+    async login(email, password) {
+      const r = await fetch(INSITU + '/users/company/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const j = await r.json().catch(() => ({}));
+      const token = j.token || (j.data && j.data.token);
+      if (!r.ok || !token) throw new Error(j.message || j.error || 'Correo o contraseña incorrectos');
+      store.set(K_TOKEN, { token, email, at: Date.now() });
+      return token;
     },
-    async saveProducts(meta, items) {
-      store.set(K_DATA, { meta, items });
-      if (!db) return;
-      const chunks = Math.ceil(items.length / CHUNK);
-      const old = await db.doc('datos/meta').get();
-      const oldChunks = old.exists ? old.data().chunks || 0 : 0;
-      const batch = db.batch();
-      for (let i = 0; i < chunks; i++) batch.set(db.doc('datos/chunk_' + i), { items: items.slice(i * CHUNK, (i + 1) * CHUNK) });
-      for (let i = chunks; i < oldChunks; i++) batch.delete(db.doc('datos/chunk_' + i));
-      batch.set(db.doc('datos/meta'), { ...meta, chunks });
-      await batch.commit();
+    async get(path, params) {
+      const q = new URLSearchParams(params || {}).toString();
+      const r = await fetch(`${INSITU}${path}${q ? '?' + q : ''}`, { headers: { Authorization: 'Bearer ' + this.token() } });
+      if (r.status === 401 || r.status === 403) { const e = new Error('La sesión de InSitu expiró. Vuelve a conectar.'); e.auth = true; throw e; }
+      if (r.status === 429) { await new Promise((res) => setTimeout(res, 4000)); return this.get(path, params); }
+      if (!r.ok) throw new Error(`InSitu respondió ${r.status} en ${path}`);
+      return r.json();
     },
-    async addProposal(p) {
-      if (!db) { const h = store.get(K_HIST, []); h.unshift(p); store.set(K_HIST, h.slice(0, 60)); S.hist = h; return; }
-      const { id, ...rest } = p;
-      await db.collection('propuestas').doc(id).set(rest);
-    },
-    async delProposal(id) {
-      if (!db) { S.hist = store.get(K_HIST, []).filter((x) => x.id !== id); store.set(K_HIST, S.hist); return; }
-      await db.collection('propuestas').doc(id).delete();
+    // Recorre todas las páginas; `key` = arreglo en la respuesta (products / invoices / warehouse_stocks)
+    async all(path, key, params, onPage) {
+      const LIM = 500;
+      const out = [];
+      for (let off = 0; ; off += LIM) {
+        const j = await this.get(path, { ...params, limit: LIM, offset: off });
+        const arr = j[key] || j.data || [];
+        out.push(...arr);
+        if (onPage) onPage(out.length, j.total_count || j.count);
+        if (arr.length < LIM) break;
+      }
+      return out;
     },
   };
 
-  S.hist = [];
-  let unHist = null;
-  function listenHist() {
-    if (!db) { S.hist = store.get(K_HIST, []); return; }
-    if (unHist) unHist();
-    unHist = db.collection('propuestas').orderBy('ts', 'desc').limit(60).onSnapshot(
-      (snap) => {
-        S.hist = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        if (!$('#histModal').hidden) renderHist();
-      },
-      () => toast('No se pudo leer el historial compartido')
-    );
+  const connectMsg = (t, err) => { const m = $('#connectMsg'); m.textContent = t || ''; m.classList.toggle('err', !!err); };
+
+  $('#connectForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = $('#connectBtn');
+    btn.disabled = true;
+    connectMsg('Conectando con InSitu…');
+    try {
+      await Insitu.login($('#insEmail').value.trim(), $('#insPass').value);
+      $('#insPass').value = '';
+      await syncInsitu();
+    } catch (err) {
+      connectMsg(err.message || 'No se pudo conectar', true);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  async function syncInsitu() {
+    const setSync = (t) => { const el = $('#syncInfo'); if (el) el.textContent = t; };
+    const say = (t) => { connectMsg(t); setSync(t); };
+    try {
+      say('Bajando productos…');
+      const prods = await Insitu.all('/products', 'products', {}, (n) => say(`Bajando productos… ${n}`));
+
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const from = new Date(today); from.setFullYear(from.getFullYear() - 1);
+      say('Bajando ventas de 12 meses…');
+      const invs = await Insitu.all('/invoices', 'invoices', {
+        fromDate: ymd(from) + ' 00:00:00', toDate: ymd(today) + ' 23:59:59', order: JSON.stringify([['id', 'ASC']]),
+      }, (n, t) => say(`Bajando ventas de 12 meses… ${n}${t ? ' de ' + t : ''} facturas`));
+
+      say('Bajando inventario…');
+      let stocks = null;
+      try { stocks = await Insitu.all('/inventory_stock', 'warehouse_stocks', {}); }
+      catch (e) { if (e.auth) throw e; stocks = null; } // sin inventario, seguimos con ventas
+
+      const { items, withDetail } = buildDataset(prods, invs, stocks, today);
+      if (!items.length) throw new Error('InSitu no regresó productos con precio y costo.');
+      S.products = items;
+      S.meta = {
+        source: 'InSitu', at: Date.now(), sales: withDetail > 0, stock: !!stocks,
+        invoices: invs.length, from: ymd(from),
+      };
+      if (!store.set(K_DATA, { meta: S.meta, items })) toast('Aviso: no se pudo guardar en este dispositivo.');
+      S.set.cats = null;
+      connectMsg('');
+      showWorkspace();
+      if (!withDetail && invs.length) toast('Las facturas llegaron sin detalle de productos: no hay datos de venta.');
+      else toast(`${items.length} productos · ${invs.length} facturas analizadas`);
+    } catch (err) {
+      if (err.auth) { store.del(K_TOKEN); showConnect(); }
+      connectMsg(err.message || 'Falló la descarga', true);
+      setSync('');
+      if (!$('#workspace').hidden) toast(err.message || 'Falló la descarga');
+      throw err;
+    }
   }
 
-  /* ================= EXCEL ================= */
+  function buildDataset(prods, invs, stocks, today) {
+    // Ventas por código de producto
+    const T = today.getTime();
+    const sales = {};
+    let withDetail = 0;
+    for (const inv of invs) {
+      if (inv.cancelled === true || inv.cancelled === 1 || /cancel|void|anulad/i.test(inv.status || '')) continue;
+      const t = Date.parse(String(inv.invoice_date || inv.invoice_ship_date || '').replace(' ', 'T'));
+      if (!isFinite(t)) continue;
+      const age = Math.floor((T - t) / DAY);
+      const lines = inv.invoiceDetailList || inv.invoice_details || [];
+      if (lines.length) withDetail++;
+      const client = inv.client_nit || inv.account_number || inv.client_branch_code || inv.client_branch_name || '';
+      for (const l of lines) {
+        const code = String(l.product_code ?? '').trim();
+        const q = Number(l.quantity) || 0;
+        if (!code || q <= 0) continue;
+        const s = (sales[code] = sales[code] || { last: 0, u30: 0, u90: 0, uPrev90: 0, u365: 0, rev90: 0, clients: new Set(), m: new Array(12).fill(0) });
+        if (t > s.last) s.last = t;
+        s.u365 += q;
+        if (age <= 30) s.u30 += q;
+        if (age <= 90) { s.u90 += q; s.rev90 += Number(l.invoice_detail_net_value) || q * (Number(l.product_price) || 0); if (client) s.clients.add(client); }
+        else if (age <= 180) s.uPrev90 += q;
+        const mi = Math.min(11, Math.max(0, Math.floor(age / 30.44)));
+        s.m[11 - mi] += q; // m[11] = últimos 30 días
+      }
+    }
+    // Inventario por product_id
+    const stockBy = {};
+    (stocks || []).forEach((w) => { stockBy[w.product_id] = (stockBy[w.product_id] || 0) + (Number(w.stock) || 0); });
+
+    const items = [];
+    for (const p of prods) {
+      if (p.hidden || p.disabled) continue;
+      const code = String(p.code ?? '').trim();
+      const name = String(p.name || '').replace(/\s+/g, ' ').trim();
+      if (!name) continue;
+      const s = sales[code];
+      items.push({
+        id: code || String(p.id),
+        pid: p.id,
+        name,
+        key: name.replace(/^CR-\s*/i, '').toLowerCase(),
+        cat: String(p.line_name || p.group_name || 'Otros').trim(),
+        brand: String(p.brand_name || '').trim(),
+        upc: String(p.barcode || '').trim(),
+        price: Number(p.default_price) || 0,
+        cost: Number(p.default_cost) || 0,
+        photo: String(p.photourl || '').trim(),
+        pack: packLabel(p.units),
+        vendor: '',
+        st: s ? {
+          last: s.last ? ymd(new Date(s.last)) : null,
+          days: s.last ? Math.floor((T - s.last) / DAY) : null,
+          u30: r2(s.u30), u90: r2(s.u90), uPrev90: r2(s.uPrev90), u365: r2(s.u365), rev90: r2(s.rev90),
+          clients: s.clients.size, m: s.m.map(r2),
+        } : { last: null, days: null, u30: 0, u90: 0, uPrev90: 0, u365: 0, rev90: 0, clients: 0, m: new Array(12).fill(0) },
+        stock: stocks ? r2(stockBy[p.id] || 0) : null,
+      });
+    }
+    classify(items);
+    return { items, withDetail };
+  }
+
+  // Asigna a cada producto su motivo principal (why) + texto explicativo
+  function classify(items) {
+    if (!items.some((p) => p.st)) return;
+    const sold = items.filter((p) => p.st && p.st.u90 > 0).map((p) => p.st.u90).sort((a, b) => b - a);
+    const topCut = sold.length ? sold[Math.max(0, Math.floor(sold.length * 0.1) - 1)] : Infinity;
+    for (const p of items) {
+      const st = p.st;
+      if (!st) { p.why = 'normal'; continue; }
+      const hasStock = p.stock == null ? true : p.stock > 0;
+      const weekly = st.u90 / 13;
+      const cover = p.stock != null && weekly > 0 ? p.stock / weekly : null;
+      if (hasStock && st.days != null && st.days >= 60) p.why = 'dormido';
+      else if (hasStock && st.days == null && p.stock > 0) p.why = 'dormido';
+      else if (cover != null && cover >= 12) p.why = 'lento';
+      else if (st.uPrev90 >= 3 && st.u90 < st.uPrev90 * 0.6) p.why = 'bajando';
+      else if (st.u90 > 0 && st.u90 >= topCut) p.why = 'gancho';
+      else p.why = 'normal';
+      p.cover = cover != null ? Math.round(cover) : null;
+    }
+  }
+
+  // Frase de "por qué" + acción sugerida, con los números reales
+  function reasonText(it, off) {
+    const st = it.st;
+    if (!st) return '';
+    const d = Math.round(off * 100);
+    const stk = it.stock != null ? ` y quedan ${cajas(it.stock)} en bodega` : '';
+    switch (it.why) {
+      case 'dormido':
+        return st.days == null
+          ? `No se ha vendido en 12 meses${stk}. Especial de -${d}% para sacarlo antes de que se haga viejo.`
+          : `Tiene ${hace(st.days)} sin venderse (última venta ${fmtD(st.last)})${stk}. Especial de -${d}% para moverlo.`;
+      case 'lento':
+        return `Se venden ${nfmt(st.u90 / 13)} cajas por semana y hay ${cajas(it.stock)}: inventario para ~${it.cover} semanas. Un -${d}% acelera la rotación.`;
+      case 'bajando':
+        return `Bajó ${Math.round((1 - st.u90 / st.uPrev90) * 100)}% vs los 3 meses anteriores (${cajas(st.uPrev90)} → ${cajas(st.u90)}). Un -${d}% para recuperarlo.`;
+      case 'gancho':
+        return `De tus más vendidos: ${cajas(st.u90)} en 90 días con ${st.clients} clientes. Descuento chico (-${d}%) como gancho para jalar pedidos.`;
+      default:
+        return st.u90 > 0 ? `Vende ${cajas(st.u90)} en 90 días. Especial de -${d}% para darle movimiento.` : '';
+    }
+  }
+
+  /* ================= EXCEL (respaldo sin InSitu) ================= */
   const dz = $('#dropzone');
   ['dragenter', 'dragover'].forEach((t) => dz.addEventListener(t, (e) => { e.preventDefault(); dz.classList.add('over'); }));
   ['dragleave', 'drop'].forEach((t) => dz.addEventListener(t, (e) => { e.preventDefault(); dz.classList.remove('over'); }));
@@ -297,26 +423,31 @@
   $('#fileInput').addEventListener('change', (e) => { const f = e.target.files[0]; if (f) loadFile(f); e.target.value = ''; });
 
   async function loadFile(file) {
-    const msg = $('#dropMsg');
-    msg.textContent = 'Leyendo ' + file.name + '…';
+    connectMsg('Leyendo ' + file.name + '…');
     try {
       const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: null, raw: true });
       const items = parseRows(rows);
       if (!items.length) throw new Error('No encontré productos con precio y costo. ¿Es el export de InSitu?');
       S.products = items;
-      S.meta = { file: file.name, at: Date.now(), total: rows.length - 1, by: S.user || '' };
-      msg.textContent = 'Guardando en la base compartida…';
-      try { await Cloud.saveProducts(S.meta, items); }
-      catch (e) { toast('Aviso: no se pudo compartir el Excel (' + (e.code || e.message) + ')'); }
-      S.set.cats = null; // nuevas categorías → todas activas
-      S.cards = S.cards.filter((c) => c.pinned);
-      msg.textContent = '';
+      S.meta = { source: file.name, at: Date.now(), sales: false };
+      if (!store.set(K_DATA, { meta: S.meta, items })) toast('Aviso: no se pudo guardar en este dispositivo.');
+      S.set.cats = null;
+      connectMsg('');
       showWorkspace();
-      toast(items.length + ' productos cargados');
+      toast(items.length + ' productos cargados (sin datos de venta)');
     } catch (e) {
-      msg.textContent = e.message || 'No se pudo leer el archivo.';
+      connectMsg(e.message || 'No se pudo leer el archivo.', true);
     }
+  }
+
+  function packLabel(v) {
+    const s = String(v ?? '').trim();
+    const m = s.match(/^case\s*(\d+)$/i);
+    if (m) return 'Caja ' + m[1];
+    if (/count in each/i.test(s)) return 'Pieza';
+    if (/^\d+$/.test(s)) return Number(s) > 1 ? 'Caja ' + s : 'Pieza';
+    return s;
   }
 
   function parseRows(rows) {
@@ -350,34 +481,44 @@
         photo: String(g(r, c.photo) || '').trim(),
         pack: packLabel(g(r, c.pack)),
         vendor: String(g(r, c.vendor) || '').trim(),
+        why: 'normal',
       });
     }
     return out;
   }
 
-  function packLabel(v) {
-    const s = String(v || '').trim();
-    const m = s.match(/^case\s*(\d+)$/i);
-    if (m) return 'Caja ' + m[1];
-    if (/count in each/i.test(s)) return 'Pieza';
-    return s;
+  /* ================= PANTALLAS ================= */
+  function showConnect() {
+    $('#dropzone').hidden = false;
+    $('#workspace').hidden = true;
   }
 
-  /* ================= CONTROLES ================= */
   function showWorkspace() {
     $('#dropzone').hidden = true;
     $('#workspace').hidden = false;
     buildFilters();
     syncControls();
-    const m = S.meta || {};
-    const d = m.at ? new Date(m.at) : null;
-    $('#dataInfo').innerHTML =
-      `<b>${S.products.length}</b> productos · ${esc(m.file || 'Excel')}${d ? ' · ' + d.getDate() + ' ' + MES[d.getMonth()] : ''}${m.by ? ' por ' + esc(m.by) : ''} · ` +
-      `<button id="changeXls" class="btn-link" type="button">cambiar Excel</button>`;
-    $('#changeXls').addEventListener('click', () => $('#fileInput').click());
+    renderDataInfo();
     render();
   }
 
+  function renderDataInfo() {
+    const m = S.meta || {};
+    const conn = !!Insitu.token();
+    $('#dataInfo').innerHTML =
+      `<b>${S.products.length}</b> productos · ${esc(m.source || '')}${m.at ? ' · ' + fmtTs(m.at) : ''}` +
+      (m.sales ? ` · ventas desde ${fmtD(m.from)} (${m.invoices} facturas)${m.stock ? ' + inventario' : ''}` : ' · sin datos de venta') +
+      ` · ${conn ? '<button id="resync" class="btn-link" type="button">actualizar de InSitu</button> · ' : ''}` +
+      `<button id="changeSrc" class="btn-link" type="button">${conn ? 'desconectar' : 'conectar InSitu'}</button> <span id="syncInfo"></span>`;
+    const rs = $('#resync');
+    if (rs) rs.addEventListener('click', () => { rs.disabled = true; syncInsitu().catch(() => {}).finally(() => { rs.disabled = false; }); });
+    $('#changeSrc').addEventListener('click', () => {
+      if (conn) { store.del(K_TOKEN); toast('InSitu desconectado en este dispositivo'); renderDataInfo(); }
+      else showConnect();
+    });
+  }
+
+  /* ================= CONTROLES ================= */
   function eligibleBase() {
     return S.products.filter((p) => p.price > 0 && p.cost > 0 && p.cost < p.price && p.photo && !EXCLUDE_CATS.includes(p.cat));
   }
@@ -387,23 +528,39 @@
     const cats = {};
     base.forEach((p) => { cats[p.cat] = (cats[p.cat] || 0) + 1; });
     const catNames = Object.keys(cats).sort((a, b) => cats[b] - cats[a]);
-    if (!Array.isArray(S.set.cats)) S.set.cats = catNames.slice();
+    if (!Array.isArray(S.set.cats) || !S.set.cats.some((c) => cats[c])) S.set.cats = catNames.slice();
     $('#catChips').innerHTML = catNames
       .map((c) => `<button type="button" class="chip${S.set.cats.includes(c) ? ' on' : ''}" data-cat="${esc(c)}">${esc(c)}<small>${cats[c]}</small></button>`)
       .join('');
 
     const opts = (arr) => [...new Set(arr.filter(Boolean))].sort((a, b) => a.localeCompare(b));
-    $('#fVendor').innerHTML = '<option value="">Todos</option>' + opts(base.map((p) => p.vendor)).map((v) => `<option>${esc(v)}</option>`).join('');
+    const vendors = opts(base.map((p) => p.vendor));
+    $('#vendorCtrl').hidden = !vendors.length;
+    $('#fVendor').innerHTML = '<option value="">Todos</option>' + vendors.map((v) => `<option>${esc(v)}</option>`).join('');
     $('#fBrand').innerHTML = '<option value="">Todas</option>' + opts(base.map((p) => p.brand)).map((v) => `<option>${esc(v)}</option>`).join('');
     $('#fVendor').value = S.set.vendor;
     $('#fBrand').value = S.set.brand;
     if ($('#fVendor').value !== S.set.vendor) S.set.vendor = '';
     if ($('#fBrand').value !== S.set.brand) S.set.brand = '';
+
+    // Estrategias: solo con datos de venta
+    const counts = {};
+    base.forEach((p) => { counts[p.why || 'normal'] = (counts[p.why || 'normal'] || 0) + 1; });
+    $('#stratCtrl').hidden = !hasSales();
+    if (!hasSales()) S.set.strat = 'azar';
+    else if (S.set.strat === 'azar' && !store.get(K_SET, {}).strat) S.set.strat = 'mixto';
+    const n = (k) => STRATS[k] ? STRATS[k].filter((w) => w !== 'normal').reduce((a, w) => a + (counts[w] || 0), 0) : base.length;
+    $$('#segStrat button').forEach((b) => {
+      const k = b.dataset.v;
+      b.querySelector('small') && b.querySelector('small').remove();
+      if (k !== 'mixto' && k !== 'azar') b.insertAdjacentHTML('beforeend', `<small>${n(k)}</small>`);
+    });
   }
 
   function syncControls() {
     $$('#segCount button').forEach((b) => b.classList.toggle('on', Number(b.dataset.v) === S.set.count));
     $$('#segMode button').forEach((b) => b.classList.toggle('on', b.dataset.v === S.set.mode));
+    $$('#segStrat button').forEach((b) => b.classList.toggle('on', b.dataset.v === S.set.strat));
     $('#dMin').value = S.set.dMin;
     $('#dMax').value = S.set.dMax;
     $('#floor').value = S.set.floor;
@@ -421,6 +578,10 @@
     S.set.mode = b.dataset.v;
     [S.set.dMin, S.set.dMax] = MODES[S.set.mode];
     saveSettings(); syncControls();
+  });
+  $('#segStrat').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    S.set.strat = b.dataset.v; saveSettings(); syncControls();
   });
   const numIn = (id, key) => $(id).addEventListener('change', (e) => {
     let v = parseFloat(e.target.value);
@@ -453,10 +614,11 @@
   const floorF = () => Math.min(0.9, S.set.floor / 100);
   const minPrice = (C) => C / (1 - floorF()); // precio más bajo que respeta el margen mínimo
 
-  // Precio especial para regular P y costo C. null = no aguanta descuento.
-  function specialPrice(P, C) {
-    const d = rand(S.set.dMin, S.set.dMax) / 100;
-    let s = psychDown(P * (1 - d));
+  // Precio especial para regular P y costo C. `why` ajusta qué tan fuerte es el descuento.
+  function specialPrice(P, C, why) {
+    const [a, b] = (hasSales() && WHY[why] ? WHY[why].dBoost : [1, 1]);
+    const d = (rand(S.set.dMin, S.set.dMax) * rand(a, b)) / 100;
+    let s = psychDown(P * (1 - Math.min(0.6, d)));
     const floorP = minPrice(C);
     if (s < floorP) s = psychUp(floorP);
     s = r2(s);
@@ -466,19 +628,29 @@
 
   function pool() {
     const cats = S.set.cats || [];
+    const whys = hasSales() ? STRATS[S.set.strat] : null;
     return eligibleBase().filter((p) =>
-      cats.includes(p.cat) && (!S.set.vendor || p.vendor === S.set.vendor) && (!S.set.brand || p.brand === S.set.brand));
+      cats.includes(p.cat) && (!S.set.vendor || p.vendor === S.set.vendor) && (!S.set.brand || p.brand === S.set.brand) &&
+      (!whys || whys.includes(p.why || 'normal')));
   }
 
-  // Barajado ponderado: los de más margen tienen más chance (más espacio para descontar)
+  // Barajado ponderado: pesa el motivo (si hay ventas) y el margen (más espacio para descontar)
+  function weight(p) {
+    const m = (p.price - p.cost) / p.price;
+    const w = hasSales() && S.set.strat !== 'azar' ? (WHY[p.why] || WHY.normal).w : 1;
+    return w * (0.4 + m);
+  }
   function weightedShuffle(arr) {
     return arr
-      .map((p) => ({ p, k: Math.pow(Math.random(), 1 / (0.4 + (p.price - p.cost) / p.price)) }))
+      .map((p) => ({ p, k: Math.pow(Math.random(), 1 / weight(p)) }))
       .sort((a, b) => b.k - a.k)
       .map((x) => x.p);
   }
 
-  const snap = (p) => ({ id: p.id, name: p.name, key: p.key, brand: p.brand, cat: p.cat, upc: p.upc, photo: p.photo, pack: p.pack, vendor: p.vendor });
+  const snap = (p) => ({
+    id: p.id, name: p.name, key: p.key, brand: p.brand, cat: p.cat, upc: p.upc, photo: p.photo, pack: p.pack, vendor: p.vendor,
+    why: p.why || 'normal', st: p.st || null, stock: p.stock ?? null, cover: p.cover ?? null,
+  });
 
   function makeCard(items, P, C, s) {
     const c = { uid: uid(), kind: items.length > 1 ? 'combo' : 'single', items: items.map(snap), P: r2(P), C: r2(C), S: s, from: S.set.from, to: S.set.to, pinned: false, open: false, customDates: false };
@@ -489,6 +661,13 @@
   function tagFor(c) {
     const off = (c.P - c.S) / c.P, m0 = (c.P - c.C) / c.P;
     if (c.kind === 'combo') return ['combo', 'Combo'];
+    const why = c.items[0].why;
+    if (hasSales() && why && why !== 'normal') {
+      if (why === 'dormido') return ['liquidacion', 'Liquidación'];
+      if (why === 'gancho') return ['gancho', 'Gancho'];
+      if (why === 'lento') return ['relampago', 'A mover'];
+      if (why === 'bajando') return ['semana', 'Recuperar'];
+    }
     if (off >= 0.15) return ['relampago', 'Oferta relámpago'];
     if (/vida|produce|fruta|verdura/i.test(c.items[0].cat)) return ['temporada', 'De temporada'];
     if (m0 >= 0.4) return ['liquidacion', 'Liquidación'];
@@ -517,7 +696,7 @@
         while (q.length) {
           const p = q.shift();
           if (used.has(p.key)) continue;
-          const s = specialPrice(p.price, p.cost);
+          const s = specialPrice(p.price, p.cost, p.why);
           if (s == null) continue;
           used.add(p.key);
           out.push(makeCard([p], p.price, p.cost, s));
@@ -539,7 +718,7 @@
       const bb = rest.find((p) => p.key !== a.key);
       if (!bb) continue;
       const P = a.price + bb.price, C = a.cost + bb.cost;
-      const s = specialPrice(P, C);
+      const s = specialPrice(P, C, 'normal');
       if (s == null) continue;
       used.add(a.key); used.add(bb.key);
       return makeCard([a, bb], P, C, s);
@@ -613,6 +792,31 @@
     return `<span class="tag t-${c.tag[0]}">${esc(c.tag[1])}</span><span class="off">-${Math.round(st.off * 100)}%</span>`;
   }
 
+  // Mini gráfica de 12 meses (cajas vendidas por mes)
+  function sparkHTML(m) {
+    const max = Math.max(...m, 0);
+    if (!max) return '<div class="spark empty-spark">sin ventas en 12 meses</div>';
+    const bars = m.map((v, i) => `<i style="height:${Math.max(v ? 8 : 2, (v / max) * 100)}%" class="${i === 11 ? 'now' : ''}${!v ? ' zero' : ''}" title="${nfmt(v)}"></i>`).join('');
+    return `<div class="spark" title="Cajas vendidas por mes (últimos 12)">${bars}</div>`;
+  }
+
+  function salesHTML(c, off) {
+    if (c.kind === 'combo' || !c.items[0].st) return '';
+    const it = c.items[0], st = it.st, w = WHY[it.why] || WHY.normal;
+    if (it.why === 'normal' && !st.u365) return '';
+    const txt = reasonText(it, off);
+    return `
+      <div class="why why-${esc(it.why)}">
+        <div class="why-h"><span>${w.icon} ${esc(w.label)}</span><span class="why-last">${st.last ? 'última venta ' + fmtD(st.last) : 'sin ventas 12m'}</span></div>
+        ${txt ? `<p class="why-t">${esc(txt)}</p>` : ''}
+        ${sparkHTML(st.m)}
+        <div class="why-k">
+          <span><b>${nfmt(st.u30)}</b> 30d</span><span><b>${nfmt(st.u90)}</b> 90d</span><span><b>${nfmt(st.u365)}</b> 12m</span>
+          ${it.stock != null ? `<span><b>${nfmt(it.stock)}</b> stock</span>` : `<span><b>${st.clients}</b> clientes</span>`}
+        </div>
+      </div>`;
+  }
+
   function viewHTML(c) {
     const st = stats(c), fl = floorF();
     const name = c.items.map((i) => i.name).join(' + ');
@@ -620,7 +824,7 @@
     const meta = c.kind === 'combo'
       ? `${c.items.length} productos · ${esc(c.items[0].cat)}`
       : [c.items[0].pack, c.items[0].upc && 'UPC ' + c.items[0].upc, c.items[0].cat].filter(Boolean).map(esc).join(' · ');
-    const w0 = Math.max(0, Math.min(100, st.m0 * 100 / 0.6 * 1)), w1 = Math.max(0, Math.min(100, st.m1 * 100 / 0.6));
+    const w0 = Math.max(0, Math.min(100, st.m0 * 100 / 0.6)), w1 = Math.max(0, Math.min(100, st.m1 * 100 / 0.6));
     const flx = Math.min(100, fl * 100 / 0.6);
     const low = st.m1 < fl - 1e-9;
     return `
@@ -634,6 +838,7 @@
         <span class="p-new">${money(c.S)}</span>
         <span class="p-save">Ahorra ${money(st.save)}</span>
       </div>
+      ${salesHTML(c, st.off)}
       <table class="ab">
         <thead><tr><th></th><th>Antes</th><th>Especial</th></tr></thead>
         <tbody>
@@ -720,7 +925,10 @@
     const all = S.cards.map(stats);
     const avg = (f) => all.reduce((a, s) => a + f(s), 0) / n;
     const cats = {};
-    S.cards.forEach((c) => { const k = c.kind === 'combo' ? 'Combo' : c.items[0].cat; cats[k] = (cats[k] || 0) + 1; });
+    S.cards.forEach((c) => {
+      const k = c.kind === 'combo' ? '🧩 Combo' : c.items[0].st && c.items[0].why !== 'normal' ? `${WHY[c.items[0].why].icon} ${WHY[c.items[0].why].label}` : c.items[0].cat;
+      cats[k] = (cats[k] || 0) + 1;
+    });
     $('#summary').hidden = false;
     $('#summary').innerHTML = `
       <div class="stat"><span class="lbl">Especiales</span><div class="stat-v">${n}</div></div>
@@ -778,7 +986,50 @@
     renderSummary();
   });
 
-  /* ================= HISTORIAL ================= */
+  /* ================= HISTORIAL (Firestore compartido) ================= */
+  // Firestore no rechaza si la base no existe: se queda esperando. Cortamos a los 10 s.
+  const withTimeout = (pr) => Promise.race([pr, new Promise((_, rej) => setTimeout(() => rej(new Error('sin respuesta de la base compartida')), 10000))]);
+  const Cloud = {
+    async add(p) {
+      if (!db) { const h = store.get(K_HIST, []); h.unshift(p); store.set(K_HIST, h.slice(0, 60)); S.hist = h; return; }
+      const { id, ...rest } = p;
+      await withTimeout(db.collection('propuestas').doc(id).set(rest));
+    },
+    async del(id) {
+      if (!db) { S.hist = store.get(K_HIST, []).filter((x) => x.id !== id); store.set(K_HIST, S.hist); return; }
+      await withTimeout(db.collection('propuestas').doc(id).delete());
+    },
+  };
+  function initFirebase() {
+    if (typeof firebase === 'undefined') { gateMsg('No cargó Firebase. Revisa tu internet y recarga.', 'err'); return; }
+    firebase.initializeApp(FIREBASE_CONFIG);
+    auth = firebase.auth();
+    db = firebase.firestore();
+    // La sesión queda guardada en el dispositivo (LOCAL): no vuelve a pedir contraseña hasta "Salir"
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+    auth.onAuthStateChanged(async (u) => {
+      const name = u && nameOf(u.email);
+      if (name) { enterApp(name); return; }
+      if (u) { await auth.signOut(); gateMsg('Esta cuenta no tiene acceso.', 'err'); }
+      showGate();
+    });
+  }
+  function listenHist() {
+    try {
+      if (unHist) unHist();
+      unHist = db.collection('propuestas').orderBy('ts', 'desc').limit(60).onSnapshot(
+        (snap) => {
+          S.hist = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          $('#histCount').textContent = S.hist.length ? S.hist.length : '';
+          if (!$('#histModal').hidden) renderHist();
+        },
+        (err) => { console.warn('Firestore', err); $('#histNote').textContent = 'No se pudo leer el historial compartido (' + (err.code || err.message) + ').'; }
+      );
+    } catch (e) {
+      console.warn('Historial', e);
+    }
+  }
+
   const openModal = (id) => { $(id).hidden = false; };
   $$('.modal').forEach((m) => m.addEventListener('click', (e) => { if (e.target === m || e.target.closest('[data-close]')) m.hidden = true; }));
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $$('.modal').forEach((m) => (m.hidden = true)); });
@@ -789,13 +1040,13 @@
     btn.disabled = true;
     const all = S.cards.map(stats);
     try {
-      await Cloud.addProposal({
-        id: Date.now().toString(36) + uid(), ts: Date.now(), by: S.user,
+      await Cloud.add({
+        id: Date.now().toString(36) + uid(), ts: Date.now(), by: S.who,
         from: S.set.from, to: S.set.to,
         m1: all.reduce((a, s) => a + s.m1, 0) / all.length,
         cards: S.cards.map(({ open, ...c }) => JSON.parse(JSON.stringify(c))),
       });
-      toast('Propuesta guardada 💾');
+      toast('Propuesta guardada 💾 — ya la ve ' + PEOPLE.filter((p) => p !== S.who).join(' y '));
     } catch (e) {
       toast('No se pudo guardar (' + (e.code || e.message) + ')');
     } finally {
@@ -806,12 +1057,11 @@
   function renderHist() {
     const hist = S.hist || [];
     $('#histList').innerHTML = hist.length ? hist.map((h) => {
-      const d = new Date(h.ts);
       const thumbs = h.cards.slice(0, 5).map((c) => `<img src="${esc(c.items[0].photo)}" alt="">`).join('');
-      return `<div class="hist-item" data-id="${h.id}">
+      return `<div class="hist-item" data-id="${esc(h.id)}">
         <div class="hi-thumbs">${thumbs}</div>
         <div class="hi-txt"><b>${h.cards.length} especiales · ${fmtD(h.from)} – ${fmtD(h.to)}</b>
-          ${d.getDate()} ${MES[d.getMonth()]} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} · ${esc(h.by || '')} · margen ${pct(h.m1 || 0)}</div>
+          ${fmtTs(h.ts)} · ${esc(h.by || '')} · margen ${pct(h.m1 || 0)}</div>
         <button class="btn btn-oro btn-sm" data-h="open" type="button">Abrir</button>
         <button class="btn-x" data-h="del" type="button" title="Quitar" aria-label="Quitar">🗑</button>
       </div>`;
@@ -823,14 +1073,14 @@
     const id = b.closest('.hist-item').dataset.id;
     const h = (S.hist || []).find((x) => x.id === id); if (!h) return;
     if (b.dataset.h === 'open') {
+      if ($('#workspace').hidden) { toast('Conecta InSitu o carga el Excel primero'); return; }
       S.cards = h.cards.map((c) => ({ ...c, uid: uid(), open: false }));
       S.set.from = h.from; S.set.to = h.to;
-      if ($('#workspace').hidden) { toast('Carga tu Excel primero'); return; }
       syncControls();
       render(true);
       $('#histModal').hidden = true;
     } else if (confirm('¿Quitar esta propuesta del historial? (Oscar y Luis dejan de verla)')) {
-      Cloud.delProposal(id).then(renderHist).catch((e) => toast('No se pudo quitar (' + (e.code || e.message) + ')'));
+      Cloud.del(id).then(renderHist).catch((err) => toast('No se pudo quitar (' + (err.code || err.message) + ')'));
     }
   });
 
@@ -867,5 +1117,5 @@
   $('#printBtn').addEventListener('click', () => window.print());
 
   /* ================= INICIO ================= */
-  initAuth();
+  initFirebase();
 })();
