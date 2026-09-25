@@ -269,6 +269,23 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .hist-item .st{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:3px 8px;border-radius:99px;background:rgba(246,242,233,.08);color:var(--muted)}
 .hist-item .st.sent{background:rgba(91,192,108,.16);color:var(--verde-2)}
 
+/* Revisión con Claude */
+.ai-review{margin-top:24px}
+.ai-review .btn .ico{width:18px;height:18px;color:var(--oro)}
+.ai-out{margin-top:18px;padding-left:14px;border-left:3px solid var(--oro);display:flex;flex-direction:column;gap:14px;max-width:760px}
+.ai-out .ai-sum{margin:0;font-size:16px;line-height:1.5}
+.ai-out .ai-meta{font-family:var(--mono);font-size:11px;color:var(--muted-2)}
+.ai-alert{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:start;padding-top:12px;border-top:1px solid var(--linea)}
+.ai-alert .ai-t{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:4px 8px;border-radius:99px;background:rgba(246,242,233,.08);color:var(--muted);white-space:nowrap}
+.ai-alert .ai-t.subir,.ai-alert .ai-t.agregar{background:rgba(91,192,108,.16);color:var(--verde-2)}
+.ai-alert .ai-t.bajar,.ai-alert .ai-t.quitar{background:rgba(216,51,27,.18);color:#ff9a88}
+.ai-alert p{margin:0;font-size:14px;line-height:1.45}
+.ai-alert p b{display:block;font-size:13px;color:var(--muted)}
+.ai-alert .btn{min-height:36px;padding:6px 14px;font-size:13px}
+.ai-alert.done{opacity:.5}
+.ol.flash{animation:flash 1.4s var(--ease)}
+@keyframes flash{0%,40%{background:rgba(242,163,30,.14)}100%{background:transparent}}
+
 /* ============ AJUSTES (drawer) ============ */
 .drawer{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.55);animation:fade .25s var(--ease)}
 .drawer-panel{position:absolute;left:0;right:0;bottom:0;max-height:88dvh;overflow:auto;overscroll-behavior:contain;background:var(--negro-2);border-radius:28px 28px 0 0;padding:10px var(--gut) calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:24px;animation:sheetUp .4s var(--ease)}
