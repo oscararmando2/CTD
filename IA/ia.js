@@ -1325,7 +1325,7 @@
     $('#espView').hidden = ord;
     $('#ordView').hidden = !ord;
     $('#dock').hidden = ord;
-    $('#ordDock').hidden = !ord;
+    $('#ordDock').hidden = !ord || O.vendor === null;
     if (ord) {
       if (!O.lines.length && !O.touched) suggestOrder(); else renderOrders();
       // Datos viejos sin compras (de antes de Órdenes): se bajan solas
@@ -1342,7 +1342,9 @@
   /* ================= ÓRDENES DE COMPRA ================= */
   // Cuánto pedir = venta por día × (cada cuánto le compras + días de entrega) × (1 + colchón) − stock.
   // "Cada cuánto" sale de las recepciones reales en InSitu (por producto; si no, del proveedor; si no, 21 días).
-  const O = Object.assign({ vendor: '', lines: [], id: null, status: 'borrador', touched: false }, store.get(K_ORD, {}));
+  // vendor: null = todavía no se elige proveedor (pantalla "¿A quién le vas a pedir?"), '' = todos
+  const O = Object.assign({ vendor: null, lines: [], id: null, status: 'borrador', touched: false }, store.get(K_ORD, {}));
+  if (!O.lines.length && !O.touched) O.vendor = null;
   const OS = Object.assign({ lead: 3, safety: 25 }, store.get(K_ORDSET, {}));
   const saveDraft = () => store.set(K_ORD, { vendor: O.vendor, lines: O.lines, id: O.id, status: O.status, touched: O.touched });
   O.recent = [];
@@ -1394,6 +1396,7 @@
   }
 
   function suggestOrder() {
+    if (O.vendor === null) { renderOrders(); return; }
     const manual = O.lines.filter((l) => l.manual);
     const sug = allSuggestions().filter((l) => !O.vendor || l.vendor === O.vendor);
     const ids = new Set(sug.map((l) => l.id));
@@ -1403,13 +1406,70 @@
     renderOrders();
   }
 
+  // Proveedores con productos comprados: cuándo fue el último pedido y cada cuánto se les compra
+  function vendorSummary() {
+    const sug = allSuggestions();
+    const V = {};
+    const get = (v) => (V[v] = V[v] || { name: v, n: 0, cajas: 0, last: null, cycles: [] });
+    S.products.forEach((p) => {
+      if (!p.buy || !p.buy.vendor) return;
+      const x = get(p.buy.vendor);
+      if (!x.last || p.buy.last > x.last) x.last = p.buy.last;
+      if (p.buy.cycle) x.cycles.push(p.buy.cycle);
+    });
+    sug.forEach((l) => { const x = get(l.vendor); x.n++; x.cajas += l.qty; });
+    const today = Date.parse(ymd(new Date()));
+    return Object.values(V).map((x) => {
+      const cycle = median(x.cycles);
+      const since = x.last ? Math.round((today - Date.parse(x.last)) / DAY) : null;
+      return { ...x, cycle, since, due: x.n > 0 && cycle != null && since != null && since >= cycle * 0.9 };
+    });
+  }
+
+  function renderPicker() {
+    const vs = vendorSummary();
+    const real = vs.filter((v) => v.name !== 'Sin proveedor').sort((a, b) => (b.due - a.due) || (b.n - a.n) || a.name.localeCompare(b.name));
+    const sinProv = vs.find((v) => v.name === 'Sin proveedor');
+    const total = vs.reduce((a, v) => a + v.n, 0);
+    const m = S.meta || {};
+    $('#ordPickInfo').innerHTML = m.receipts
+      ? `Según tus ventas, inventario y <b>${m.receipts} compras</b> registradas en InSitu.`
+      : (syncing ? 'Bajando tus compras de InSitu…' : 'Todavía no se bajan tus compras de InSitu, por eso no salen tus proveedores.') +
+        (Insitu.token() && !syncing ? ' <button id="ordSync" class="btn-link" type="button">Bajar compras ahora</button>' : '');
+    const os = $('#ordSync');
+    if (os) os.addEventListener('click', () => syncInsitu({ silent: true }).catch(() => {}));
+    const card = (v, cls = '') => `<button type="button" class="vcard ${cls}" data-v="${esc(v.name)}">
+        ${v.due ? '<span class="due">Toca pedir</span>' : ''}
+        <span class="vn">${esc(v.name)}</span>
+        <span class="vs">${v.n ? `<b>${v.n}</b> productos por pedir · <b>${nfmt(v.cajas)}</b> cajas` : 'Nada urgente por pedir'}</span>
+        ${v.last ? `<span class="vm">Último pedido ${fmtD(v.last)} (hace ${v.since} ${v.since === 1 ? 'día' : 'días'})${v.cycle ? ` · le compras cada ~${v.cycle} días` : ''}</span>` : ''}
+      </button>`;
+    $('#ordVendorGrid').innerHTML = real.map((v) => card(v)).join('') +
+      (sinProv && sinProv.n ? card({ ...sinProv, due: false }, 'all') : '') +
+      `<button type="button" class="vcard all" data-v=""><span class="vn">Todos los proveedores</span><span class="vs"><b>${total}</b> productos · una orden agrupada por proveedor</span></button>`;
+  }
+  $('#ordVendorGrid').addEventListener('click', (e) => {
+    const b = e.target.closest('.vcard'); if (!b) return;
+    O.vendor = b.dataset.v; O.lines = []; O.touched = false; O.id = null; O.no = null;
+    $('#ordReviewOut').hidden = true;
+    suggestOrder();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  $('#ordChange').addEventListener('click', () => {
+    if (O.touched && O.lines.length && O.status !== 'enviada' && !confirm('¿Cambiar de proveedor? Esta orden se descarta (dale Guardar antes si la quieres conservar).')) return;
+    O.vendor = null; O.lines = []; O.touched = false; O.id = null; O.no = null;
+    $('#ordReviewOut').hidden = true;
+    saveDraft(); renderOrders();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
   function renderOrders() {
-    const all = allSuggestions();
-    const counts = {};
-    all.forEach((l) => { counts[l.vendor] = (counts[l.vendor] || 0) + 1; });
-    const vendors = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
-    $('#ordVendors').innerHTML = `<button type="button" role="radio" data-v="" class="${!O.vendor ? 'on' : ''}" aria-checked="${!O.vendor}">Todos<small>${all.length}</small></button>` +
-      vendors.map((v) => `<button type="button" role="radio" data-v="${esc(v)}" class="${O.vendor === v ? 'on' : ''}" aria-checked="${O.vendor === v}">${esc(v)}<small>${counts[v]}</small></button>`).join('');
+    const picking = O.vendor === null;
+    $('#ordPicker').hidden = !picking;
+    $('#ordEditor').hidden = picking;
+    if (S.view === 'ord') $('#ordDock').hidden = picking;
+    if (picking) { renderPicker(); return; }
+    $('#ordTitle').textContent = O.vendor || 'Todos los proveedores';
     const m = S.meta || {};
     $('#ordInfo').innerHTML = m.receipts
       ? `Calculado con tus ventas y <b>${m.receipts} recepciones</b> de InSitu · stock al ${fmtTs(m.at)}`
@@ -1470,11 +1530,6 @@
     $('#ordReview').disabled = !has || reviewing;
   }
 
-  $('#ordVendors').addEventListener('click', (e) => {
-    const b = e.target.closest('button'); if (!b) return;
-    O.vendor = b.dataset.v;
-    suggestOrder();
-  });
   $('#ordRecalc').addEventListener('click', () => {
     if (O.touched && !confirm('¿Recalcular? Se pierden los cambios de cantidades (los productos agregados a mano se quedan).')) return;
     suggestOrder();
