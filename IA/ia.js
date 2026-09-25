@@ -1379,12 +1379,59 @@
     };
   }
 
+  // ---- Explicación de cada renglón (se recalcula al cambiar la cantidad) ----
+  const stockOf = (l) => Math.max(0, Number(l.stock) || 0); // InSitu a veces marca stock negativo
+  const coverDays = (l, qty) => (l.rate > 0 ? Math.round((stockOf(l) + qty) / (l.rate / 7)) : null);
+  const span = (d) => (d < 14 ? `~${d} ${d === 1 ? 'día' : 'días'}` : `~${Math.round(d / 7)} semanas`);
+  const until = (d) => { const t = new Date(); t.setDate(t.getDate() + d); return fmtD(ymd(t)) + (t.getFullYear() !== new Date().getFullYear() ? ' ' + t.getFullYear() : ''); };
+  const targetDays = (l) => (l.cycle || 21) + OS.lead;
+  const isShort = (l) => { const c = coverDays(l, l.qty); return c != null && c < targetDays(l); };
+
   function whyLine(l) {
-    if (l.manual) return 'Agregado a mano.';
-    const left = l.left == null ? '' : l.left <= 0 ? ' Ya no hay.' : ` Te alcanza para ~${l.left} ${l.left === 1 ? 'día' : 'días'}.`;
+    const st = Number(l.stock) || 0;
+    const left = l.rate > 0 && st > 0 ? Math.round(st / (l.rate / 7)) : 0;
+    const stockTxt = st < 0 ? `no hay (InSitu marca ${nfmt(st)})` : st === 0 ? 'ya no hay' : `quedan ${cajas(st)} (${span(left)})`;
+    const base = l.rate > 0 ? `Vendes ~${nfmt(l.rate)} cajas/semana y ${stockTxt}.` : '';
+    if (l.manual && !base) return `Agregado a mano. Con ${cajas(l.qty)}.`;
     const cyc = l.cycleOwn ? `Le compras cada ~${l.cycle} días` : `Se compra cada ~${l.cycle} días (${l.lastBuy ? 'promedio del proveedor' : 'estimado'})`;
-    return `Vendes ~${nfmt(l.rate)} cajas/semana y quedan ${cajas(l.stock ?? 0)}.${left} ${cyc} + ${OS.lead} de entrega + ${OS.safety}% colchón → pide ${l.sug}.` +
-      (l.boost ? ' Incluye +30% porque está en un especial vigente.' : '');
+    if (!l.manual && l.qty === l.sug) {
+      return `${base} ${cyc} + ${OS.lead} de entrega + ${OS.safety}% colchón → pide ${l.sug}.` + (l.boost ? ' Incluye +30% porque está en un especial vigente.' : '');
+    }
+    if (l.qty === 0) return `${base} Sin pedir, ${st > 0 ? `solo te alcanza para ${span(left)}` : 'te quedas sin producto'}.`;
+    const c = coverDays(l, l.qty);
+    let txt = `${base} Con ${cajas(l.qty)} te alcanza para ${span(c)} (hasta ${until(c)}).`;
+    if (!l.manual) {
+      const diff = l.qty - l.sug;
+      if (diff > 0) {
+        const extra = c - coverDays(l, l.sug);
+        txt += ` Son ${diff} más de lo sugerido: ${span(extra)} extra de inventario (+${money(diff * (l.cost || 0))}).`;
+      } else {
+        const falta = targetDays(l) - c;
+        txt += ` Son ${-diff} menos de lo sugerido: ` + (falta > 0 ? `te quedas corto ~${falta} días antes de que llegue el siguiente pedido.` : 'todavía alcanza para el siguiente pedido.');
+      }
+    } else if (c < targetDays(l)) {
+      txt += ` Se acaba ~${targetDays(l) - c} días antes de que llegue el siguiente pedido.`;
+    }
+    return txt;
+  }
+
+  function kHTML(l) {
+    if (!(l.rate > 0) && l.manual) return '';
+    const st = Number(l.stock) || 0;
+    const c = coverDays(l, l.qty);
+    return `<span><b>${nfmt(Math.max(0, st))}</b> stock${st < 0 ? ` (InSitu ${nfmt(st)})` : ''}</span><span><b>${nfmt(l.rate)}</b> /semana</span>` +
+      `<span><b>${l.cycle}</b> días entre compras</span>${l.lastBuy ? `<span>última compra <b>${fmtD(l.lastBuy)}</b></span>` : ''}` +
+      (c != null && l.qty > 0 ? `<span>con la orden alcanza <b>${span(c)}</b></span>` : '');
+  }
+
+  function refreshLine(el, l) {
+    const w = el.querySelector('.ol-why');
+    w.textContent = whyLine(l);
+    w.classList.toggle('hot', isShort(l));
+    w.classList.toggle('over', !l.manual && l.qty > l.sug);
+    const k = el.querySelector('.ol-k');
+    if (k) k.innerHTML = kHTML(l);
+    el.classList.toggle('edited', l.qty !== l.sug);
   }
 
   function allSuggestions() {
@@ -1497,14 +1544,13 @@
 
   function lineHTML(l) {
     const img = l.photo ? `<img src="${esc(l.photo)}" alt="" loading="lazy" onerror="this.remove()">` : '';
-    const hot = l.left != null && l.left <= 7;
     return `<article class="ol${l.qty !== l.sug ? ' edited' : ''}" data-id="${esc(l.id)}">
       <div class="ol-ph">${img}</div>
       <div class="ol-main">
         <div class="ol-name">${esc(l.name)}</div>
         <div class="meta">SKU ${esc(l.id)}${l.upc ? ' · UPC ' + esc(l.upc) : ''}${l.pack ? ' · ' + esc(l.pack) : ''}</div>
-        <p class="ol-why${hot ? ' hot' : ''}">${esc(whyLine(l))}</p>
-        ${l.manual ? '' : `<div class="ol-k"><span><b>${nfmt(l.stock ?? 0)}</b> stock</span><span><b>${nfmt(l.rate)}</b> /semana</span><span><b>${l.cycle}</b> días entre compras</span>${l.lastBuy ? `<span>última compra <b>${fmtD(l.lastBuy)}</b></span>` : ''}</div>`}
+        <p class="ol-why${isShort(l) ? ' hot' : ''}${!l.manual && l.qty > l.sug ? ' over' : ''}">${esc(whyLine(l))}</p>
+        <div class="ol-k">${kHTML(l)}</div>
       </div>
       <div class="ol-qty">
         <div class="stepper"><button type="button" data-q="-1" aria-label="Menos">−</button><input type="number" inputmode="numeric" min="0" step="1" value="${l.qty}" aria-label="Cajas de ${esc(l.name)}"><button type="button" data-q="1" aria-label="Más">+</button></div>
@@ -1546,8 +1592,9 @@
     const l = O.lines.find((x) => x.id === el.dataset.id); if (!l) return;
     l.qty = Math.max(0, Math.round(q) || 0);
     O.touched = true;
-    el.querySelector('.stepper input').value = l.qty;
-    el.classList.toggle('edited', l.qty !== l.sug);
+    const inp = el.querySelector('.stepper input');
+    if (document.activeElement !== inp) inp.value = l.qty;
+    refreshLine(el, l);
     saveDraft();
     renderOrdTotals();
   }
@@ -1560,6 +1607,11 @@
       O.lines = O.lines.filter((x) => x !== l);
       O.touched = true; saveDraft(); renderOrders();
     }
+  });
+  // Al escribir la cantidad, el texto se recalcula al momento
+  $('#ordList').addEventListener('input', (e) => {
+    const inp = e.target.closest('.stepper input'); if (!inp || inp.value === '') return;
+    setQty(inp.closest('.ol'), parseFloat(inp.value));
   });
   $('#ordList').addEventListener('change', (e) => {
     const inp = e.target.closest('.stepper input'); if (!inp) return;
