@@ -233,6 +233,7 @@
     if (data && Array.isArray(data.items) && data.items.length) {
       S.products = data.items;
       S.meta = data.meta;
+      aplicarProduce();
       showWorkspace();
       autoSync();
     } else {
@@ -345,6 +346,7 @@
       const { items, withDetail } = buildDataset(prods, invs, stocks, today);
       if (!items.length) throw new Error('InSitu no regresó productos con precio y costo.');
       S.products = items;
+      aplicarProduce();
       S.meta = {
         source: 'InSitu', at: Date.now(), sales: withDetail > 0, stock: !!stocks,
         invoices: invs.length, from: ymd(from),
@@ -512,6 +514,7 @@
       const items = parseRows(rows);
       if (!items.length) throw new Error('No encontré productos con precio y costo. ¿Es el export de InSitu?');
       S.products = items;
+      aplicarProduce();
       S.meta = { source: file.name, at: Date.now(), sales: false };
       if (!store.set(K_DATA, { meta: S.meta, items })) toast('Aviso: no se pudo guardar en este dispositivo.');
       S.set.cats = null;
@@ -593,6 +596,7 @@
     $('#dataInfo').innerHTML =
       `<span id="ageInfo" class="age"></span> · <b>${S.products.length}</b> productos · ${esc(m.source || '')}` +
       (m.sales ? ` · ventas desde ${fmtD(m.from)} (${m.invoices} facturas)${m.stock ? ' + inventario' : ''}` : ' · sin datos de venta') +
+      (PRODUCE ? ` · <b>produce semana ${PRODUCE.semana}</b> en ${S.products.filter((p) => p.produceSemana).length} productos` : '') +
       ` · ${conn ? '<button id="resync" class="btn-link" type="button">actualizar de InSitu</button> · ' : ''}` +
       `<button id="changeSrc" class="btn-link" type="button">${conn ? 'desconectar' : 'conectar InSitu'}</button> <span id="syncInfo"></span>`;
     renderAge();
@@ -617,6 +621,38 @@
   /* ================= CONTROLES ================= */
   // Con inventario de InSitu, nunca se propone algo sin stock (salvo que casi todo venga en 0,
   // señal de que el inventario no se lleva en InSitu y no hay que confiar en él)
+  /* ===== Produce de la semana =====
+     El produce cambia de precio cada semana, pero InSitu guarda el costo con
+     el que se dio de alta el producto. En la W40 habia 9 articulos cuyo costo
+     real ya superaba el precio de venta de InSitu: la IA los proponia como
+     especiales porque veia un costo viejo mas barato. Este archivo lo genera
+     IA/tools/produce_a_insitu.py con la lista de la semana y solo trae cruces
+     seguros (mismo empaque y PLU de un solo producto). */
+  let PRODUCE = null;
+
+  async function cargarProduce() {
+    try {
+      const r = await fetch('./produce-precios.json', { cache: 'no-store' });
+      if (!r.ok) return;
+      const d = await r.json();
+      if (d && d.items) PRODUCE = d;
+    } catch (e) { /* sin archivo se sigue con lo de InSitu */ }
+  }
+
+  function aplicarProduce() {
+    if (!PRODUCE || !S.products.length) return 0;
+    let n = 0;
+    for (const p of S.products) {
+      const w = PRODUCE.items[String(p.id)];
+      if (!w) continue;
+      p.costAntes = p.cost; p.priceAntes = p.price;
+      p.cost = w.costo; p.price = w.precio;
+      p.produceSemana = PRODUCE.semana;
+      n++;
+    }
+    return n;
+  }
+
   let stockTrusted = null;
   function trustStock() {
     if (stockTrusted !== null) return stockTrusted;
@@ -1263,5 +1299,7 @@
 
   /* ================= INICIO ================= */
   fillIcons();
-  initFirebase();
+  // El precio del produce se carga antes que Firebase para que ya este listo
+  // cuando entren los productos, vengan de InSitu o de la copia local.
+  cargarProduce().finally(initFirebase);
 })();
