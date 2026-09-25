@@ -367,7 +367,7 @@
       syncing = false;
       if (silent && !$('#workspace').hidden) {
         stockTrusted = null;
-        if (S.view === 'ord') renderOrders();
+        if (S.view === 'ord') { if (!O.touched) suggestOrder(); else renderOrders(); }
         refreshCards();
         buildFilters();
         renderDataInfo();
@@ -1326,7 +1326,11 @@
     $('#ordView').hidden = !ord;
     $('#dock').hidden = ord;
     $('#ordDock').hidden = !ord;
-    if (ord) { if (!O.lines.length && !O.touched) suggestOrder(); else renderOrders(); }
+    if (ord) {
+      if (!O.lines.length && !O.touched) suggestOrder(); else renderOrders();
+      // Datos viejos sin compras (de antes de Órdenes): se bajan solas
+      if (S.meta && S.meta.source === 'InSitu' && !S.meta.receipts && Insitu.token() && !syncing) syncInsitu({ silent: true }).then(() => {}, () => {});
+    }
   }
   $('#viewTabs').addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;
@@ -1409,7 +1413,10 @@
     const m = S.meta || {};
     $('#ordInfo').innerHTML = m.receipts
       ? `Calculado con tus ventas y <b>${m.receipts} recepciones</b> de InSitu · stock al ${fmtTs(m.at)}`
-      : 'Sin recepciones de InSitu: se usa "cada 21 días" para todo. Dale <b>actualizar de InSitu</b> para bajar tus compras.';
+      : (syncing ? 'Bajando tus compras de InSitu…' : 'Todavía no se bajan tus compras de InSitu, por eso todo sale "Sin proveedor".') +
+        (Insitu.token() && !syncing ? ' <button id="ordSync" class="btn-link" type="button">Bajar compras ahora</button>' : '');
+    const os = $('#ordSync');
+    if (os) os.addEventListener('click', () => syncInsitu({ silent: true }).catch(() => {}));
     $('#ordLead').value = OS.lead;
     $('#ordSafety').value = OS.safety;
 
