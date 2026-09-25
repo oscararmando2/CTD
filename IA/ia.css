@@ -157,6 +157,13 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .p-new{font-family:var(--display);font-weight:800;font-size:44px;letter-spacing:-.045em;color:var(--hueso);line-height:.95}
 .p-old{color:var(--muted-2);text-decoration:line-through;text-decoration-color:var(--rojo);font-size:17px}
 .p-save{font-size:14px;color:var(--verde-2);font-weight:700}
+.prices.nx{flex-direction:column;align-items:flex-start;gap:6px}
+.p-nx{font-family:var(--display);font-weight:800;font-size:40px;letter-spacing:-.04em;line-height:.95;color:var(--hueso)}
+.p-nx small{display:block;font-size:20px;letter-spacing:-.02em;color:var(--oro);margin-top:4px}
+.p-eq{font-size:14px;color:var(--muted)}
+.p-eq b{color:var(--hueso)}
+.tag.t-nx{background:var(--oro);color:#1a1206}
+.acts{flex-wrap:wrap}
 
 /* Motivo con ventas reales: sin caja, acento de color a la izquierda */
 .why{position:relative;padding-left:14px;display:flex;flex-direction:column;gap:10px}
@@ -357,6 +364,8 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .sh-card .sh-name{font-family:var(--display);font-weight:800;font-size:13.5px;line-height:1.15;margin:2px 0 6px}
 .sh-card .sh-old{text-decoration:line-through;color:#8b8274;font-size:12px}
 .sh-card .sh-new{font-family:var(--display);font-weight:800;font-size:24px;color:#D8331B;letter-spacing:-.02em;line-height:1}
+.sh-card .sh-nx{font-family:var(--display);font-weight:800;font-size:17px;line-height:1.05;color:#D8331B;letter-spacing:-.02em;margin:2px 0 4px}
+.sh-card .sh-eq{text-decoration:none}
 .sh-card .sh-pack{font-size:10.5px;color:#8b8274;margin-top:3px}
 .sh-foot{margin-top:18px;font-size:11px;color:#6b6356;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
 

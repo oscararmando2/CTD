@@ -75,6 +75,7 @@
     logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>',
     send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
+    gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>',
     trash: '<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   };
   const icon = (n) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ''}</svg>`;
@@ -815,14 +816,41 @@
   });
 
   function makeCard(items, P, C, s) {
-    const c = { uid: uid(), kind: items.length > 1 ? 'combo' : 'single', items: items.map(snap), P: r2(P), C: r2(C), S: s, from: S.set.from, to: S.set.to, pinned: false, open: false, customDates: false };
+    const c = { uid: uid(), kind: items.length > 1 ? 'combo' : 'single', items: items.map(snap), P: r2(P), C: r2(C), S: s, from: S.set.from, to: S.set.to, pinned: false, open: false, customDates: false, nx: null };
+    // Los más vendidos (gancho) salen como "Compra N, llévate 1 gratis": sube el pedido y no baja el precio de lista
+    if (hasSales() && c.kind === 'single' && items[0].why === 'gancho') setNx(c, nxFor(c));
     c.tag = tagFor(c);
     return c;
+  }
+
+  /* ---- "Compra N, llévate 1 gratis" ----
+   * El cliente paga N cajas y se lleva N+1: precio efectivo por caja = P·N/(N+1).
+   * Se usa ese precio efectivo para margen y ganancia (respeta el margen mínimo). */
+  const nxPrice = (P, n) => r2((P * n) / (n + 1));
+  function nxFor(c) {
+    const off = Math.max(0.01, (c.P - c.S) / c.P);
+    const COMMON = [1, 2, 3, 4, 5, 6, 8, 10, 12]; // promociones que se usan en la calle (2x1, 5+1, 10+1…)
+    const ideal = 1 / off - 1;
+    const ok = COMMON.filter((n) => nxPrice(c.P, n) >= minPrice(c.C));
+    if (!ok.length) return null;
+    return ok.reduce((best, n) => (Math.abs(n - ideal) < Math.abs(best - ideal) ? n : best), ok[0]);
+  }
+  function setNx(c, n) {
+    if (!n) { c.nx = null; return false; }
+    if (c.nx == null) c.Sdirect = c.S;
+    c.nx = n;
+    c.S = nxPrice(c.P, n);
+    return true;
+  }
+  function unsetNx(c) {
+    c.S = c.Sdirect != null ? c.Sdirect : c.S;
+    c.nx = null;
   }
 
   function tagFor(c) {
     const off = (c.P - c.S) / c.P, m0 = (c.P - c.C) / c.P;
     if (c.kind === 'combo') return ['combo', 'Combo'];
+    if (c.nx) return ['nx', `${c.nx} + 1 gratis`];
     const why = c.items[0].why;
     if (hasSales() && why && why !== 'normal') {
       if (why === 'dormido') return ['liquidacion', 'Liquidación'];
@@ -1008,16 +1036,19 @@
         <h3 class="name">${esc(name)}</h3>
         <div class="meta">${meta}</div>
       </div>
-      <div class="prices">
+      ${c.nx ? `<div class="prices nx">
+        <span class="p-nx">Compra ${c.nx}<small>llévate 1 gratis</small></span>
+        <span class="p-eq">Paga ${money(c.P * c.nx)} por ${c.nx + 1} cajas · equivale a <b>${money(c.S)}</b> c/u (-${pct(st.off)})</span>
+      </div>` : `<div class="prices">
         <span class="p-new">${money(c.S)}</span>
         <span class="p-old">${money(c.P)}</span>
         <span class="p-save">Ahorra ${money(st.save)}</span>
-      </div>
+      </div>`}
       ${salesHTML(c, st.off)}
       <table class="ab">
         <thead><tr><th></th><th>Antes</th><th>Especial</th></tr></thead>
         <tbody>
-          <tr><td>Precio</td><td>${money(c.P)}</td><td class="hi">${money(c.S)}</td></tr>
+          <tr><td>${c.nx ? 'Precio efectivo' : 'Precio'}</td><td>${money(c.P)}</td><td class="hi">${money(c.S)}</td></tr>
           <tr><td>Costo</td><td>${money(c.C)}</td><td>${money(c.C)}</td></tr>
           <tr><td>Margen</td><td>${pct(st.m0)}</td><td class="hi${low ? ' warn' : ''}">${pct(st.m1)}</td></tr>
           <tr><td>Ganancia / caja</td><td>${money(st.g0)}</td><td class="hi${low ? ' warn' : ''}">${money(st.g1)}</td></tr>
@@ -1038,10 +1069,12 @@
     const maxOff = Math.max(0, Math.floor(((c.P - minPrice(c.C)) / c.P) * 200) / 2);
     return `
       <div class="adj"${c.open ? '' : ' hidden'}>
-        <div class="adj-row"><label>Descuento</label>
+        ${c.nx ? `<div class="adj-row"><label>Compra</label>
+          <input type="number" data-f="nx" inputmode="numeric" min="1" max="24" step="1" value="${c.nx}">
+          <span class="val" data-v="off">${pct(st.off)}</span></div>` : `<div class="adj-row"><label>Descuento</label>
           <input type="range" data-f="off" min="0" max="${maxOff}" step="0.5" value="${Math.min(maxOff, r2(st.off * 100))}">
           <span class="val" data-v="off">${pct(st.off)}</span></div>
-        <div class="adj-row"><label>Especial $</label><input type="number" data-f="price" step="0.01" min="0" value="${c.S.toFixed(2)}"></div>
+        <div class="adj-row"><label>Especial $</label><input type="number" data-f="price" step="0.01" min="0" value="${c.S.toFixed(2)}"></div>`}
         <div class="adj-row"><label>Desde</label><input type="date" data-f="from" value="${esc(c.from)}"></div>
         <div class="adj-row"><label>Hasta</label><input type="date" data-f="to" value="${esc(c.to)}"></div>
         <p class="adj-warn" data-v="warn"${st.m1 < floorF() - 1e-9 ? '' : ' hidden'}>Abajo del margen mínimo (${pct(floorF(), 0)}).</p>
@@ -1059,6 +1092,7 @@
           <div class="acts">
             <button data-act="swap" type="button">${icon('refresh')}Cambiar</button>
             <button data-act="adj" type="button">${icon(c.open ? 'check' : 'pencil')}${c.open ? 'Listo' : 'Ajustar'}</button>
+            ${c.kind === 'single' ? `<button data-act="fmt" type="button">${icon('gift')}${c.nx ? 'Precio directo' : 'Compra N + 1'}</button>` : ''}
           </div>
         </div>
       </article>`;
@@ -1132,6 +1166,11 @@
     } else if (act === 'swap') {
       if (c.pinned) { toast('Está fijada: suéltala para cambiarla'); return; }
       swapCard(c.uid);
+    } else if (act === 'fmt') {
+      if (c.nx) unsetNx(c);
+      else if (!setNx(c, nxFor(c))) { toast('Con el margen mínimo no alcanza para regalar una caja'); return; }
+      c.tag = tagFor(c);
+      render(false, c.uid);
     } else if (act === 'adj') {
       c.open = !c.open;
       el.querySelector('.adj').hidden = !c.open;
@@ -1155,6 +1194,10 @@
       const st = stats(c);
       const r = el.querySelector('[data-f="off"]');
       r.value = Math.min(parseFloat(r.max), Math.max(0, st.off * 100));
+    } else if (f === 'nx') {
+      const n = Math.round(parseFloat(inp.value));
+      if (!(n >= 1 && n <= 24)) return;
+      setNx(c, n);
     } else if (f === 'from' || f === 'to') {
       c[f] = inp.value;
       c.customDates = true;
@@ -1295,12 +1338,13 @@
       const pack = c.kind === 'combo' ? 'Combo · ' + c.items.length + ' productos' : c.items[0].pack;
       const own = c.from !== froms[0] || c.to !== tos[tos.length - 1] ? ` · ${fmtD(c.from)}–${fmtD(c.to)}` : '';
       return `<div class="sh-card">
-        <div class="sh-ph${c.kind === 'combo' ? ' combo' : ''}">${imgs}<span class="sh-off">-${Math.round(st.off * 100)}%</span></div>
+        <div class="sh-ph${c.kind === 'combo' ? ' combo' : ''}">${imgs}<span class="sh-off">${c.nx ? `${c.nx}+1` : `-${Math.round(st.off * 100)}%`}</span></div>
         <div class="sh-b">
           <div class="sh-brand">${esc(brand)}</div>
           <div class="sh-name">${esc(name)}</div>
-          <div class="sh-old">Antes ${money(c.P)}</div>
-          <div class="sh-new">${money(c.S)}</div>
+          ${c.nx ? `<div class="sh-nx">Compra ${c.nx}, llévate 1 gratis</div>
+          <div class="sh-old sh-eq">Precio ${money(c.P)} · equivale a ${money(c.S)} c/u</div>` : `<div class="sh-old">Antes ${money(c.P)}</div>
+          <div class="sh-new">${money(c.S)}</div>`}
           <div class="sh-pack">${esc(pack || '')}${own}</div>
         </div></div>`;
     }).join('');
