@@ -253,6 +253,7 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .ol-name{font-family:var(--display);font-weight:800;font-size:16px;line-height:1.15;letter-spacing:-.01em}
 .ol-why{margin:6px 0 0;font-size:13.5px;line-height:1.4;color:var(--muted)}
 .ol-why.hot{color:#ff9a88}
+.ol-why.over{color:var(--oro)}
 .ol-k{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:12px;color:var(--muted-2)}
 .ol-k b{color:var(--hueso);font-weight:700}
 .ol-qty{grid-column:1/-1;display:flex;align-items:center;gap:8px;margin-top:6px}
