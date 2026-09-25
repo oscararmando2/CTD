@@ -46,124 +46,109 @@
 <!-- ============ APP ============ -->
 <div id="app" class="app" hidden>
   <header class="topbar">
-    <div class="topbar-l">
-      <img src="ctd-logo.png" alt="CTD" class="topbar-logo">
-      <div>
-        <p class="hud">IA de Especiales</p>
-        <p class="topbar-title">Propuestas de la semana</p>
-      </div>
-    </div>
+    <img src="ctd-logo.png" alt="CTD" class="topbar-logo">
+    <span class="topbar-name">IA de Especiales</span>
     <div class="topbar-r">
-      <button id="histBtn" class="btn btn-ghost btn-sm" type="button">Historial <span id="histCount" class="badge"></span></button>
       <span id="whoami" class="whoami"></span>
-      <button id="logoutBtn" class="btn btn-ghost btn-sm" type="button">Salir</button>
+      <button id="histBtn" class="icon-btn" type="button" aria-label="Historial" title="Historial"><i data-icon="clock"></i><span id="histCount" class="badge"></span></button>
+      <button id="logoutBtn" class="icon-btn" type="button" aria-label="Salir" title="Salir"><i data-icon="logout"></i></button>
     </div>
   </header>
 
   <!-- Conexión de datos -->
   <section id="dropzone" class="dropzone" hidden>
-    <div class="drop-inner">
-      <p class="hud">Paso 1 · Datos reales</p>
-      <h2 class="drop-title">Conecta InSitu</h2>
-      <p class="drop-sub">Entra con tu usuario web de InSitu. Se bajan productos, costos, fotos, <b>ventas de los últimos 12 meses</b> e inventario. En este dispositivo solo se guarda la sesión, nunca tu contraseña.</p>
-      <form id="connectForm" class="connect" autocomplete="on">
-        <input id="insEmail" type="email" autocomplete="username" placeholder="correo de InSitu" required>
-        <input id="insPass" type="password" autocomplete="current-password" placeholder="contraseña" required>
-        <button id="connectBtn" class="btn btn-oro" type="submit">Conectar y bajar datos</button>
-      </form>
-      <p id="connectMsg" class="drop-msg" role="status" aria-live="polite"></p>
-      <p class="drop-alt">¿Sin InSitu a la mano? <label class="btn-link">arrastra o elige el Excel de productos<input id="fileInput" type="file" accept=".xlsx,.xls,.csv" hidden></label> (sin datos de venta).</p>
-    </div>
+    <p class="hud">Paso 1 · Datos reales</p>
+    <h2 class="display">Conecta<br>InSitu</h2>
+    <p class="lead">Entra con tu usuario web de InSitu. Se bajan productos, costos, fotos, <b>ventas de los últimos 12 meses</b> e inventario. En este dispositivo solo se guarda la sesión, nunca tu contraseña.</p>
+    <form id="connectForm" class="connect" autocomplete="on">
+      <label class="field"><span>Correo de InSitu</span><input id="insEmail" type="email" autocomplete="username" inputmode="email" required></label>
+      <label class="field"><span>Contraseña</span><input id="insPass" type="password" autocomplete="current-password" required></label>
+      <button id="connectBtn" class="btn btn-oro btn-lg" type="submit">Conectar y bajar datos</button>
+    </form>
+    <p id="connectMsg" class="drop-msg" role="status" aria-live="polite"></p>
+    <p class="drop-alt">¿Sin InSitu a la mano? <label class="btn-link">elige el Excel de productos<input id="fileInput" type="file" accept=".xlsx,.xls,.csv" hidden></label> (sin datos de venta).</p>
   </section>
 
   <main id="workspace" hidden>
-    <!-- Controles -->
-    <section class="controls">
-      <div class="ctrl-grid">
-        <div class="ctrl">
-          <span class="lbl">Especiales</span>
-          <div class="seg" id="segCount">
-            <button type="button" data-v="4">4</button>
-            <button type="button" data-v="8" class="on">8</button>
-            <button type="button" data-v="12">12</button>
-          </div>
-        </div>
-        <div class="ctrl ctrl-full" id="stratCtrl">
-          <span class="lbl">Estrategia (según ventas reales)</span>
-          <div class="seg seg-wrap" id="segStrat">
-            <button type="button" data-v="mixto">✨ Mixto</button>
-            <button type="button" data-v="mover">💤 Mover lo parado</button>
-            <button type="button" data-v="bajando">📉 Recuperar ventas</button>
-            <button type="button" data-v="gancho">🔥 Gancho (más vendidos)</button>
-            <button type="button" data-v="azar">🎲 Al azar</button>
-          </div>
-        </div>
-        <div class="ctrl">
-          <span class="lbl">Modo</span>
-          <div class="seg" id="segMode">
-            <button type="button" data-v="equilibrado" class="on">Equilibrado</button>
-            <button type="button" data-v="agresivo">Agresivo</button>
-            <button type="button" data-v="cuidar">Cuidar margen</button>
-          </div>
-        </div>
-        <div class="ctrl ctrl-sm">
-          <span class="lbl">Descuento %</span>
-          <div class="pair">
-            <input id="dMin" type="number" min="0" max="60" step="1" value="6" aria-label="Descuento mínimo">
-            <span>a</span>
-            <input id="dMax" type="number" min="0" max="60" step="1" value="12" aria-label="Descuento máximo">
-          </div>
-        </div>
-        <div class="ctrl ctrl-sm">
-          <span class="lbl">Margen mínimo %</span>
-          <input id="floor" type="number" min="0" max="60" step="0.5" value="5">
-        </div>
-        <div class="ctrl ctrl-sm">
-          <span class="lbl">Vigencia</span>
-          <div class="pair">
-            <input id="dFrom" type="date" aria-label="Desde">
-            <input id="dTo" type="date" aria-label="Hasta">
-          </div>
-        </div>
-      </div>
+    <section class="hero">
+      <h1 class="display">Propuestas<br>de la semana</h1>
+      <p id="dataInfo" class="status"></p>
 
-      <div class="ctrl-grid ctrl-grid-2">
-        <div class="ctrl" id="vendorCtrl">
-          <span class="lbl">Proveedor</span>
-          <select id="fVendor"><option value="">Todos</option></select>
+      <div class="strat" id="stratCtrl">
+        <div class="pills" id="segStrat" role="radiogroup" aria-label="Estrategia">
+          <button type="button" data-v="mixto"><i data-icon="sparkles"></i>Mixto</button>
+          <button type="button" data-v="mover"><i data-icon="moon"></i>Mover lo parado</button>
+          <button type="button" data-v="bajando"><i data-icon="down"></i>Recuperar ventas</button>
+          <button type="button" data-v="gancho"><i data-icon="flame"></i>Gancho</button>
+          <button type="button" data-v="azar"><i data-icon="shuffle"></i>Al azar</button>
         </div>
-        <div class="ctrl">
-          <span class="lbl">Marca</span>
-          <select id="fBrand"><option value="">Todas</option></select>
-        </div>
-        <label class="ctrl toggle">
-          <input id="fCombo" type="checkbox" checked>
-          <span>Incluir 1 combo</span>
-        </label>
-      </div>
-
-      <div class="ctrl">
-        <span class="lbl">Categorías <button id="catAll" type="button" class="btn-link sm">todas</button> · <button id="catNone" type="button" class="btn-link sm">ninguna</button></span>
-        <div id="catChips" class="chips"></div>
-      </div>
-
-      <div class="ctrl-actions">
-        <button id="genBtn" class="btn btn-oro btn-lg" type="button">🎲 Generar propuesta</button>
-        <p id="dataInfo" class="data-info"></p>
       </div>
     </section>
 
-    <!-- Resumen -->
-    <section id="summary" class="summary" hidden></section>
-
-    <!-- Tarjetas -->
+    <section id="summary" class="kpis" hidden></section>
     <section id="grid" class="grid" aria-live="polite"></section>
-
-    <div id="bottomBar" class="bottombar" hidden>
-      <button id="saveBtn" class="btn btn-ghost" type="button">💾 Guardar propuesta</button>
-      <button id="clientBtn" class="btn btn-oro" type="button">🖨️ Vista cliente / PDF</button>
-    </div>
   </main>
+
+  <!-- Dock flotante: acciones principales (celular y compu) -->
+  <nav id="dock" class="dock" hidden aria-label="Acciones">
+    <button id="settingsBtn" class="dock-btn" type="button" aria-label="Ajustes"><i data-icon="sliders"></i><span>Ajustes</span><b id="setBadge" class="dot" hidden></b></button>
+    <button id="genBtn" class="dock-main" type="button"><i data-icon="sparkles"></i>Generar</button>
+    <button id="saveBtn" class="dock-btn" type="button" disabled><i data-icon="bookmark"></i><span>Guardar</span></button>
+    <button id="clientBtn" class="dock-btn" type="button" disabled><i data-icon="printer"></i><span>PDF</span></button>
+  </nav>
+
+  <!-- Ajustes (hoja inferior en celular, panel lateral en compu) -->
+  <div id="settings" class="drawer" hidden>
+    <div class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+      <div class="drawer-grab" aria-hidden="true"></div>
+      <div class="drawer-head">
+        <h3 id="setTitle">Ajustes</h3>
+        <button class="icon-btn" data-close type="button" aria-label="Cerrar"><i data-icon="x"></i></button>
+      </div>
+
+      <div class="set">
+        <span class="lbl">Cuántos especiales</span>
+        <div class="seg" id="segCount">
+          <button type="button" data-v="4">4</button>
+          <button type="button" data-v="8" class="on">8</button>
+          <button type="button" data-v="12">12</button>
+        </div>
+      </div>
+      <div class="set">
+        <span class="lbl">Modo</span>
+        <div class="seg" id="segMode">
+          <button type="button" data-v="equilibrado" class="on">Equilibrado</button>
+          <button type="button" data-v="agresivo">Agresivo</button>
+          <button type="button" data-v="cuidar">Cuidar margen</button>
+        </div>
+      </div>
+      <div class="set set-2">
+        <label class="field"><span>Descuento mín %</span><input id="dMin" type="number" inputmode="decimal" min="0" max="60" step="1" value="6"></label>
+        <label class="field"><span>Descuento máx %</span><input id="dMax" type="number" inputmode="decimal" min="0" max="60" step="1" value="12"></label>
+      </div>
+      <div class="set">
+        <label class="field"><span>Margen mínimo %</span><input id="floor" type="number" inputmode="decimal" min="0" max="60" step="0.5" value="5"></label>
+      </div>
+      <div class="set set-2">
+        <label class="field"><span>Vigencia desde</span><input id="dFrom" type="date"></label>
+        <label class="field"><span>Hasta</span><input id="dTo" type="date"></label>
+      </div>
+      <div class="set set-2">
+        <label class="field" id="vendorCtrl"><span>Proveedor</span><select id="fVendor"><option value="">Todos</option></select></label>
+        <label class="field"><span>Marca</span><select id="fBrand"><option value="">Todas</option></select></label>
+      </div>
+      <label class="switch">
+        <input id="fCombo" type="checkbox" checked>
+        <span class="switch-ui" aria-hidden="true"></span>
+        <span>Incluir 1 combo</span>
+      </label>
+      <div class="set">
+        <span class="lbl">Categorías <button id="catAll" type="button" class="btn-link sm">todas</button> · <button id="catNone" type="button" class="btn-link sm">ninguna</button></span>
+        <div id="catChips" class="chips"></div>
+      </div>
+      <button id="applyBtn" class="btn btn-oro btn-lg btn-block" type="button">Generar con estos ajustes</button>
+    </div>
+  </div>
 </div>
 
 <!-- Historial -->
@@ -171,7 +156,7 @@
   <div class="modal-card">
     <div class="modal-head">
       <h3>Propuestas guardadas <small>(Oscar y Luis ven lo mismo)</small></h3>
-      <button class="btn-x" data-close aria-label="Cerrar">✕</button>
+      <button class="icon-btn" data-close type="button" aria-label="Cerrar"><i data-icon="x"></i></button>
     </div>
     <p id="histNote" class="data-info"></p>
     <div id="histList" class="hist-list"></div>
@@ -185,7 +170,7 @@
       <h3>Vista para clientes <small>(sin costos ni márgenes)</small></h3>
       <div>
         <button id="printBtn" class="btn btn-oro btn-sm" type="button">Imprimir / Guardar PDF</button>
-        <button class="btn-x" data-close aria-label="Cerrar">✕</button>
+        <button class="icon-btn" data-close type="button" aria-label="Cerrar"><i data-icon="x"></i></button>
       </div>
     </div>
     <div id="clientSheet" class="sheet"></div>
