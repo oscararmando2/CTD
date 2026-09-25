@@ -32,11 +32,11 @@
 
   // Motivos (insights) que salen de las ventas reales
   const WHY = {
-    dormido: { icon: '💤', label: 'Sin venta', w: 3.2, dBoost: [1.35, 1.8] },
-    lento: { icon: '🐢', label: 'Rotación lenta', w: 2.6, dBoost: [1.15, 1.5] },
-    bajando: { icon: '📉', label: 'Ventas a la baja', w: 2.2, dBoost: [1.0, 1.3] },
-    gancho: { icon: '🔥', label: 'Más vendido', w: 1.6, dBoost: [0.45, 0.8] },
-    normal: { icon: '🎲', label: 'Al azar', w: 0.5, dBoost: [1, 1] },
+    dormido: { icon: 'moon', label: 'Sin venta', w: 3.2, dBoost: [1.35, 1.8] },
+    lento: { icon: 'hourglass', label: 'Rotación lenta', w: 2.6, dBoost: [1.15, 1.5] },
+    bajando: { icon: 'down', label: 'Ventas a la baja', w: 2.2, dBoost: [1.0, 1.3] },
+    gancho: { icon: 'flame', label: 'Más vendido', w: 1.6, dBoost: [0.45, 0.8] },
+    normal: { icon: 'shuffle', label: 'Al azar', w: 0.5, dBoost: [1, 1] },
   };
   const STRATS = {
     mixto: ['dormido', 'lento', 'bajando', 'gancho', 'normal'],
@@ -49,6 +49,30 @@
   /* ================= HELPERS ================= */
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  // Iconos de línea (estilo Lucide), sin emojis
+  const ICONS = {
+    sparkles: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 3v4M21 5h-4"/>',
+    moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+    hourglass: '<path d="M5 22h14M5 2h14"/><path d="M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22"/><path d="M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2"/>',
+    down: '<polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/>',
+    flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.1-2.1-.2-4.1 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.2.4-2.3 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+    shuffle: '<path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>',
+    sliders: '<path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/>',
+    bookmark: '<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>',
+    printer: '<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/>',
+    pin: '<path d="M12 17v5"/><path d="M5 17h14v-1.8a2 2 0 0 0-1.1-1.8l-1.8-.9A2 2 0 0 1 15 10.8V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.8a2 2 0 0 1-1.1 1.8l-1.8.9A2 2 0 0 0 5 15.2Z"/>',
+    refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.8 9.8 0 0 1 6.7 2.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.8 9.8 0 0 1-6.7-2.7L3 16"/><path d="M8 16H3v5"/>',
+    pencil: '<path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    x: '<path d="M18 6 6 18M6 6l12 12"/>',
+    calendar: '<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+    alert: '<path d="m21.7 18-8-14a2 2 0 0 0-3.5 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z"/><path d="M12 9v4M12 17h.01"/>',
+    clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>',
+    trash: '<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  };
+  const icon = (n) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ''}</svg>`;
+  const fillIcons = (root = document) => $$('i[data-icon]', root).forEach((el) => { el.innerHTML = icon(el.dataset.icon); el.removeAttribute('data-icon'); });
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const money = (n) => '$' + (Math.round(n * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const pct = (x, d = 1) => (x * 100).toFixed(d) + '%';
@@ -192,6 +216,7 @@
   });
 
   function showGate() {
+    $('#dock').hidden = true;
     $('#app').hidden = true;
     $('#gate').hidden = false;
     renderGate();
@@ -546,11 +571,13 @@
 
   /* ================= PANTALLAS ================= */
   function showConnect() {
+    $('#dock').hidden = true;
     $('#dropzone').hidden = false;
     $('#workspace').hidden = true;
   }
 
   function showWorkspace() {
+    $('#dock').hidden = false;
     stockTrusted = null;
     $('#dropzone').hidden = true;
     $('#workspace').hidden = false;
@@ -647,6 +674,7 @@
     $('#dFrom').value = S.set.from;
     $('#dTo').value = S.set.to;
     $('#fCombo').checked = !!S.set.combo;
+    updateSetBadge();
   }
 
   $('#segCount').addEventListener('click', (e) => {
@@ -677,18 +705,18 @@
     S.cards.forEach((c) => { if (!c.customDates) { c.from = S.set.from; c.to = S.set.to; } });
     render();
   }));
-  $('#fVendor').addEventListener('change', (e) => { S.set.vendor = e.target.value; saveSettings(); });
-  $('#fBrand').addEventListener('change', (e) => { S.set.brand = e.target.value; saveSettings(); });
-  $('#fCombo').addEventListener('change', (e) => { S.set.combo = e.target.checked; saveSettings(); });
+  $('#fVendor').addEventListener('change', (e) => { S.set.vendor = e.target.value; saveSettings(); updateSetBadge(); });
+  $('#fBrand').addEventListener('change', (e) => { S.set.brand = e.target.value; saveSettings(); updateSetBadge(); });
+  $('#fCombo').addEventListener('change', (e) => { S.set.combo = e.target.checked; saveSettings(); updateSetBadge(); });
   $('#catChips').addEventListener('click', (e) => {
     const b = e.target.closest('.chip'); if (!b) return;
     const c = b.dataset.cat;
     S.set.cats = S.set.cats.includes(c) ? S.set.cats.filter((x) => x !== c) : [...S.set.cats, c];
     b.classList.toggle('on');
-    saveSettings();
+    saveSettings(); updateSetBadge();
   });
-  $('#catAll').addEventListener('click', () => { S.set.cats = $$('#catChips .chip').map((b) => b.dataset.cat); $$('#catChips .chip').forEach((b) => b.classList.add('on')); saveSettings(); });
-  $('#catNone').addEventListener('click', () => { S.set.cats = []; $$('#catChips .chip').forEach((b) => b.classList.remove('on')); saveSettings(); });
+  $('#catAll').addEventListener('click', () => { S.set.cats = $$('#catChips .chip').map((b) => b.dataset.cat); $$('#catChips .chip').forEach((b) => b.classList.add('on')); saveSettings(); updateSetBadge(); });
+  $('#catNone').addEventListener('click', () => { S.set.cats = []; $$('#catChips .chip').forEach((b) => b.classList.remove('on')); saveSettings(); updateSetBadge(); });
 
   /* ================= MOTOR DE ESPECIALES ================= */
   const floorF = () => Math.min(0.9, S.set.floor / 100);
@@ -813,7 +841,7 @@
     const keep = S.cards.filter((c) => c.pinned);
     const used = new Set(keep.flatMap((c) => c.items.map((i) => i.key)));
     const need = Math.max(0, n - keep.length);
-    if (!need) { toast('Todas están fijadas 📌'); return; }
+    if (!need) { toast('Todas están fijadas'); return; }
     const fresh = [];
     if (S.set.combo && need >= 2 && !keep.some((c) => c.kind === 'combo')) {
       const cb = pickCombo(used, list);
@@ -884,10 +912,10 @@
   function stockWarn(it) {
     if (it.stock == null || !it.st) return '';
     const weekly = it.st.u90 / 13;
-    if (it.stock <= 0) return '<p class="why-warn">⚠️ Sin stock. Resurte antes de lanzarla.</p>';
+    if (it.stock <= 0) return `<p class="why-warn">${icon('alert')}<span>Sin stock. Resurte antes de lanzarla.</span></p>`;
     if (weekly > 0 && it.stock / weekly < 3) {
       const w = it.stock / weekly;
-      return `<p class="why-warn">⚠️ Solo quedan ${cajas(it.stock)} (~${w < 1 ? 'menos de 1 semana' : Math.round(w) + (Math.round(w) === 1 ? ' semana' : ' semanas')} de venta). Resurte antes de lanzarla.</p>`;
+      return `<p class="why-warn">${icon('alert')}<span>Solo quedan ${cajas(it.stock)} (~${w < 1 ? 'menos de 1 semana' : Math.round(w) + (Math.round(w) === 1 ? ' semana' : ' semanas')} de venta). Resurte antes de lanzarla.</span></p>`;
     }
     return '';
   }
@@ -899,7 +927,7 @@
     const txt = reasonText(it, off);
     return `
       <div class="why why-${esc(it.why)}">
-        <div class="why-h"><span>${w.icon} ${esc(w.label)}</span><span class="why-last">${st.last ? 'última venta ' + fmtD(st.last) : 'sin ventas 12m'}</span></div>
+        <div class="why-h"><span>${icon(w.icon)}${esc(w.label)}</span><span class="why-last">${st.last ? 'última venta ' + fmtD(st.last) : 'sin ventas 12m'}</span></div>
         ${txt ? `<p class="why-t">${esc(txt)}</p>` : ''}
         ${stockWarn(it)}
         ${sparkHTML(st.m)}
@@ -927,8 +955,8 @@
         <div class="meta">${meta}</div>
       </div>
       <div class="prices">
-        <span class="p-old">${money(c.P)}</span>
         <span class="p-new">${money(c.S)}</span>
+        <span class="p-old">${money(c.P)}</span>
         <span class="p-save">Ahorra ${money(st.save)}</span>
       </div>
       ${salesHTML(c, st.off)}
@@ -948,7 +976,7 @@
         </div>
         <div class="mbar-l"><span>margen ${pct(st.m0, 0)} → ${pct(st.m1, 0)}</span><span>piso ${pct(fl, 0)}</span></div>
       </div>
-      <div class="dates">📅 Vigencia <b>${fmtD(c.from)} – ${fmtD(c.to)}</b></div>`;
+      <div class="dates">${icon('calendar')}Vigencia <b>${fmtD(c.from)} – ${fmtD(c.to)}</b></div>`;
   }
 
   function adjHTML(c) {
@@ -962,7 +990,7 @@
         <div class="adj-row"><label>Especial $</label><input type="number" data-f="price" step="0.01" min="0" value="${c.S.toFixed(2)}"></div>
         <div class="adj-row"><label>Desde</label><input type="date" data-f="from" value="${esc(c.from)}"></div>
         <div class="adj-row"><label>Hasta</label><input type="date" data-f="to" value="${esc(c.to)}"></div>
-        <p class="adj-warn" data-v="warn"${st.m1 < floorF() - 1e-9 ? '' : ' hidden'}>⚠️ Abajo del margen mínimo (${pct(floorF(), 0)}).</p>
+        <p class="adj-warn" data-v="warn"${st.m1 < floorF() - 1e-9 ? '' : ' hidden'}>Abajo del margen mínimo (${pct(floorF(), 0)}).</p>
       </div>`;
   }
 
@@ -970,13 +998,13 @@
     return `
       <article class="card${c.pinned ? ' pinned' : ''}" data-uid="${c.uid}" style="animation-delay:${Math.min(i, 12) * 45}ms">
         ${photoHTML(c)}
-        <button class="pin${c.pinned ? ' on' : ''}" data-act="pin" type="button" title="${c.pinned ? 'Soltar' : 'Fijar'}" aria-label="Fijar">📌</button>
+        <button class="pin${c.pinned ? ' on' : ''}" data-act="pin" type="button" title="${c.pinned ? 'Soltar' : 'Fijar'}" aria-label="Fijar" aria-pressed="${c.pinned}">${icon('pin')}</button>
         <div class="cb">
           <div class="view">${viewHTML(c)}</div>
           ${adjHTML(c)}
           <div class="acts">
-            <button class="btn btn-ghost" data-act="swap" type="button">🔄 Cambiar</button>
-            <button class="btn btn-ghost" data-act="adj" type="button">✏️ ${c.open ? 'Listo' : 'Ajustar'}</button>
+            <button data-act="swap" type="button">${icon('refresh')}Cambiar</button>
+            <button data-act="adj" type="button">${icon(c.open ? 'check' : 'pencil')}${c.open ? 'Listo' : 'Ajustar'}</button>
           </div>
         </div>
       </article>`;
@@ -990,9 +1018,10 @@
   function render(stagger, swappedUid) {
     const grid = $('#grid');
     if (!S.cards.length) {
-      grid.innerHTML = `<div class="empty"><p class="hud">Listo</p><p>Dale <b>🎲 Generar propuesta</b> para armar ${S.set.count} especiales.</p></div>`;
+      grid.innerHTML = `<div class="empty"><p class="hud">Listo</p>Dale <b>Generar</b> abajo para armar ${S.set.count} especiales con tus datos.</div>`;
       $('#summary').hidden = true;
-      $('#bottomBar').hidden = true;
+      $('#saveBtn').disabled = true;
+      $('#clientBtn').disabled = true;
       return;
     }
     if (swappedUid) {
@@ -1010,7 +1039,8 @@
       if (!stagger) $$('.card', grid).forEach((el) => (el.style.animation = 'none'));
     }
     renderSummary();
-    $('#bottomBar').hidden = false;
+    $('#saveBtn').disabled = false;
+    $('#clientBtn').disabled = false;
   }
 
   function renderSummary() {
@@ -1019,16 +1049,19 @@
     const avg = (f) => all.reduce((a, s) => a + f(s), 0) / n;
     const cats = {};
     S.cards.forEach((c) => {
-      const k = c.kind === 'combo' ? '🧩 Combo' : c.items[0].st && c.items[0].why !== 'normal' ? `${WHY[c.items[0].why].icon} ${WHY[c.items[0].why].label}` : c.items[0].cat;
-      cats[k] = (cats[k] || 0) + 1;
+      const w = c.items[0].why;
+      const k = c.kind === 'combo' ? 'Combo' : c.items[0].st && w !== 'normal' ? WHY[w].label : c.items[0].cat;
+      const col = { dormido: 'var(--morado)', lento: 'var(--oro)', bajando: '#ff7a66', gancho: 'var(--verde-2)' }[c.kind === 'combo' ? '' : w] || (c.kind === 'combo' ? 'var(--oro)' : '');
+      cats[k] = cats[k] || { n: 0, col };
+      cats[k].n++;
     });
     $('#summary').hidden = false;
     $('#summary').innerHTML = `
-      <div class="stat"><span class="lbl">Especiales</span><div class="stat-v">${n}</div></div>
-      <div class="stat"><span class="lbl">Margen prom.</span><div class="stat-v">${pct(avg((s) => s.m0))}<span class="arrow">→</span><span class="down">${pct(avg((s) => s.m1))}</span></div></div>
-      <div class="stat"><span class="lbl">Ahorro cliente</span><div class="stat-v">${pct(avg((s) => s.off))}</div></div>
-      <div class="stat"><span class="lbl">Ganancia prom. / caja</span><div class="stat-v">${money(avg((s) => s.g1))}</div></div>
-      <div class="stat stat-wide"><span class="lbl">Mezcla</span><div class="stat-cats">${Object.entries(cats).map(([k, v]) => `<span>${esc(k)} <b>${v}</b></span>`).join('')}</div></div>`;
+      <div class="kpi"><span class="lbl">Especiales</span><div class="kpi-v">${n}</div></div>
+      <div class="kpi"><span class="lbl">Margen prom.</span><div class="kpi-v">${pct(avg((s) => s.m0), 0)}<span class="arrow">→</span><span class="down">${pct(avg((s) => s.m1), 0)}</span></div></div>
+      <div class="kpi"><span class="lbl">Ahorro cliente</span><div class="kpi-v">${pct(avg((s) => s.off))}</div></div>
+      <div class="kpi"><span class="lbl">Ganancia / caja</span><div class="kpi-v">${money(avg((s) => s.g1))}</div></div>
+      <div class="kpi kpi-mix"><span class="lbl">Mezcla</span><div class="mix">${Object.entries(cats).map(([k, v]) => `<span${v.col ? ` style="--c:${v.col}"` : ''}>${esc(k)} <b>${v.n}</b></span>`).join('')}</div></div>`;
   }
 
   // Acciones de tarjeta
@@ -1041,13 +1074,14 @@
       c.pinned = !c.pinned;
       el.classList.toggle('pinned', c.pinned);
       b.classList.toggle('on', c.pinned);
+      b.setAttribute('aria-pressed', c.pinned);
     } else if (act === 'swap') {
-      if (c.pinned) { toast('Está fijada 📌 — suéltala para cambiarla'); return; }
+      if (c.pinned) { toast('Está fijada: suéltala para cambiarla'); return; }
       swapCard(c.uid);
     } else if (act === 'adj') {
       c.open = !c.open;
       el.querySelector('.adj').hidden = !c.open;
-      b.textContent = c.open ? '✏️ Listo' : '✏️ Ajustar';
+      b.innerHTML = icon(c.open ? 'check' : 'pencil') + (c.open ? 'Listo' : 'Ajustar');
     }
   });
 
@@ -1078,6 +1112,20 @@
     paintCard(el, c);
     renderSummary();
   });
+
+  /* ================= AJUSTES (drawer) ================= */
+  const openSettings = () => { $('#settings').hidden = false; setTimeout(() => $('#settings [data-close]').focus(), 50); };
+  const closeSettings = () => { $('#settings').hidden = true; $('#settingsBtn').focus(); };
+  $('#settingsBtn').addEventListener('click', openSettings);
+  $('#settings').addEventListener('click', (e) => { if (e.target.id === 'settings' || e.target.closest('[data-close]')) closeSettings(); });
+  $('#applyBtn').addEventListener('click', () => { closeSettings(); generate(); });
+  // Punto en "Ajustes" cuando algo no está en su valor normal
+  function updateSetBadge() {
+    const s = S.set, allCats = $$('#catChips .chip').length;
+    const custom = s.count !== 8 || s.mode !== 'equilibrado' || s.floor !== 5 || s.vendor || s.brand || !s.combo ||
+      (Array.isArray(s.cats) && allCats && s.cats.length !== allCats);
+    $('#setBadge').hidden = !custom;
+  }
 
   /* ================= HISTORIAL (Firestore compartido) ================= */
   // Si la base no responde, no dejamos el botón colgado: cortamos a los 10 s.
@@ -1129,7 +1177,7 @@
 
   const openModal = (id) => { $(id).hidden = false; };
   $$('.modal').forEach((m) => m.addEventListener('click', (e) => { if (e.target === m || e.target.closest('[data-close]')) m.hidden = true; }));
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $$('.modal').forEach((m) => (m.hidden = true)); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { $$('.modal').forEach((m) => (m.hidden = true)); if (!$('#settings').hidden) closeSettings(); } });
 
   $('#saveBtn').addEventListener('click', async () => {
     if (!S.cards.length) return;
@@ -1160,7 +1208,7 @@
         <div class="hi-txt"><b>${h.cards.length} especiales · ${fmtD(h.from)} – ${fmtD(h.to)}</b>
           ${fmtTs(h.ts)} · ${esc(h.by || '')} · margen ${pct(h.m1 || 0)}</div>
         <button class="btn btn-oro btn-sm" data-h="open" type="button">Abrir</button>
-        <button class="btn-x" data-h="del" type="button" title="Quitar" aria-label="Quitar">🗑</button>
+        <button class="icon-btn" data-h="del" type="button" title="Quitar" aria-label="Quitar">${icon('trash')}</button>
       </div>`;
     }).join('') : '<p class="data-info">Aún no hay propuestas guardadas.</p>';
   }
@@ -1214,5 +1262,6 @@
   $('#printBtn').addEventListener('click', () => window.print());
 
   /* ================= INICIO ================= */
+  fillIcons();
   initFirebase();
 })();
