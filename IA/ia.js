@@ -30,6 +30,8 @@
   const STALE_MS = 3 * 36e5; // si los datos tienen más de 3 h, se actualizan solos al abrir
   const K_VIEW = 'ctdIA.view', K_ORD = 'ctdIA.orderDraft', K_ORDSET = 'ctdIA.orderSettings';
   const WHATSAPP_LUIS = '13146095131'; // las órdenes siempre se mandan a Luis
+  // Revisión con Claude: función en el Vercel del catálogo (ahí vive ANTHROPIC_API_KEY)
+  const REVIEW_URL = 'https://catalogo-mexiquense.vercel.app/api/orden';
   const K_DATA = 'ctdIA.data', K_SET = 'ctdIA.settings', K_HIST = 'ctdIA.hist', K_TOKEN = 'ctdIA.insitu', K_WHO = 'ctdIA.who';
 
   // Motivos (insights) que salen de las ventas reales
@@ -1458,6 +1460,7 @@
       <div class="kpi"><span class="lbl">Proveedores</span><div class="kpi-v">${nv}</div></div>`;
     const has = ls.length > 0;
     $('#ordSend').disabled = !has; $('#ordSave').disabled = !has; $('#ordPdf').disabled = !has;
+    $('#ordReview').disabled = !has || reviewing;
   }
 
   $('#ordVendors').addEventListener('click', (e) => {
@@ -1530,6 +1533,81 @@
     $('#ordSearch').value = ''; $('#ordResults').hidden = true;
   });
   document.addEventListener('click', (e) => { if (!e.target.closest('.ord-search')) $('#ordResults').hidden = true; });
+
+  // ---- Revisar con Claude ----
+  let reviewing = false;
+  $('#ordReview').addEventListener('click', async () => {
+    if (!auth || !auth.currentUser) { toast('Entra de nuevo para usar Claude'); return; }
+    const ls = O.lines.filter((l) => l.qty > 0);
+    if (!ls.length) return;
+    const out = $('#ordReviewOut');
+    reviewing = true; $('#ordReview').disabled = true;
+    out.hidden = false;
+    out.innerHTML = '<p class="ai-sum">Claude está revisando la orden…</p>';
+    // Contexto: lo que más se vende de esos proveedores y no está en la orden
+    const inOrder = new Set(ls.map((l) => l.id));
+    const vendors = new Set(ls.map((l) => l.vendor));
+    const context = S.products
+      .filter((p) => p.st && p.st.u90 > 0 && !inOrder.has(String(p.id)) && vendors.has((p.buy && p.buy.vendor) || p.vendor || 'Sin proveedor'))
+      .map((p) => ({ sku: String(p.id), name: p.name, vendor: (p.buy && p.buy.vendor) || p.vendor || 'Sin proveedor', stock: p.stock, rate: r2(weeklyRate(p.st)), cycle: p.buy ? p.buy.cycle : null }))
+      .sort((a, b) => b.rate - a.rate).slice(0, 60);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const r = await fetch(REVIEW_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({
+          order: { lead: OS.lead, safety: OS.safety, today: ymd(new Date()),
+            lines: ls.map((l) => ({ sku: l.id, name: l.name, vendor: l.vendor, qty: l.qty, sug: l.sug, stock: l.stock, rate: l.rate, cycle: l.cycle, lastBuy: l.lastBuy, manual: !!l.manual })) },
+          context,
+        }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || data.error) throw new Error(data.error || `Error ${r.status}`);
+      renderReview(data);
+    } catch (e) {
+      out.innerHTML = `<p class="ai-sum">No se pudo revisar: ${esc(e.message)}</p>`;
+    } finally {
+      reviewing = false; renderOrdTotals();
+    }
+  });
+
+  const TIPO = { subir: 'Subir', bajar: 'Bajar', quitar: 'Quitar', agregar: 'Agregar', revisar: 'Revisar' };
+  let lastReview = [];
+  function renderReview(data) {
+    lastReview = data.alertas || [];
+    const nameOf = (sku) => { const l = O.lines.find((x) => x.id === sku); if (l) return l.name; const p = S.products.find((x) => String(x.id) === sku); return p ? p.name : 'SKU ' + sku; };
+    const canApply = (a) => (a.tipo === 'quitar') || (a.cantidad_sugerida != null && ['subir', 'bajar', 'agregar'].includes(a.tipo));
+    $('#ordReviewOut').innerHTML = `<p class="ai-sum">${esc(data.resumen || '')}</p>` +
+      lastReview.map((a, i) => `<div class="ai-alert" data-i="${i}">
+        <span class="ai-t ${esc(a.tipo)}">${esc(TIPO[a.tipo] || a.tipo)}</span>
+        <p><b>${esc(nameOf(String(a.sku)))}${a.cantidad_sugerida != null ? ' → ' + a.cantidad_sugerida + ' cajas' : ''}</b>${esc(a.mensaje)}</p>
+        ${canApply(a) ? '<button class="btn btn-ghost" type="button" data-apply>Aplicar</button>' : '<span></span>'}
+      </div>`).join('') +
+      `<span class="ai-meta">Revisado por Claude${data.modelo ? ' (' + esc(data.modelo) + ')' : ''} · son sugerencias, tú decides</span>`;
+  }
+  $('#ordReviewOut').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-apply]'); if (!b) return;
+    const box = b.closest('.ai-alert');
+    const a = lastReview[Number(box.dataset.i)]; if (!a) return;
+    const sku = String(a.sku);
+    let line = O.lines.find((l) => l.id === sku);
+    if (a.tipo === 'agregar' && !line) {
+      const p = S.products.find((x) => String(x.id) === sku);
+      if (!p) { toast('No encontré ese producto'); return; }
+      const base = lineFor(p, inSpecial()) || {};
+      line = { ...base, id: sku, name: p.name, upc: p.upc || '', pack: p.pack || '', photo: p.photo || '',
+        vendor: (p.buy && p.buy.vendor) || p.vendor || 'Sin proveedor', cost: (p.buy && p.buy.lastCost) || p.cost || 0, qty: 0, sug: 0, manual: true };
+      O.lines.push(line);
+    }
+    if (!line) { toast('Ese producto ya no está en la orden'); return; }
+    line.qty = a.tipo === 'quitar' ? 0 : Math.max(0, Math.round(a.cantidad_sugerida));
+    if (line.qty === 0) O.lines = O.lines.filter((l) => l !== line);
+    O.touched = true; saveDraft(); renderOrders();
+    box.classList.add('done'); b.remove();
+    const el = $(`.ol[data-id="${CSS.escape(sku)}"]`);
+    if (el) { el.classList.add('flash'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  });
 
   // ---- Guardar (compartido) ----
   const ordNo = (ts) => { const d = new Date(ts); return `OC-${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`; };
