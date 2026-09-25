@@ -1,0 +1,258 @@
+{
+  "semana": 40,
+  "rango": "Septiembre 27 – Octubre 3, 2026",
+  "items": {
+    "525": {
+      "plu": "4771",
+      "nombre": "Aguacate FL / Caribbean",
+      "pack": "24 CT",
+      "costo": 35.5,
+      "precio": 44.38
+    },
+    "483": {
+      "plu": "3319",
+      "nombre": "Yellow Dragon Fruit (Golden)",
+      "pack": "10 LB",
+      "costo": 36.95,
+      "precio": 46.19
+    },
+    "480": {
+      "plu": "3551",
+      "nombre": "Red Dragon Fruit",
+      "pack": "10 LB",
+      "costo": 36.95,
+      "precio": 46.19
+    },
+    "530": {
+      "plu": "4299",
+      "nombre": "Guayaba Amarilla",
+      "pack": "13 LB",
+      "costo": 19.89,
+      "precio": 24.86
+    },
+    "532": {
+      "plu": "4310",
+      "nombre": "Mamey / Zapote",
+      "pack": "25 LB",
+      "costo": 54.95,
+      "precio": 68.69
+    },
+    "535": {
+      "plu": "3112",
+      "nombre": "Papaya Maradol (Blondy)",
+      "pack": "35 LB",
+      "costo": 27.95,
+      "precio": 34.94
+    },
+    "534": {
+      "plu": "6351",
+      "nombre": "Mango Indio",
+      "pack": "22 CT",
+      "costo": 45.95,
+      "precio": 57.44
+    },
+    "477": {
+      "plu": "3109",
+      "nombre": "Naranja Agria / Sour Orange",
+      "pack": "30 LB",
+      "costo": 37.95,
+      "precio": 47.44
+    },
+    "476": {
+      "plu": "4309",
+      "nombre": "Lychee Nuts",
+      "pack": "10 LB",
+      "costo": 19.95,
+      "precio": 24.94
+    },
+    "479": {
+      "plu": "3041",
+      "nombre": "Rambutan",
+      "pack": "15 LB",
+      "costo": 28.95,
+      "precio": 36.19
+    },
+    "481": {
+      "plu": "4256",
+      "nombre": "Starfruit",
+      "pack": "30 CT",
+      "costo": 36.95,
+      "precio": 46.19
+    },
+    "451": {
+      "plu": "4235",
+      "nombre": "Platano Macho",
+      "pack": "50 LB",
+      "costo": 27.5,
+      "precio": 34.38
+    },
+    "475": {
+      "plu": "3454",
+      "nombre": "Jack Fruit",
+      "pack": "1 LB",
+      "costo": 0.62,
+      "precio": 0.77
+    },
+    "527": {
+      "plu": "4539",
+      "nombre": "Betabel Jumbo bunch",
+      "pack": "12 CT",
+      "costo": 25.47,
+      "precio": 31.84
+    },
+    "561": {
+      "plu": "4785",
+      "nombre": "Chayote con Espinas",
+      "pack": "38 LB",
+      "costo": 24.29,
+      "precio": 30.36
+    },
+    "496": {
+      "plu": "4819",
+      "nombre": "Hierba Buena",
+      "pack": "24 CT",
+      "costo": 23.95,
+      "precio": 29.94
+    },
+    "497": {
+      "plu": "4917",
+      "nombre": "Hierba De Olor",
+      "pack": "24 CT",
+      "costo": 43.12,
+      "precio": 53.9
+    },
+    "567": {
+      "plu": "4478",
+      "nombre": "Xoconostle",
+      "pack": "38 LB",
+      "costo": 43.35,
+      "precio": 54.19
+    },
+    "503": {
+      "plu": "4475",
+      "nombre": "Papalo",
+      "pack": "24 CT",
+      "costo": 33.5,
+      "precio": 41.88
+    },
+    "565": {
+      "plu": "4089",
+      "nombre": "Rabano / Radish",
+      "pack": "24 CT",
+      "costo": 26.18,
+      "precio": 32.72
+    },
+    "488": {
+      "plu": "3062",
+      "nombre": "Bay Leaves / Hoja de Laurel",
+      "pack": "12 CT",
+      "costo": 18.95,
+      "precio": 23.69
+    },
+    "505": {
+      "plu": "4733",
+      "nombre": "Rue / Ruda",
+      "pack": "12 CT",
+      "costo": 17.95,
+      "precio": 22.44
+    },
+    "568": {
+      "plu": "4562",
+      "nombre": "Zanahorias Jumbo / Carrotz",
+      "pack": "50 LB",
+      "costo": 14.99,
+      "precio": 18.74
+    },
+    "514": {
+      "plu": "4812",
+      "nombre": "Garbanzo",
+      "pack": "15 LB",
+      "costo": 54.95,
+      "precio": 68.69
+    },
+    "491": {
+      "plu": "4921",
+      "nombre": "Culantro",
+      "pack": "40 CT",
+      "costo": 23.5,
+      "precio": 29.38
+    },
+    "555": {
+      "plu": "5804",
+      "nombre": "Turmerick (FIJI)",
+      "pack": "30 LB",
+      "costo": 61.95,
+      "precio": 77.44
+    },
+    "547": {
+      "plu": "4546",
+      "nombre": "Boniato Root",
+      "pack": "40 LB",
+      "costo": 67.95,
+      "precio": 84.94
+    },
+    "551": {
+      "plu": "4794",
+      "nombre": "Malanga Eddo / Small Taro",
+      "pack": "35 LB",
+      "costo": 34.95,
+      "precio": 43.69
+    },
+    "556": {
+      "plu": "4818",
+      "nombre": "Yame Amarillo / Yellow Yam",
+      "pack": "40 LB",
+      "costo": 193.95,
+      "precio": 242.44
+    },
+    "455": {
+      "plu": "4678",
+      "nombre": "Caribe Peppers",
+      "pack": "20 LB",
+      "costo": 40.88,
+      "precio": 51.1
+    },
+    "456": {
+      "plu": "4711",
+      "nombre": "Chilaca Peppers",
+      "pack": "20 LB",
+      "costo": 46.88,
+      "precio": 58.6
+    },
+    "460": {
+      "plu": "3125",
+      "nombre": "Habanero Rojo / Red",
+      "pack": "8 LB",
+      "costo": 22.95,
+      "precio": 28.69
+    },
+    "459": {
+      "plu": "4506",
+      "nombre": "Habanero Orange / Naranja",
+      "pack": "8 LB",
+      "costo": 19.95,
+      "precio": 24.94
+    },
+    "461": {
+      "plu": "4716",
+      "nombre": "Habanero Verde / Green",
+      "pack": "8 LB",
+      "costo": 22.95,
+      "precio": 28.69
+    },
+    "462": {
+      "plu": "4694",
+      "nombre": "Jalapeño Rojo / Red",
+      "pack": "35 LB",
+      "costo": 35.95,
+      "precio": 44.94
+    },
+    "500": {
+      "plu": "4849",
+      "nombre": "Lemon Grass",
+      "pack": "40 8oz",
+      "costo": 32.73,
+      "precio": 40.91
+    }
+  }
+}
