@@ -47,7 +47,11 @@
 <div id="app" class="app" hidden>
   <header class="topbar">
     <img src="ctd-logo.png" alt="CTD" class="topbar-logo">
-    <span class="topbar-name">IA de Especiales</span>
+    <span class="topbar-name">IA · CTD</span>
+    <div class="tabs" id="viewTabs" role="tablist" aria-label="Sección">
+      <button type="button" role="tab" data-v="esp" class="on">Especiales</button>
+      <button type="button" role="tab" data-v="ord">Órdenes</button>
+    </div>
     <div class="topbar-r">
       <span id="whoami" class="whoami"></span>
       <button id="histBtn" class="icon-btn" type="button" aria-label="Historial" title="Historial"><i data-icon="clock"></i><span id="histCount" class="badge"></span></button>
@@ -70,6 +74,7 @@
   </section>
 
   <main id="workspace" hidden>
+   <div id="espView">
     <section class="hero">
       <h1 class="display">Propuestas<br>de la semana</h1>
       <p id="dataInfo" class="status"></p>
@@ -87,6 +92,31 @@
 
     <section id="summary" class="kpis" hidden></section>
     <section id="grid" class="grid" aria-live="polite"></section>
+   </div>
+
+   <!-- Órdenes de compra sugeridas -->
+   <div id="ordView" hidden>
+    <section class="hero">
+      <h1 class="display">Orden<br>sugerida</h1>
+      <p id="ordInfo" class="status"></p>
+      <div class="strat"><div class="pills" id="ordVendors" role="radiogroup" aria-label="Proveedor"></div></div>
+      <div class="ord-params">
+        <label class="field"><span>Tarda en llegar (días)</span><input id="ordLead" type="number" inputmode="numeric" min="0" max="60" step="1" value="3"></label>
+        <label class="field"><span>Colchón %</span><input id="ordSafety" type="number" inputmode="numeric" min="0" max="200" step="5" value="25"></label>
+        <div class="field ord-search">
+          <span>Agregar producto</span>
+          <input id="ordSearch" type="search" placeholder="Nombre, SKU o UPC" autocomplete="off" aria-controls="ordResults">
+          <div id="ordResults" class="ord-results" role="listbox" hidden></div>
+        </div>
+      </div>
+    </section>
+    <section id="ordKpis" class="kpis" hidden></section>
+    <section id="ordList" class="ord-list" aria-live="polite"></section>
+    <section class="ord-recent">
+      <p class="lbl">Órdenes recientes <small>(Oscar y Luis ven lo mismo)</small></p>
+      <div id="ordRecent" class="hist-list"></div>
+    </section>
+   </div>
   </main>
 
   <!-- Dock flotante: acciones principales (celular y compu) -->
@@ -95,6 +125,13 @@
     <button id="genBtn" class="dock-main" type="button"><i data-icon="sparkles"></i>Generar</button>
     <button id="saveBtn" class="dock-btn" type="button" disabled><i data-icon="bookmark"></i><span>Guardar</span></button>
     <button id="clientBtn" class="dock-btn" type="button" disabled><i data-icon="printer"></i><span>PDF</span></button>
+  </nav>
+
+  <nav id="ordDock" class="dock" hidden aria-label="Acciones de la orden">
+    <button id="ordRecalc" class="dock-btn" type="button"><i data-icon="refresh"></i><span>Recalcular</span></button>
+    <button id="ordSend" class="dock-main" type="button" disabled><i data-icon="send"></i>Mandar<span class="wide-only">&nbsp;a Luis</span></button>
+    <button id="ordSave" class="dock-btn" type="button" disabled><i data-icon="bookmark"></i><span>Guardar</span></button>
+    <button id="ordPdf" class="dock-btn" type="button" disabled><i data-icon="printer"></i><span>PDF</span></button>
   </nav>
 
   <!-- Ajustes (hoja inferior en celular, panel lateral en compu) -->

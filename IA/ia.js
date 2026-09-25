@@ -28,6 +28,8 @@
   const EXCLUDE_CATS = ['Spoilage', 'Shipping', 'TEST'];
   const MODES = { equilibrado: [6, 12], agresivo: [12, 22], cuidar: [3, 7] };
   const STALE_MS = 3 * 36e5; // si los datos tienen más de 3 h, se actualizan solos al abrir
+  const K_VIEW = 'ctdIA.view', K_ORD = 'ctdIA.orderDraft', K_ORDSET = 'ctdIA.orderSettings';
+  const WHATSAPP_LUIS = '13146095131'; // las órdenes siempre se mandan a Luis
   const K_DATA = 'ctdIA.data', K_SET = 'ctdIA.settings', K_HIST = 'ctdIA.hist', K_TOKEN = 'ctdIA.insitu', K_WHO = 'ctdIA.who';
 
   // Motivos (insights) que salen de las ventas reales
@@ -69,6 +71,8 @@
     alert: '<path d="m21.7 18-8-14a2 2 0 0 0-3.5 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z"/><path d="M12 9v4M12 17h.01"/>',
     clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
     logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>',
+    send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
     trash: '<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   };
   const icon = (n) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ''}</svg>`;
@@ -212,11 +216,13 @@
   });
   $('#logoutBtn').addEventListener('click', async () => {
     if (unHist) { unHist(); unHist = null; }
+    if (unOrd) { unOrd(); unOrd = null; }
     if (auth) await auth.signOut();
   });
 
   function showGate() {
     $('#dock').hidden = true;
+    $('#ordDock').hidden = true;
     $('#app').hidden = true;
     $('#gate').hidden = false;
     renderGate();
@@ -228,6 +234,7 @@
     $('#gate').hidden = true;
     $('#app').hidden = false;
     listenHist();
+    listenOrders();
     if (S.products.length) return;
     const data = store.get(K_DATA, null);
     if (data && Array.isArray(data.items) && data.items.length) {
@@ -342,17 +349,23 @@
       try { stocks = await Insitu.all('/inventory_stock', 'warehouse_stocks', {}); }
       catch (e) { if (e.auth) throw e; stocks = null; } // sin inventario, seguimos con ventas
 
-      const { items, withDetail } = buildDataset(prods, invs, stocks, today);
+      say('Bajando compras (recepciones)…');
+      let recs = null;
+      try { recs = await Insitu.all('/item_receipt', 'item_receipt', {}, (n) => say(`Bajando compras… ${n} recepciones`)); }
+      catch (e) { if (e.auth) throw e; recs = null; } // sin compras, las órdenes usan valores por defecto
+
+      const { items, withDetail } = buildDataset(prods, invs, stocks, today, recs);
       if (!items.length) throw new Error('InSitu no regresó productos con precio y costo.');
       S.products = items;
       S.meta = {
         source: 'InSitu', at: Date.now(), sales: withDetail > 0, stock: !!stocks,
-        invoices: invs.length, from: ymd(from),
+        invoices: invs.length, from: ymd(from), receipts: recs ? recs.length : 0,
       };
       if (!store.set(K_DATA, { meta: S.meta, items })) toast('Aviso: no se pudo guardar en este dispositivo.');
       syncing = false;
       if (silent && !$('#workspace').hidden) {
         stockTrusted = null;
+        if (S.view === 'ord') renderOrders();
         refreshCards();
         buildFilters();
         renderDataInfo();
@@ -390,7 +403,7 @@
     });
   }
 
-  function buildDataset(prods, invs, stocks, today) {
+  function buildDataset(prods, invs, stocks, today, recs) {
     // Ventas por código de producto
     const T = today.getTime();
     const sales = {};
@@ -451,7 +464,45 @@
       });
     }
     classify(items);
+    if (recs) attachBuys(items, recs);
     return { items, withDetail };
+  }
+
+  // Compras (recepciones de InSitu) → proveedor, cada cuánto se compra, cantidad típica y último costo
+  const median = (a) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
+  function attachBuys(items, recs) {
+    const byCode = {}, vendorDates = {};
+    for (const ir of recs) {
+      if (ir.cancelled === true || ir.cancelled === 1) continue;
+      const d = String(ir.trn_date || '').slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
+      const v = String(ir.vendor_name || '').trim() || 'Sin proveedor';
+      for (const l of ir.lines || []) {
+        const code = String(l.product_code ?? '').trim();
+        const q = Number(l.quantity) || 0;
+        if (!code || q <= 0) continue;
+        (byCode[code] = byCode[code] || []).push({ d, q, v, c: Number(l.product_cost) || 0 });
+        (vendorDates[v] = vendorDates[v] || new Set()).add(d);
+      }
+    }
+    const gapsOf = (dates) => { const g = []; for (let i = 1; i < dates.length; i++) g.push(Math.round((Date.parse(dates[i]) - Date.parse(dates[i - 1])) / DAY)); return g.filter((x) => x > 0); };
+    const vendorCycle = {};
+    Object.entries(vendorDates).forEach(([v, s]) => { vendorCycle[v] = median(gapsOf([...s].sort())); });
+    for (const p of items) {
+      const arr = byCode[p.id];
+      if (!arr) continue;
+      arr.sort((a, b) => a.d.localeCompare(b.d));
+      const last = arr[arr.length - 1];
+      const perDate = {};
+      arr.forEach((x) => { perDate[x.d] = (perDate[x.d] || 0) + x.q; });
+      const dates = Object.keys(perDate).sort();
+      const own = median(gapsOf(dates));
+      p.buy = {
+        vendor: last.v, last: last.d, lastQty: r2(perDate[last.d]), lastCost: r2(last.c), n: dates.length,
+        cycle: own || vendorCycle[last.v] || null, cycleOwn: !!own, typQty: r2(median(Object.values(perDate))),
+      };
+      if (!p.vendor) p.vendor = last.v;
+    }
   }
 
   // Asigna a cada producto su motivo principal (why) + texto explicativo
@@ -572,12 +623,12 @@
   /* ================= PANTALLAS ================= */
   function showConnect() {
     $('#dock').hidden = true;
+    $('#ordDock').hidden = true;
     $('#dropzone').hidden = false;
     $('#workspace').hidden = true;
   }
 
   function showWorkspace() {
-    $('#dock').hidden = false;
     stockTrusted = null;
     $('#dropzone').hidden = true;
     $('#workspace').hidden = false;
@@ -585,6 +636,7 @@
     syncControls();
     renderDataInfo();
     render();
+    applyView();
   }
 
   function renderDataInfo() {
@@ -1260,6 +1312,365 @@
     openModal('#clientModal');
   });
   $('#printBtn').addEventListener('click', () => window.print());
+
+
+  /* ================= VISTAS: Especiales | Órdenes ================= */
+  S.view = store.get(K_VIEW, 'esp');
+  function applyView() {
+    if ($('#workspace').hidden) return;
+    const ord = S.view === 'ord';
+    $$('#viewTabs button').forEach((b) => { const on = b.dataset.v === S.view; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+    $('#espView').hidden = ord;
+    $('#ordView').hidden = !ord;
+    $('#dock').hidden = ord;
+    $('#ordDock').hidden = !ord;
+    if (ord) { if (!O.lines.length && !O.touched) suggestOrder(); else renderOrders(); }
+  }
+  $('#viewTabs').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    S.view = b.dataset.v; store.set(K_VIEW, S.view);
+    applyView();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  /* ================= ÓRDENES DE COMPRA ================= */
+  // Cuánto pedir = venta por día × (cada cuánto le compras + días de entrega) × (1 + colchón) − stock.
+  // "Cada cuánto" sale de las recepciones reales en InSitu (por producto; si no, del proveedor; si no, 21 días).
+  const O = Object.assign({ vendor: '', lines: [], id: null, status: 'borrador', touched: false }, store.get(K_ORD, {}));
+  const OS = Object.assign({ lead: 3, safety: 25 }, store.get(K_ORDSET, {}));
+  const saveDraft = () => store.set(K_ORD, { vendor: O.vendor, lines: O.lines, id: O.id, status: O.status, touched: O.touched });
+  O.recent = [];
+  let unOrd = null;
+
+  const weeklyRate = (st) => (0.6 * (st.u30 / 30) + 0.4 * (st.u90 / 90)) * 7; // pesa más lo reciente
+  // Productos que están en un especial guardado vigente → se venderá más
+  function inSpecial() {
+    const today = ymd(new Date());
+    const ids = new Set();
+    (S.hist || []).forEach((h) => { if ((h.to || '') >= today) (h.cards || []).forEach((c) => (c.items || []).forEach((i) => ids.add(String(i.id)))); });
+    return ids;
+  }
+
+  function lineFor(p, special) {
+    const st = p.st;
+    if (!st) return null;
+    const rate = weeklyRate(st);
+    const cycle = Math.min(42, (p.buy && p.buy.cycle) || 21); // tope 6 semanas: compras muy espaciadas no disparan órdenes enormes
+    const days = cycle + OS.lead;
+    const boost = special.has(String(p.id)) ? 1.3 : 1;
+    const need = (rate / 7) * days * (1 + OS.safety / 100) * boost;
+    const stock = p.stock != null ? Math.max(0, p.stock) : 0;
+    const qty = Math.ceil(need - stock - 1e-9);
+    const left = rate > 0 ? stock / (rate / 7) : Infinity;
+    return {
+      id: String(p.id), name: p.name, upc: p.upc || '', pack: p.pack || '', photo: p.photo || '',
+      vendor: (p.buy && p.buy.vendor) || p.vendor || 'Sin proveedor',
+      cost: (p.buy && p.buy.lastCost) || p.cost || 0,
+      qty, sug: qty, rate: r2(rate), stock: p.stock, left: isFinite(left) ? Math.round(left) : null,
+      cycle, cycleOwn: !!(p.buy && p.buy.cycleOwn), lastBuy: p.buy ? p.buy.last : null, boost: boost > 1,
+    };
+  }
+
+  function whyLine(l) {
+    if (l.manual) return 'Agregado a mano.';
+    const left = l.left == null ? '' : l.left <= 0 ? ' Ya no hay.' : ` Te alcanza para ~${l.left} ${l.left === 1 ? 'día' : 'días'}.`;
+    const cyc = l.cycleOwn ? `Le compras cada ~${l.cycle} días` : `Se compra cada ~${l.cycle} días (${l.lastBuy ? 'promedio del proveedor' : 'estimado'})`;
+    return `Vendes ~${nfmt(l.rate)} cajas/semana y quedan ${cajas(l.stock ?? 0)}.${left} ${cyc} + ${OS.lead} de entrega + ${OS.safety}% colchón → pide ${l.sug}.` +
+      (l.boost ? ' Incluye +30% porque está en un especial vigente.' : '');
+  }
+
+  function allSuggestions() {
+    const special = inSpecial();
+    return S.products
+      .filter((p) => p.st && p.st.u90 > 0 && !EXCLUDE_CATS.includes(p.cat))
+      .map((p) => lineFor(p, special))
+      .filter((l) => l && l.qty > 0);
+  }
+
+  function suggestOrder() {
+    const manual = O.lines.filter((l) => l.manual);
+    const sug = allSuggestions().filter((l) => !O.vendor || l.vendor === O.vendor);
+    const ids = new Set(sug.map((l) => l.id));
+    O.lines = [...sug, ...manual.filter((l) => !ids.has(l.id))];
+    O.id = null; O.status = 'borrador'; O.touched = false;
+    saveDraft();
+    renderOrders();
+  }
+
+  function renderOrders() {
+    const all = allSuggestions();
+    const counts = {};
+    all.forEach((l) => { counts[l.vendor] = (counts[l.vendor] || 0) + 1; });
+    const vendors = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+    $('#ordVendors').innerHTML = `<button type="button" role="radio" data-v="" class="${!O.vendor ? 'on' : ''}" aria-checked="${!O.vendor}">Todos<small>${all.length}</small></button>` +
+      vendors.map((v) => `<button type="button" role="radio" data-v="${esc(v)}" class="${O.vendor === v ? 'on' : ''}" aria-checked="${O.vendor === v}">${esc(v)}<small>${counts[v]}</small></button>`).join('');
+    const m = S.meta || {};
+    $('#ordInfo').innerHTML = m.receipts
+      ? `Calculado con tus ventas y <b>${m.receipts} recepciones</b> de InSitu · stock al ${fmtTs(m.at)}`
+      : 'Sin recepciones de InSitu: se usa "cada 21 días" para todo. Dale <b>actualizar de InSitu</b> para bajar tus compras.';
+    $('#ordLead').value = OS.lead;
+    $('#ordSafety').value = OS.safety;
+
+    const list = $('#ordList');
+    if (!O.lines.length) {
+      list.innerHTML = `<div class="empty"><p class="hud">Nada que pedir</p>Con el stock actual no hace falta pedir${O.vendor ? ' a ' + esc(O.vendor) : ''}. Puedes agregar productos con el buscador.</div>`;
+    } else {
+      const groups = {};
+      O.lines.forEach((l) => { (groups[l.vendor] = groups[l.vendor] || []).push(l); });
+      list.innerHTML = Object.entries(groups).map(([v, ls]) => {
+        ls.sort((a, b) => (a.left ?? 1e9) - (b.left ?? 1e9));
+        const cj = ls.reduce((a, l) => a + (Number(l.qty) || 0), 0);
+        return `<div class="ord-group"><div class="ord-gh"><h3>${esc(v)}</h3><span>${ls.length} productos · ${nfmt(cj)} cajas</span></div>${ls.map(lineHTML).join('')}</div>`;
+      }).join('');
+    }
+    renderOrdTotals();
+  }
+
+  function lineHTML(l) {
+    const img = l.photo ? `<img src="${esc(l.photo)}" alt="" loading="lazy" onerror="this.remove()">` : '';
+    const hot = l.left != null && l.left <= 7;
+    return `<article class="ol${l.qty !== l.sug ? ' edited' : ''}" data-id="${esc(l.id)}">
+      <div class="ol-ph">${img}</div>
+      <div class="ol-main">
+        <div class="ol-name">${esc(l.name)}</div>
+        <div class="meta">SKU ${esc(l.id)}${l.upc ? ' · UPC ' + esc(l.upc) : ''}${l.pack ? ' · ' + esc(l.pack) : ''}</div>
+        <p class="ol-why${hot ? ' hot' : ''}">${esc(whyLine(l))}</p>
+        ${l.manual ? '' : `<div class="ol-k"><span><b>${nfmt(l.stock ?? 0)}</b> stock</span><span><b>${nfmt(l.rate)}</b> /semana</span><span><b>${l.cycle}</b> días entre compras</span>${l.lastBuy ? `<span>última compra <b>${fmtD(l.lastBuy)}</b></span>` : ''}</div>`}
+      </div>
+      <div class="ol-qty">
+        <div class="stepper"><button type="button" data-q="-1" aria-label="Menos">−</button><input type="number" inputmode="numeric" min="0" step="1" value="${l.qty}" aria-label="Cajas de ${esc(l.name)}"><button type="button" data-q="1" aria-label="Más">+</button></div>
+        ${l.manual ? '' : `<span class="ol-sug">sugerido ${l.sug}</span>`}
+        <button class="icon-btn ol-del" type="button" data-del aria-label="Quitar ${esc(l.name)}">${icon('trash')}</button>
+      </div>
+    </article>`;
+  }
+
+  function renderOrdTotals() {
+    const ls = O.lines.filter((l) => l.qty > 0);
+    const cj = ls.reduce((a, l) => a + l.qty, 0);
+    const cost = ls.reduce((a, l) => a + l.qty * (l.cost || 0), 0);
+    const nv = new Set(ls.map((l) => l.vendor)).size;
+    $('#ordKpis').hidden = !O.lines.length;
+    $('#ordKpis').innerHTML = `
+      <div class="kpi"><span class="lbl">Productos</span><div class="kpi-v">${ls.length}</div></div>
+      <div class="kpi"><span class="lbl">Cajas</span><div class="kpi-v">${nfmt(cj)}</div></div>
+      <div class="kpi"><span class="lbl">Costo estimado</span><div class="kpi-v">${money(cost)}</div></div>
+      <div class="kpi"><span class="lbl">Proveedores</span><div class="kpi-v">${nv}</div></div>`;
+    const has = ls.length > 0;
+    $('#ordSend').disabled = !has; $('#ordSave').disabled = !has; $('#ordPdf').disabled = !has;
+  }
+
+  $('#ordVendors').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    O.vendor = b.dataset.v;
+    suggestOrder();
+  });
+  $('#ordRecalc').addEventListener('click', () => {
+    if (O.touched && !confirm('¿Recalcular? Se pierden los cambios de cantidades (los productos agregados a mano se quedan).')) return;
+    suggestOrder();
+    toast('Orden recalculada');
+  });
+  ['#ordLead', '#ordSafety'].forEach((id) => $(id).addEventListener('change', () => {
+    OS.lead = Math.max(0, parseFloat($('#ordLead').value) || 0);
+    OS.safety = Math.max(0, parseFloat($('#ordSafety').value) || 0);
+    store.set(K_ORDSET, OS);
+    if (!O.touched) suggestOrder(); else { renderOrders(); toast('Dale Recalcular para aplicar'); }
+  }));
+
+  function setQty(el, q) {
+    const l = O.lines.find((x) => x.id === el.dataset.id); if (!l) return;
+    l.qty = Math.max(0, Math.round(q) || 0);
+    O.touched = true;
+    el.querySelector('.stepper input').value = l.qty;
+    el.classList.toggle('edited', l.qty !== l.sug);
+    saveDraft();
+    renderOrdTotals();
+  }
+  $('#ordList').addEventListener('click', (e) => {
+    const el = e.target.closest('.ol'); if (!el) return;
+    const l = O.lines.find((x) => x.id === el.dataset.id); if (!l) return;
+    const b = e.target.closest('[data-q]');
+    if (b) { setQty(el, l.qty + Number(b.dataset.q)); return; }
+    if (e.target.closest('[data-del]')) {
+      O.lines = O.lines.filter((x) => x !== l);
+      O.touched = true; saveDraft(); renderOrders();
+    }
+  });
+  $('#ordList').addEventListener('change', (e) => {
+    const inp = e.target.closest('.stepper input'); if (!inp) return;
+    setQty(inp.closest('.ol'), parseFloat(inp.value));
+  });
+
+  // Buscador para agregar productos a mano
+  const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  $('#ordSearch').addEventListener('input', (e) => {
+    const q = norm(e.target.value.trim());
+    const box = $('#ordResults');
+    if (q.length < 2) { box.hidden = true; return; }
+    const words = q.split(/\s+/);
+    const res = S.products.filter((p) => { const t = norm(`${p.name} ${p.id} ${p.upc} ${p.brand}`); return words.every((w) => t.includes(w)); }).slice(0, 12);
+    box.innerHTML = res.length ? res.map((p) => `<button type="button" role="option" data-add="${esc(p.id)}">${p.photo ? `<img src="${esc(p.photo)}" alt="">` : ''}<span>${esc(p.name)}<small>SKU ${esc(p.id)}${p.stock != null ? ' · stock ' + nfmt(p.stock) : ''}</small></span></button>`).join('')
+      : '<p class="data-info" style="padding:10px">Sin resultados</p>';
+    box.hidden = false;
+  });
+  $('#ordResults').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-add]'); if (!b) return;
+    const p = S.products.find((x) => String(x.id) === b.dataset.add); if (!p) return;
+    const ex = O.lines.find((l) => l.id === String(p.id));
+    if (ex) { toast('Ya está en la orden'); }
+    else {
+      const base = lineFor(p, inSpecial()) || {};
+      const q = Math.max(1, Math.round((p.buy && p.buy.typQty) || base.qty || 1));
+      O.lines.push({ ...base, id: String(p.id), name: p.name, upc: p.upc || '', pack: p.pack || '', photo: p.photo || '',
+        vendor: (p.buy && p.buy.vendor) || p.vendor || O.vendor || 'Sin proveedor', cost: (p.buy && p.buy.lastCost) || p.cost || 0,
+        qty: q, sug: q, manual: true });
+      O.touched = true; saveDraft(); renderOrders();
+      toast('Agregado: ' + p.name);
+    }
+    $('#ordSearch').value = ''; $('#ordResults').hidden = true;
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.ord-search')) $('#ordResults').hidden = true; });
+
+  // ---- Guardar (compartido) ----
+  const ordNo = (ts) => { const d = new Date(ts); return `OC-${String(d.getFullYear()).slice(2)}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`; };
+  function orderPayload(status) {
+    const ts = Date.now();
+    if (!O.id) O.id = ts.toString(36) + uid();
+    const ls = O.lines.filter((l) => l.qty > 0);
+    return {
+      ts, no: O.no || (O.no = ordNo(ts)), by: S.who, status, vendor: O.vendor || '',
+      cajas: ls.reduce((a, l) => a + l.qty, 0), costo: r2(ls.reduce((a, l) => a + l.qty * (l.cost || 0), 0)),
+      lines: ls.map((l) => ({ id: l.id, name: l.name, upc: l.upc || '', pack: l.pack || '', photo: l.photo || '', vendor: l.vendor, qty: l.qty, sug: l.sug ?? l.qty, cost: l.cost || 0, manual: !!l.manual })),
+    };
+  }
+  async function saveOrder(status) {
+    const p = orderPayload(status);
+    O.status = status; saveDraft();
+    if (!db) return p;
+    await withTimeout(db.ref('ordenes/' + O.id).set(p));
+    return p;
+  }
+  $('#ordSave').addEventListener('click', async () => {
+    try { await saveOrder(O.status === 'enviada' ? 'enviada' : 'borrador'); toast('Orden guardada · ya la ve ' + PEOPLE.filter((x) => x !== S.who).join(' y ')); }
+    catch (e) { toast('No se pudo guardar (' + (e.code || e.message) + ')'); }
+  });
+
+  function listenOrders() {
+    try {
+      if (unOrd) unOrd();
+      const ref = db.ref('ordenes').orderByChild('ts').limitToLast(15);
+      const onVal = ref.on('value', (snap) => {
+        const arr = [];
+        snap.forEach((c) => { arr.push({ id: c.key, ...c.val() }); });
+        O.recent = arr.reverse();
+        renderRecent();
+      }, (err) => { $('#ordRecent').innerHTML = `<p class="data-info">No se pudo leer (${esc(err.code || err.message)}).</p>`; });
+      unOrd = () => ref.off('value', onVal);
+    } catch (e) { console.warn('Órdenes', e); }
+  }
+  function renderRecent() {
+    $('#ordRecent').innerHTML = O.recent.length ? O.recent.map((o) => `
+      <div class="hist-item" data-oid="${esc(o.id)}">
+        <div class="hi-thumbs">${(o.lines || []).slice(0, 4).map((l) => `<img src="${esc(l.photo)}" alt="">`).join('')}</div>
+        <div class="hi-txt"><b>${esc(o.no || '')} · ${esc(o.vendor || 'Varios proveedores')}</b>${fmtTs(o.ts)} · ${esc(o.by || '')} · ${(o.lines || []).length} productos · ${nfmt(o.cajas || 0)} cajas</div>
+        <span class="st${o.status === 'enviada' ? ' sent' : ''}">${o.status === 'enviada' ? 'enviada' : 'borrador'}</span>
+        <button class="btn btn-ghost btn-sm" data-o="open" type="button">Abrir</button>
+      </div>`).join('') : '<p class="data-info">Todavía no hay órdenes guardadas.</p>';
+  }
+  $('#ordRecent').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-o="open"]'); if (!b) return;
+    const o = O.recent.find((x) => x.id === b.closest('.hist-item').dataset.oid); if (!o) return;
+    O.id = o.id; O.no = o.no; O.status = o.status; O.vendor = o.vendor || ''; O.touched = true;
+    O.lines = (o.lines || []).map((l) => ({ ...l, manual: true }));
+    saveDraft(); renderOrders();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // ---- PDF (sin imágenes: SKU, UPC, nombre, empaque, cantidad) ----
+  const loadScript = (src) => new Promise((res, rej) => { if (document.querySelector(`script[src="${src}"]`)) return res(); const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('No cargó ' + src)); document.head.appendChild(s); });
+  async function logoData() {
+    try { const b = await (await fetch('ctd-logo.png')).blob(); return await new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(b); }); } catch (e) { return null; }
+  }
+  async function buildPdf(p) {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const W = doc.internal.pageSize.getWidth();
+    const logo = await logoData();
+    if (logo) doc.addImage(logo, 'PNG', 40, 34, 84, 45);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(20, 18, 12);
+    doc.text('Orden de compra', W - 40, 52, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(90, 84, 74);
+    const d = new Date(p.ts);
+    doc.text(`${p.no}  ·  ${d.getDate()} ${MES[d.getMonth()]} ${d.getFullYear()}  ·  Hecha por ${p.by || ''}`, W - 40, 68, { align: 'right' });
+    doc.text('Central Trade Distribution · Kansas City', 40, 96);
+    let y = 112;
+    const groups = {};
+    p.lines.forEach((l) => { (groups[l.vendor] = groups[l.vendor] || []).push(l); });
+    Object.entries(groups).forEach(([v, ls]) => {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(20, 18, 12);
+      if (y > 700) { doc.addPage(); y = 50; }
+      doc.text(v, 40, y + 14);
+      doc.autoTable({
+        startY: y + 22, margin: { left: 40, right: 40 },
+        head: [['#', 'SKU', 'UPC', 'Producto', 'Empaque', 'Cant.']],
+        body: ls.map((l, i) => [i + 1, l.id, l.upc || '', l.name, l.pack || '', l.qty]),
+        foot: [['', '', '', 'Total cajas', '', ls.reduce((a, l) => a + l.qty, 0)]],
+        styles: { font: 'helvetica', fontSize: 9, cellPadding: 5, textColor: [20, 18, 12] },
+        headStyles: { fillColor: [15, 13, 10], textColor: [242, 163, 30], fontStyle: 'bold' },
+        footStyles: { fillColor: [246, 242, 233], textColor: [20, 18, 12], fontStyle: 'bold' },
+        columnStyles: { 0: { cellWidth: 22 }, 1: { cellWidth: 60 }, 2: { cellWidth: 92 }, 4: { cellWidth: 60 }, 5: { cellWidth: 42, halign: 'right', fontStyle: 'bold' } },
+        alternateRowStyles: { fillColor: [250, 248, 243] },
+      });
+      y = doc.lastAutoTable.finalY + 18;
+    });
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+    if (y > 740) { doc.addPage(); y = 50; }
+    doc.text(`Total: ${p.lines.length} productos · ${p.cajas} cajas`, 40, y + 6);
+    return doc.output('blob');
+  }
+  const pdfName = (p) => `Orden-CTD-${p.no}.pdf`;
+  function download(blob, name) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+  function waText(p) {
+    const head = `Orden ${p.no} · ${p.vendor || 'Varios proveedores'} · ${p.lines.length} productos · ${p.cajas} cajas (PDF adjunto)`;
+    const body = p.lines.map((l) => `${l.qty} × ${l.name} (SKU ${l.id})`).join('\n');
+    const full = head + '\n\n' + body;
+    return full.length < 1500 ? full : head;
+  }
+  $('#ordPdf').addEventListener('click', async () => {
+    const btn = $('#ordPdf'); btn.disabled = true;
+    try { const p = orderPayload(O.status); download(await buildPdf(p), pdfName(p)); }
+    catch (e) { toast('No se pudo hacer el PDF (' + e.message + ')'); }
+    finally { btn.disabled = false; }
+  });
+  $('#ordSend').addEventListener('click', async () => {
+    const btn = $('#ordSend'); btn.disabled = true;
+    try {
+      const p = orderPayload('enviada');
+      const blob = await buildPdf(p);
+      const file = new File([blob], pdfName(p), { type: 'application/pdf' });
+      const text = waText(p);
+      const phone = window.matchMedia('(pointer: coarse)').matches;
+      if (phone && navigator.canShare && navigator.canShare({ files: [file] })) {
+        // Celular: menú de compartir con el PDF adjunto → WhatsApp → Luis
+        await navigator.share({ files: [file], title: `Orden ${p.no}`, text });
+      } else {
+        // Compu: se descarga el PDF y se abre el chat de Luis; arrastra el PDF al chat
+        download(blob, pdfName(p));
+        window.open(`https://wa.me/${WHATSAPP_LUIS}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+        toast('Se descargó el PDF: arrástralo al chat de Luis');
+      }
+      await saveOrder('enviada').catch(() => {});
+    } catch (e) {
+      if (e && e.name !== 'AbortError') toast('No se pudo mandar (' + (e.message || e) + ')');
+    } finally { btn.disabled = false; }
+  });
 
   /* ================= INICIO ================= */
   fillIcons();
