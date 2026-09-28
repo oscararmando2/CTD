@@ -309,6 +309,31 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .ol.flash{animation:flash 1.4s var(--ease)}
 @keyframes flash{0%,40%{background:rgba(242,163,30,.14)}100%{background:transparent}}
 
+/* QuickBooks */
+.qb-status{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.qb-status .btn .ico{width:18px;height:18px}
+.qb-msg{margin:0;font-size:15px;color:var(--muted)}
+.qb-msg.ok{color:var(--verde-2)}
+.qb-msg b{color:var(--hueso)}
+.qb-plan{margin-top:14px;padding:16px 0;border-top:1px solid var(--linea);display:flex;flex-direction:column;gap:10px}
+.qb-h{margin-top:22px}
+.qb-list,.qb-plan{max-width:100%}
+.qb-row{display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center;padding:10px 0;border-top:1px solid var(--linea)}
+.qb-row.miss{opacity:.6}
+.qb-chk input{width:20px;height:20px;accent-color:var(--oro)}
+.qb-main{min-width:0;display:flex;flex-direction:column;gap:2px}
+.qb-main b{font-size:14px}
+.qb-main span{font-size:12.5px;color:var(--muted-2)}
+.qb-main em{color:var(--oro);font-style:normal}
+.qb-prices{text-align:right;font-size:14px;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.qb-prices s{color:var(--muted-2)}
+.qb-prices span{font-size:12px;color:var(--muted-2)}
+.qb-pill{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:4px 8px;border-radius:99px;background:rgba(246,242,233,.08);color:var(--muted);white-space:nowrap}
+.st-activo .qb-pill{background:rgba(91,192,108,.16);color:var(--verde-2)}
+.st-programado .qb-pill{background:rgba(242,163,30,.16);color:var(--oro)}
+.st-omitido .qb-pill,.st-vencido .qb-pill{background:rgba(216,51,27,.18);color:#ff9a88}
+.qb-warn{margin:0;font-size:13px;color:#ffb199}
+
 /* ============ AJUSTES (drawer) ============ */
 .drawer{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.55);animation:fade .25s var(--ease)}
 .drawer-panel{position:absolute;left:0;right:0;bottom:0;max-height:88dvh;overflow:auto;overscroll-behavior:contain;background:var(--negro-2);border-radius:28px 28px 0 0;padding:10px var(--gut) calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:24px;animation:sheetUp .4s var(--ease)}

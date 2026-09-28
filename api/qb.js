@@ -1,0 +1,142 @@
+// API de QuickBooks para la IA de especiales (solo Oscar y Luis, con su token de Firebase).
+// POST {action, ...}:
+//   status     → ¿conectado?, empresa, ambiente (sandbox/production)
+//   match      → busca en QuickBooks los productos de InSitu (por Id, Sku/UPC o nombre)
+//   schedule   → programa especiales {qbId, special, from, to}; si empiezan hoy se aplican ya
+//   cancel     → cancela un especial (si ya estaba activo, regresa el precio original)
+//   list       → especiales programados/activos/terminados + últimos cambios
+//   tick       → aplica/regresa lo que toque hoy (respaldo de la tarea diaria)
+//   selftest   → solo sandbox: cambia y regresa el precio de un producto de prueba
+const { cors, verifyUser, bearer, db, qb, qbQuery, qbItem, qbSetPrice, tick, log, todayCT, r2, same, QB_ENV } = require('./_lib');
+
+const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+function similar(a, b) {
+  const A = new Set(norm(a).split(' ').filter((w) => w.length > 1)), B = new Set(norm(b).split(' ').filter((w) => w.length > 1));
+  if (!A.size || !B.size) return 0;
+  let inter = 0; A.forEach((w) => { if (B.has(w)) inter++; });
+  return inter / Math.min(A.size, B.size);
+}
+const q = (s) => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+const pick = (it, how) => it && { qbId: it.Id, qbName: it.Name, qbSku: it.Sku || '', price: r2(it.UnitPrice || 0), active: it.Active !== false, how };
+
+async function matchOne(p) {
+  const sku = String(p.sku || '').trim(), upc = String(p.upc || '').trim(), name = String(p.name || '').trim();
+  // 1) El código de InSitu suele ser el Id del producto en QuickBooks (InSitu copia los productos de QB)
+  if (/^\d+$/.test(sku)) {
+    try { const it = await qbItem(sku); if (it && (similar(it.Name, name) >= 0.5 || norm(it.Name) === norm(name))) return pick(it, 'id'); } catch (e) { /* no existe */ }
+  }
+  // 2) SKU de QuickBooks = código de barras / UPC de InSitu
+  for (const s of [upc, sku].filter(Boolean)) {
+    const r = await qbQuery(`select * from Item where Sku = '${q(s)}'`);
+    if (r.Item && r.Item.length === 1) return pick(r.Item[0], 'sku');
+  }
+  // 3) Nombre exacto
+  if (name) {
+    const r = await qbQuery(`select * from Item where Name = '${q(name)}'`);
+    if (r.Item && r.Item.length) return pick(r.Item[0], 'nombre');
+    // 4) Nombre parecido (primeras palabras) → se elige el más parecido
+    const words = norm(name).split(' ').filter((w) => w.length > 2).slice(0, 2).join('%');
+    if (words) {
+      const r2x = await qbQuery(`select * from Item where Name like '%${q(words)}%' maxresults 20`);
+      const best = (r2x.Item || []).map((it) => ({ it, s: similar(it.Name, name) })).sort((a, b) => b.s - a.s)[0];
+      if (best && best.s >= 0.6) return pick(best.it, 'parecido');
+    }
+  }
+  return null;
+}
+
+module.exports = async (req, res) => {
+  cors(req, res);
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Método no permitido' });
+  let who = null;
+  try { who = await verifyUser(bearer(req)); } catch (e) { who = null; }
+  if (!who) return res.status(401).json({ error: 'Sin acceso. Vuelve a entrar a la IA.' });
+
+  let body = req.body;
+  if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }
+  body = body || {};
+
+  try {
+    switch (body.action) {
+      case 'status': {
+        const t = await db('GET', 'qb/tokens');
+        if (!t || !t.refresh_token || t.env !== QB_ENV()) return res.json({ connected: false, env: QB_ENV() });
+        let company = '';
+        try { const d = await qb('GET', `companyinfo/${t.realmId}`); company = d.CompanyInfo && d.CompanyInfo.CompanyName; } catch (e) { return res.json({ connected: false, env: QB_ENV(), error: e.message }); }
+        return res.json({ connected: true, env: QB_ENV(), company, connectedBy: t.connectedBy, connectedAt: t.connectedAt, refreshExpires: t.refresh_expires_at });
+      }
+      case 'match': {
+        const items = (Array.isArray(body.items) ? body.items : []).slice(0, 30);
+        const out = {};
+        for (const p of items) out[String(p.sku)] = await matchOne(p);
+        return res.json({ matches: out });
+      }
+      case 'schedule': {
+        const items = (Array.isArray(body.items) ? body.items : []).slice(0, 30);
+        const all = (await db('GET', 'qbEspeciales')) || {};
+        const today = todayCT();
+        const saved = [], errors = [];
+        for (const p of items) {
+          const special = r2(p.special), regular = r2(p.regular);
+          if (!p.qbId || !(special > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(p.from) || !/^\d{4}-\d{2}-\d{2}$/.test(p.to) || p.to < p.from) { errors.push({ name: p.name, error: 'Datos incompletos' }); continue; }
+          if (p.to < today) { errors.push({ name: p.name, error: 'La vigencia ya terminó' }); continue; }
+          const clash = Object.values(all).find((e) => e.qbId === String(p.qbId) && ['programado', 'activo'].includes(e.status) && !(p.to < e.from || p.from > e.to));
+          if (clash) { errors.push({ name: p.name, error: `Ya tiene un especial del ${clash.from} al ${clash.to}` }); continue; }
+          const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+          const rec = { qbId: String(p.qbId), qbName: String(p.qbName || ''), sku: String(p.sku || ''), name: String(p.name || ''), special, regular,
+            from: p.from, to: p.to, status: 'programado', by: who, ts: Date.now() };
+          await db('PUT', 'qbEspeciales/' + id, rec);
+          await log({ id, action: 'programar', name: rec.name, special, from: p.from, to: p.to, by: who });
+          all[id] = rec; saved.push(id);
+        }
+        const done = saved.length ? await tick(who) : [];
+        return res.json({ saved, errors, applied: done.filter((d) => d.action === 'activar').length });
+      }
+      case 'cancel': {
+        const id = String(body.id || '');
+        const e = await db('GET', 'qbEspeciales/' + id);
+        if (!e) return res.status(404).json({ error: 'No existe' });
+        if (e.status === 'activo') {
+          const it = await qbItem(e.qbId);
+          if (same(it.UnitPrice, e.special)) {
+            await qbSetPrice(e.qbId, r2(e.original));
+            await log({ id, action: 'cancelar-regresar', name: e.name, from: r2(e.special), to: r2(e.original), by: who });
+          } else {
+            await log({ id, action: 'cancelar-sin-regresar', name: e.name, price: r2(it.UnitPrice), by: who });
+          }
+        } else {
+          await log({ id, action: 'cancelar', name: e.name, by: who });
+        }
+        if (['programado', 'activo'].includes(e.status)) await db('PATCH', 'qbEspeciales/' + id, { status: 'cancelado', cancelledBy: who, cancelledAt: Date.now() });
+        return res.json({ ok: true });
+      }
+      case 'list': {
+        const all = (await db('GET', 'qbEspeciales')) || {};
+        const list = Object.entries(all).map(([id, e]) => ({ id, ...e })).sort((a, b) => (b.from || '').localeCompare(a.from || '') || b.ts - a.ts).slice(0, 150);
+        return res.json({ list, today: todayCT() });
+      }
+      case 'tick': {
+        const done = await tick(who);
+        return res.json({ done });
+      }
+      case 'selftest': {
+        if (QB_ENV() !== 'sandbox') return res.status(400).json({ error: 'La prueba solo corre en la empresa de prueba (sandbox)' });
+        const r = await qbQuery("select * from Item where Type = 'NonInventory' maxresults 5");
+        const r2x = (r.Item && r.Item.length) ? r : await qbQuery('select * from Item maxresults 5');
+        const it = (r2x.Item || []).find((x) => x.UnitPrice > 0) || (r2x.Item || [])[0];
+        if (!it) return res.json({ error: 'La empresa de prueba no tiene productos' });
+        const before = r2(it.UnitPrice || 0), test = r2(before + 1);
+        await qbSetPrice(it.Id, test);
+        const mid = r2((await qbItem(it.Id)).UnitPrice);
+        await qbSetPrice(it.Id, before);
+        const after = r2((await qbItem(it.Id)).UnitPrice);
+        return res.json({ ok: mid === test && after === before, name: it.Name, before, test, mid, after });
+      }
+      default:
+        return res.status(400).json({ error: 'Acción desconocida' });
+    }
+  } catch (e) {
+    return res.status(e.code === 'not_connected' ? 409 : 500).json({ error: String(e.message || e), code: e.code || '' });
+  }
+};

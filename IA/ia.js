@@ -77,6 +77,7 @@
     plus: '<path d="M12 5v14M5 12h14"/>',
     gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>',
     download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/>',
+    qb: '<circle cx="12" cy="12" r="10"/><path d="M9 8v8M9 8h2.5a2.5 2.5 0 0 1 0 5H9M15 16V8M15 16h-2.5a2.5 2.5 0 0 1 0-5H15"/>',
     trash: '<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   };
   const icon = (n) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ''}</svg>`;
@@ -650,7 +651,9 @@
       `<span id="ageInfo" class="age"></span> · <b>${S.products.length}</b> productos · ${esc(m.source || '')}` +
       (m.sales ? ` · ventas desde ${fmtD(m.from)} (${m.invoices} facturas)${m.stock ? ' + inventario' : ''}` : ' · sin datos de venta') +
       ` · ${conn ? '<button id="resync" class="btn-link" type="button">actualizar de InSitu</button> · ' : ''}` +
-      `<button id="changeSrc" class="btn-link" type="button">${conn ? 'desconectar' : 'conectar InSitu'}</button> <span id="syncInfo"></span>`;
+      `<button id="changeSrc" class="btn-link" type="button">${conn ? 'desconectar' : 'conectar InSitu'}</button> · ` +
+      `<button id="qbOpen" class="btn-link" type="button">QuickBooks</button> <span id="syncInfo"></span>`;
+    $('#qbOpen').addEventListener('click', () => openQb([]));
     renderAge();
     const rs = $('#resync');
     if (rs) rs.addEventListener('click', () => { syncInsitu({ silent: true }).catch(() => {}); });
@@ -1094,6 +1097,7 @@
             <button data-act="swap" type="button">${icon('refresh')}Cambiar</button>
             <button data-act="adj" type="button">${icon(c.open ? 'check' : 'pencil')}${c.open ? 'Listo' : 'Ajustar'}</button>
             ${c.kind === 'single' ? `<button data-act="fmt" type="button">${icon('gift')}${c.nx ? 'Precio directo' : 'Compra N + 1'}</button>` : ''}
+            ${c.kind === 'single' ? `<button data-act="qb" type="button">${icon('qb')}QuickBooks</button>` : ''}
           </div>
         </div>
       </article>`;
@@ -1167,6 +1171,8 @@
     } else if (act === 'swap') {
       if (c.pinned) { toast('Está fijada: suéltala para cambiarla'); return; }
       swapCard(c.uid);
+    } else if (act === 'qb') {
+      openQb([c]);
     } else if (act === 'fmt') {
       if (c.nx) unsetNx(c);
       else if (!setNx(c, nxFor(c))) { toast('Con el margen mínimo no alcanza para regalar una caja'); return; }
@@ -1492,6 +1498,140 @@
       btn.disabled = false; btn.innerHTML = label;
     }
   });
+
+
+  /* ================= QUICKBOOKS =================
+   * QuickBooks es el dueño de productos y precios (InSitu los copia cada hora). Los especiales
+   * se programan aquí y el servidor (ctd-seven.vercel.app/api) cambia el precio en QuickBooks el
+   * día que empieza y lo regresa al original el día después de que termina. */
+  const QB_API = 'https://ctd-seven.vercel.app/api';
+  const QB_STATUS = { programado: 'Programado', activo: 'Activo', terminado: 'Terminado', cancelado: 'Cancelado', omitido: 'No se regresó', vencido: 'Vencido' };
+  let qbState = null, qbCards = [], qbMatches = {};
+
+  async function qbCall(action, extra = {}) {
+    if (!auth || !auth.currentUser) throw new Error('Vuelve a entrar a la IA');
+    const token = await auth.currentUser.getIdToken();
+    const r = await fetch(QB_API + '/qb', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ action, ...extra }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) throw Object.assign(new Error(d.error || `Error ${r.status}`), { code: d.code });
+    return d;
+  }
+
+  async function openQb(cards) {
+    qbCards = cards.filter((c) => c.kind === 'single');
+    openModal('#qbModal');
+    $('#qbStatus').innerHTML = '<p class="data-info">Revisando la conexión con QuickBooks…</p>';
+    $('#qbPlan').hidden = true;
+    $('#qbList').innerHTML = '';
+    try { qbState = await qbCall('status'); } catch (e) { qbState = { connected: false, error: e.message }; }
+    renderQbStatus();
+    if (qbState.connected) {
+      loadQbList();
+      if (qbCards.length) planQb();
+    }
+  }
+
+  function renderQbStatus() {
+    const s = qbState || {};
+    $('#qbEnv').textContent = s.env === 'production' ? '' : '(empresa de prueba)';
+    if (!s.connected) {
+      $('#qbStatus').innerHTML = `<p class="qb-msg">QuickBooks no está conectado${s.error ? ` (${esc(s.error)})` : ''}. Un administrador de QuickBooks tiene que autorizar la conexión una vez.</p>
+        <button id="qbConnect" class="btn btn-oro" type="button">${icon('qb')}Conectar QuickBooks</button>`;
+      $('#qbConnect').addEventListener('click', async () => {
+        const t = await auth.currentUser.getIdToken();
+        location.href = QB_API + '/qb-connect?t=' + encodeURIComponent(t);
+      });
+      return;
+    }
+    $('#qbStatus').innerHTML = `<p class="qb-msg ok">● Conectado a <b>${esc(s.company || 'QuickBooks')}</b>${s.connectedBy ? ` · lo conectó ${esc(s.connectedBy)}` : ''}</p>` +
+      (s.env !== 'production' ? '<button id="qbTest" class="btn btn-ghost btn-sm" type="button">Probar cambio de precio</button>' : '');
+    const tb = $('#qbTest');
+    if (tb) tb.addEventListener('click', async () => {
+      tb.disabled = true; tb.textContent = 'Probando…';
+      try { const d = await qbCall('selftest'); toast(d.ok ? `Prueba OK: ${d.name} ${money(d.before)} → ${money(d.test)} → ${money(d.after)}` : 'La prueba no salió: ' + JSON.stringify(d)); }
+      catch (e) { toast('Falló la prueba: ' + e.message); }
+      finally { tb.disabled = false; tb.textContent = 'Probar cambio de precio'; }
+    });
+  }
+
+  // Programar: primero se busca cada producto en QuickBooks para que confirmes que es el correcto
+  async function planQb() {
+    const box = $('#qbPlan');
+    box.hidden = false;
+    const ok = qbCards.filter((c) => !c.nx);
+    const nx = qbCards.filter((c) => c.nx);
+    box.innerHTML = '<p class="data-info">Buscando los productos en QuickBooks…</p>';
+    try {
+      const d = await qbCall('match', { items: ok.map((c) => ({ sku: c.items[0].id, upc: c.items[0].upc, name: c.items[0].name })) });
+      qbMatches = d.matches || {};
+    } catch (e) { box.innerHTML = `<p class="qb-msg">No se pudo buscar: ${esc(e.message)}</p>`; return; }
+    const rows = ok.map((c, i) => {
+      const it = c.items[0], m = qbMatches[it.id];
+      return `<div class="qb-row${m ? '' : ' miss'}" data-i="${i}">
+        <label class="qb-chk">${m ? `<input type="checkbox" checked data-i="${i}">` : ''}</label>
+        <div class="qb-main"><b>${esc(it.name)}</b>
+          <span>${m ? `En QuickBooks: ${esc(m.qbName)}${m.how !== 'id' ? ` <em>(encontrado por ${esc(m.how)}, revisa que sea el mismo)</em>` : ''}` : 'No lo encontré en QuickBooks'}</span></div>
+        <div class="qb-prices">${m ? `<s>${money(m.price)}</s> → <b>${money(c.S)}</b>` : ''}<span>${fmtD(c.from)} – ${fmtD(c.to)}</span></div>
+      </div>`;
+    }).join('');
+    const warn = [];
+    if (nx.length) warn.push(`${nx.length} en formato "Compra N + 1": en QuickBooks solo se puede poner un precio, cámbialos a precio directo si los quieres programar.`);
+    const diff = ok.filter((c) => { const m = qbMatches[c.items[0].id]; return m && Math.abs(m.price - c.P) >= 0.01; });
+    if (diff.length) warn.push(`${diff.length} tienen en QuickBooks un precio distinto al de InSitu (${diff.map((c) => esc(c.items[0].name)).slice(0, 3).join(', ')}…). Al terminar se regresa al precio que tenga QuickBooks ese día.`);
+    box.innerHTML = `<p class="lbl">Programar ${ok.length === 1 ? 'este especial' : 'estos especiales'}</p>${rows || '<p class="data-info">Nada que programar.</p>'}
+      ${warn.filter(Boolean).map((w) => `<p class="qb-warn">${w}</p>`).join('')}
+      <p class="data-info">El precio cambia en QuickBooks el día que empieza (a las ~4am) y regresa solo al terminar. InSitu lo recibe en su siguiente sincronización (cada hora).</p>
+      ${ok.some((c) => qbMatches[c.items[0].id]) ? '<button id="qbDo" class="btn btn-oro" type="button">Programar en QuickBooks</button>' : ''}`;
+    const go = $('#qbDo');
+    if (go) go.addEventListener('click', async () => {
+      const chosen = $$('#qbPlan .qb-chk input:checked').map((x) => ok[Number(x.dataset.i)]);
+      if (!chosen.length) { toast('Marca al menos uno'); return; }
+      if (!confirm(`¿Programar ${chosen.length} ${chosen.length === 1 ? 'especial' : 'especiales'} en QuickBooks? Cambia el precio para todos los clientes durante la vigencia.`)) return;
+      go.disabled = true; go.textContent = 'Programando…';
+      try {
+        const d = await qbCall('schedule', { items: chosen.map((c) => { const m = qbMatches[c.items[0].id]; return { qbId: m.qbId, qbName: m.qbName, sku: c.items[0].id, name: c.items[0].name, special: c.S, regular: m.price, from: c.from, to: c.to }; }) });
+        toast(`Programados: ${d.saved.length}${d.applied ? ` · ${d.applied} ya activos hoy` : ''}${d.errors.length ? ` · ${d.errors.length} con error` : ''}`);
+        if (d.errors.length) box.insertAdjacentHTML('beforeend', d.errors.map((e) => `<p class="qb-warn">${esc(e.name)}: ${esc(e.error)}</p>`).join(''));
+        else box.hidden = true;
+        loadQbList();
+      } catch (e) { toast('No se pudo programar: ' + e.message); }
+      finally { go.disabled = false; go.textContent = 'Programar en QuickBooks'; }
+    });
+  }
+
+  async function loadQbList() {
+    const box = $('#qbList');
+    box.innerHTML = '<p class="data-info">Cargando…</p>';
+    try {
+      const d = await qbCall('list');
+      box.innerHTML = d.list.length ? d.list.map((e) => `<div class="qb-row st-${esc(e.status)}">
+          <span class="qb-pill">${esc(QB_STATUS[e.status] || e.status)}</span>
+          <div class="qb-main"><b>${esc(e.name || e.qbName)}</b><span>${fmtD(e.from)} – ${fmtD(e.to)} · ${esc(e.by || '')}${e.note ? ' · ' + esc(e.note) : ''}${e.lastError ? ' · ⚠ ' + esc(e.lastError) : ''}</span></div>
+          <div class="qb-prices">${e.original != null ? `<s>${money(e.original)}</s> → ` : ''}<b>${money(e.special)}</b>
+            ${['programado', 'activo'].includes(e.status) ? `<button class="btn-link" type="button" data-cancel="${esc(e.id)}">cancelar</button>` : ''}</div>
+        </div>`).join('') : '<p class="data-info">Todavía no hay especiales en QuickBooks.</p>';
+    } catch (e) { box.innerHTML = `<p class="qb-msg">${esc(e.message)}</p>`; }
+  }
+  $('#qbList').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-cancel]'); if (!b) return;
+    if (!confirm('¿Cancelar este especial? Si ya está activo, el precio regresa al original ahora mismo.')) return;
+    b.disabled = true;
+    try { await qbCall('cancel', { id: b.dataset.cancel }); toast('Especial cancelado'); loadQbList(); }
+    catch (err) { toast('No se pudo cancelar: ' + err.message); b.disabled = false; }
+  });
+
+  // Regreso de Intuit después de autorizar (?qb=conectado / error / cancelado)
+  (function qbReturn() {
+    const sp = new URLSearchParams(location.search);
+    const r = sp.get('qb'); if (!r) return;
+    const msg = { conectado: 'QuickBooks conectado ✓', cancelado: 'Se canceló la conexión con QuickBooks', 'sin-acceso': 'Sin acceso: entra primero a la IA', 'faltan-llaves': 'Faltan las llaves de QuickBooks en Vercel', error: 'No se pudo conectar QuickBooks' }[r] || r;
+    setTimeout(() => toast(msg + (sp.get('m') ? ': ' + sp.get('m') : '')), 1200);
+    history.replaceState(null, '', location.pathname);
+    if (r === 'conectado') setTimeout(() => { if (S.who) openQb([]); }, 1500);
+  })();
 
   /* ================= VISTAS: Especiales | Órdenes ================= */
   S.view = store.get(K_VIEW, 'esp');
