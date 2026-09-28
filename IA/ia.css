@@ -356,26 +356,8 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .pg{position:absolute;left:0;top:0;width:816px;height:1056px;transform-origin:0 0;overflow:hidden;background:#fff;color:#16120c;font-family:var(--body)}
 .pg .pat{position:absolute;inset:0;width:100%;height:100%}
 .pg-foot{position:absolute;left:0;right:0;bottom:26px;text-align:center;font-size:13px;letter-spacing:.02em;color:#5b5346}
-.pg-foot.on-dark{color:var(--t-ink);opacity:.85}
-/* Portada (lo importante arriba: WhatsApp solo previsualiza la franja superior) */
-.pg-cover{background:var(--t-bg);color:var(--t-ink)}
-.cv-top{position:absolute;left:44px;right:44px;top:30px}
-.cv-row{display:flex;align-items:center;justify-content:space-between;gap:16px}
-.cv-k{margin:0;font-family:var(--mono);font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--t-acc)}
-.cv-logo-sm{background:#fff;border-radius:12px;padding:6px 10px}
-.cv-logo-sm img{display:block;width:74px}
-.cv-pre{margin:18px 0 0;font-family:var(--display);font-weight:800;font-size:40px;line-height:1;letter-spacing:-.02em;color:var(--t-acc)}
-.cv-word{margin:4px 0 0;font-family:var(--display);font-weight:800;line-height:.92;letter-spacing:-.045em;white-space:nowrap}
-.cv-papel{position:absolute;left:0;right:0;top:270px}
-.cv-papel .papel{display:block;width:100%;height:auto}
-.cv-mid{position:absolute;left:64px;right:64px;top:400px;text-align:center}
-.cv-tag{margin:0;font-family:var(--display);font-weight:800;font-size:38px;letter-spacing:-.02em;color:var(--t-acc)}
-.cv-date{display:inline-block;margin:18px 0 0;padding:10px 22px;border-radius:999px;background:var(--t-acc);color:var(--t-bg);font-weight:700;font-size:18px}
-.cv-hero{position:absolute;left:0;right:0;bottom:130px;height:360px}
-.cv-hero .pat{position:absolute;inset:0}
-.cv-logo{position:absolute;left:50%;bottom:66px;transform:translateX(-50%);background:#fff;border-radius:18px;padding:10px 18px}
-.cv-logo img{display:block;width:120px}
 /* Lista de especiales */
+.cv-k{margin:0;font-family:var(--mono);font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--t-acc)}
 .pl-head{position:relative;height:170px;background:var(--t-bg);color:var(--t-ink);display:flex;align-items:center;justify-content:space-between;padding:0 44px;overflow:hidden}
 .pl-head>div,.pl-head .pl-logo{position:relative}
 .pl-head h2{margin:8px 0 6px;font-family:var(--display);font-weight:800;font-size:40px;line-height:1;letter-spacing:-.03em}
@@ -384,9 +366,10 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .pl-logo img{display:block;width:92px}
 .pl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:22px 36px 0}
 .pc{border-radius:16px;overflow:hidden;background:#F8F5EE;display:flex;flex-direction:column;height:256px}
-.pc-ph{position:relative;height:132px;background:#fff;display:flex;align-items:center;justify-content:center}
-.pc-ph img{width:100%;height:100%;object-fit:contain;padding:8px}
-.pc-ph.combo{display:grid;grid-template-columns:1fr 1fr}
+.pc-ph{position:relative;height:132px;background:#fff;display:flex;align-items:center;justify-content:center;padding:8px}
+.pc-ph img{display:block;max-width:100%;max-height:100%;width:auto;height:auto;margin:auto}
+.pc-ph.combo{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.pc-ph.combo img{max-height:116px;max-width:100%}
 .pc-off{position:absolute;left:8px;top:8px;background:var(--t-price);color:#fff;font-family:var(--display);font-weight:800;font-size:15px;border-radius:9px;padding:2px 8px}
 .pc-b{padding:9px 12px 10px;display:flex;flex-direction:column;gap:2px;min-height:0}
 .pc-brand{font-family:var(--mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#9a7430}

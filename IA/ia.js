@@ -1328,7 +1328,7 @@
   });
 
   /* ================= VISTA CLIENTE (PDF de temporada) ================= */
-  // PDF tamaño carta: portada de temporada + páginas de especiales (9 por hoja), sin costos.
+  // PDF tamaño carta: hojas de especiales (9 por hoja) con colores de temporada, sin costos.
   // Las fotos pasan por /api/img (Vercel del catálogo) para poder meterlas al PDF.
   const IMG_PROXY = 'https://catalogo-mexiquense.vercel.app/api/img?u=';
   const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -1362,39 +1362,23 @@
     }
     return `<svg class="pat" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${out}</svg>`;
   }
-  // Papel picado (banderitas con cortes)
-  function papel(w, colors, n = 9) {
-    const fw = w / n; let out = `<path d="M0 6 Q ${w / 2} 22 ${w} 6" stroke="#fff" stroke-opacity=".5" fill="none" stroke-width="2"/>`;
-    for (let i = 0; i < n; i++) {
-      const x = i * fw, y = 6 + Math.sin((i + .5) / n * Math.PI) * 14, c = colors[i % colors.length];
-      out += `<g transform="translate(${x + 4} ${y})"><path d="M0 0H${fw - 8}V${fw * 0.9}l-${(fw - 8) / 4} -10 -${(fw - 8) / 4} 10 -${(fw - 8) / 4} -10 -${(fw - 8) / 4} 10Z" fill="${c}"/>` +
-        `<circle cx="${(fw - 8) / 2}" cy="${fw * 0.35}" r="${fw * 0.12}" fill="#000" opacity=".22"/><path d="M${(fw - 8) * 0.2} ${fw * 0.62}h${(fw - 8) * 0.6}" stroke="#000" stroke-opacity=".22" stroke-width="4" stroke-dasharray="6 5"/></g>`;
-    }
-    return `<svg class="papel" viewBox="0 0 ${w} ${Math.round(w / n + 30)}" aria-hidden="true">${out}</svg>`;
-  }
   const THEMES = {
-    ctd: { word: 'la Semana', label: 'CTD (sin temporada)', title: 'Especiales de la semana', tag: 'Los mejores precios para tu tienda', bg: '#0F0D0A', ink: '#F6F2E9', acc: '#F2A31E', price: '#D8331B', pat: ['dot'], pc: ['#F2A31E', '#D8331B', '#2E8B3D'] },
-    anio: { word: 'Año Nuevo', label: 'Año Nuevo / Reyes', title: 'Especiales de Año Nuevo', tag: 'Arranca el año surtido', bg: '#14213d', ink: '#fff8e7', acc: '#f2c14e', price: '#c0392b', pat: ['star', 'conf'], pc: ['#f2c14e', '#e5e5e5', '#fca311'] },
-    valentin: { word: 'San Valentín', label: 'San Valentín', title: 'Especiales de San Valentín', tag: 'Precios que enamoran', bg: '#7a1030', ink: '#fff0f3', acc: '#ff8fab', price: '#c9184a', pat: ['heart'], pc: ['#ff8fab', '#ffc2d1', '#ff4d6d'] },
-    cuaresma: { word: 'Cuaresma', label: 'Cuaresma', title: 'Especiales de Cuaresma', tag: 'Todo para la temporada', bg: '#0f4c5c', ink: '#effaf8', acc: '#9ad1d4', price: '#0f4c5c', pat: ['fish', 'dot'], pc: ['#9ad1d4', '#e0fbfc', '#5fa8d3'] },
-    primavera: { word: 'Primavera', label: 'Primavera / Pascua', title: 'Especiales de Primavera', tag: 'Temporada fresca', bg: '#2d6a4f', ink: '#f1faee', acc: '#ffd6a5', price: '#bc4749', pat: ['flower', 'leaf'], pc: ['#ffd6a5', '#fdffb6', '#caffbf'] },
-    mayo: { word: 'Mayo', label: 'Cinco de Mayo / Día de las Madres', title: 'Especiales de Mayo', tag: 'Para celebrar en grande', bg: '#0b6e3a', ink: '#ffffff', acc: '#ffd23f', price: '#c1121f', pat: ['flower', 'dot'], pc: ['#ffffff', '#ffd23f', '#e63946'], papel: ['#e63946', '#ffffff', '#2a9d8f', '#ffd23f', '#f4a261'] },
-    padre: { word: 'Día del Padre', label: 'Día del Padre', title: 'Especiales del Día del Padre', tag: 'Para el mero mero', bg: '#0b3954', ink: '#f5f9ff', acc: '#ffb703', price: '#d62828', pat: ['star', 'dot'], pc: ['#ffb703', '#8ecae6', '#ffffff'] },
-    verano: { word: 'Verano', label: 'Verano / 4 de julio', title: 'Especiales de Verano', tag: 'Precios bien frescos', bg: '#e85d04', ink: '#fffbeb', acc: '#ffd166', price: '#d00000', pat: ['sun', 'star'], pc: ['#ffd166', '#ffffff', '#ffba08'] },
-    clases: { word: 'Regreso a Clases', label: 'Regreso a clases', title: 'Especiales de Regreso a Clases', tag: 'Surte antes que nadie', bg: '#264653', ink: '#f8f5ee', acc: '#e9c46a', price: '#e76f51', pat: ['star', 'conf'], pc: ['#e9c46a', '#f4a261', '#2a9d8f'] },
-    patrias: { word: 'Fiestas Patrias', label: 'Fiestas Patrias', title: 'Especiales Patrios', tag: '¡Viva México!', bg: '#006847', ink: '#ffffff', acc: '#ffffff', price: '#ce1126', pat: ['star', 'dot'], pc: ['#ffffff', '#ce1126'], papel: ['#ce1126', '#ffffff', '#00a651', '#ce1126', '#ffffff'] },
-    halloween: { word: 'Halloween', label: 'Halloween', title: 'Especiales de Halloween', tag: 'Precios de miedo', bg: '#16110d', ink: '#fff4e6', acc: '#ff7518', price: '#ff7518', pat: ['bat', 'pumpkin', 'star'], pc: ['#ff7518', '#8338ec', '#ffbe0b'] },
-    muertos: { word: 'Día de Muertos', label: 'Día de Muertos', title: 'Especiales de Día de Muertos', tag: 'Para el altar y la mesa', bg: '#2a1036', ink: '#fff5e1', acc: '#f7a300', price: '#e0457b', pat: ['flower', 'dot'], pc: ['#f7a300', '#e0457b', '#ffb703'], papel: ['#e0457b', '#f7a300', '#7b2cbf', '#00b4d8', '#ffd60a'] },
-    gracias: { word: 'Acción de Gracias', label: 'Acción de Gracias', title: 'Especiales de Acción de Gracias', tag: 'Para la mesa en familia', bg: '#5a2a0a', ink: '#fff5e6', acc: '#f4a259', price: '#bc3908', pat: ['leaf'], pc: ['#f4a259', '#e76f51', '#e9c46a'] },
-    navidad: { word: 'Navidad', label: 'Navidad', title: 'Especiales de Navidad', tag: 'Ofertas para las fiestas', bg: '#7c0a02', ink: '#fffaf0', acc: '#f4d35e', price: '#1e5631', pat: ['snow', 'star'], pc: ['#ffffff', '#f4d35e', '#9ee493'] },
+    ctd: { word: 'la Semana', label: 'CTD (sin temporada)', title: 'Especiales de la semana', bg: '#0F0D0A', ink: '#F6F2E9', acc: '#F2A31E', price: '#D8331B', pat: ['dot'], pc: ['#F2A31E', '#D8331B', '#2E8B3D'] },
+    anio: { word: 'Año Nuevo', label: 'Año Nuevo / Reyes', title: 'Especiales de Año Nuevo', bg: '#14213d', ink: '#fff8e7', acc: '#f2c14e', price: '#c0392b', pat: ['star', 'conf'], pc: ['#f2c14e', '#e5e5e5', '#fca311'] },
+    valentin: { word: 'San Valentín', label: 'San Valentín', title: 'Especiales de San Valentín', bg: '#7a1030', ink: '#fff0f3', acc: '#ff8fab', price: '#c9184a', pat: ['heart'], pc: ['#ff8fab', '#ffc2d1', '#ff4d6d'] },
+    cuaresma: { word: 'Cuaresma', label: 'Cuaresma', title: 'Especiales de Cuaresma', bg: '#0f4c5c', ink: '#effaf8', acc: '#9ad1d4', price: '#0f4c5c', pat: ['fish', 'dot'], pc: ['#9ad1d4', '#e0fbfc', '#5fa8d3'] },
+    primavera: { word: 'Primavera', label: 'Primavera / Pascua', title: 'Especiales de Primavera', bg: '#2d6a4f', ink: '#f1faee', acc: '#ffd6a5', price: '#bc4749', pat: ['flower', 'leaf'], pc: ['#ffd6a5', '#fdffb6', '#caffbf'] },
+    mayo: { word: 'Mayo', label: 'Cinco de Mayo / Día de las Madres', title: 'Especiales de Mayo', bg: '#0b6e3a', ink: '#ffffff', acc: '#ffd23f', price: '#c1121f', pat: ['flower', 'dot'], pc: ['#ffffff', '#ffd23f', '#e63946'] },
+    padre: { word: 'Día del Padre', label: 'Día del Padre', title: 'Especiales del Día del Padre', bg: '#0b3954', ink: '#f5f9ff', acc: '#ffb703', price: '#d62828', pat: ['star', 'dot'], pc: ['#ffb703', '#8ecae6', '#ffffff'] },
+    verano: { word: 'Verano', label: 'Verano / 4 de julio', title: 'Especiales de Verano', bg: '#e85d04', ink: '#fffbeb', acc: '#ffd166', price: '#d00000', pat: ['sun', 'star'], pc: ['#ffd166', '#ffffff', '#ffba08'] },
+    clases: { word: 'Regreso a Clases', label: 'Regreso a clases', title: 'Especiales de Regreso a Clases', bg: '#264653', ink: '#f8f5ee', acc: '#e9c46a', price: '#e76f51', pat: ['star', 'conf'], pc: ['#e9c46a', '#f4a261', '#2a9d8f'] },
+    patrias: { word: 'Fiestas Patrias', label: 'Fiestas Patrias', title: 'Especiales Patrios', bg: '#006847', ink: '#ffffff', acc: '#ffffff', price: '#ce1126', pat: ['star', 'dot'], pc: ['#ffffff', '#ce1126'] },
+    halloween: { word: 'Halloween', label: 'Halloween', title: 'Especiales de Halloween', bg: '#16110d', ink: '#fff4e6', acc: '#ff7518', price: '#ff7518', pat: ['bat', 'pumpkin', 'star'], pc: ['#ff7518', '#8338ec', '#ffbe0b'] },
+    muertos: { word: 'Día de Muertos', label: 'Día de Muertos', title: 'Especiales de Día de Muertos', bg: '#2a1036', ink: '#fff5e1', acc: '#f7a300', price: '#e0457b', pat: ['flower', 'dot'], pc: ['#f7a300', '#e0457b', '#ffb703'] },
+    gracias: { word: 'Acción de Gracias', label: 'Acción de Gracias', title: 'Especiales de Acción de Gracias', bg: '#5a2a0a', ink: '#fff5e6', acc: '#f4a259', price: '#bc3908', pat: ['leaf'], pc: ['#f4a259', '#e76f51', '#e9c46a'] },
+    navidad: { word: 'Navidad', label: 'Navidad', title: 'Especiales de Navidad', bg: '#7c0a02', ink: '#fffaf0', acc: '#f4d35e', price: '#1e5631', pat: ['snow', 'star'], pc: ['#ffffff', '#f4d35e', '#9ee493'] },
   };
   const MONTH_THEME = ['anio', 'valentin', 'cuaresma', 'primavera', 'mayo', 'padre', 'verano', 'clases', 'patrias', 'halloween', 'muertos', 'navidad'];
-  // Hero grande de la portada por temporada
-  function heroArt(key, t) {
-    const big = { halloween: ['pumpkin', 'bat'], navidad: ['snow', 'star'], muertos: ['flower'], valentin: ['heart'], patrias: ['star'], anio: ['star', 'conf'], verano: ['sun'], cuaresma: ['fish'], primavera: ['flower'], mayo: ['flower'], gracias: ['leaf'], padre: ['star'], clases: ['star'], ctd: ['dot'] }[key] || ['dot'];
-    return scatter(816, 380, big, t.pc, 11, 7, 3.4, 6.2, null, [0.75, 0.25]);
-  }
-
   function rangeText(a, b) {
     const d1 = parseYmd(a), d2 = parseYmd(b);
     const y = d2.getFullYear();
@@ -1412,27 +1396,6 @@
     const foot = `<div class="pg-foot">Sujetos a disponibilidad ${esc(rangeText(from, to))}</div>`;
     const style = `--t-bg:${t.bg};--t-ink:${t.ink};--t-acc:${t.acc};--t-price:${t.price}`;
     const mes = MESES[parseYmd(from).getMonth()];
-
-    // Portada: lo importante va ARRIBA porque WhatsApp solo muestra esa franja como vista previa
-    const d1 = parseYmd(from), d2 = parseYmd(to);
-    const short = `${d1.getDate()}${d1.getMonth() !== d2.getMonth() ? ' ' + MES[d1.getMonth()] : ''}–${d2.getDate()} ${MES[d2.getMonth()]} ${d2.getFullYear()}`;
-    const wsize = Math.min(128, Math.floor(730 / (t.word.length * 0.52)));
-    const cover = `<div class="pgwrap"><section class="pg pg-cover" style="${style}">
-      ${scatter(816, 1056, t.pat, t.pc, 26, 11, 1.2, 2.6, [0, 0, 816, 250], [0.2, 0.3])}
-      <div class="cv-top">
-        <div class="cv-row"><span class="cv-k">Central Trade Distribution · ${esc(short)}</span><span class="cv-logo-sm"><img src="ctd-logo.png" alt="CTD"></span></div>
-        <p class="cv-pre">Especiales de</p>
-        <h1 class="cv-word" style="font-size:${wsize}px">${esc(t.word)}</h1>
-      </div>
-      ${t.papel ? `<div class="cv-papel">${papel(816, t.papel)}</div>` : ''}
-      <div class="cv-mid">
-        <p class="cv-tag">${esc(t.tag)}</p>
-        <p class="cv-date">${esc(rangeText(from, to))}</p>
-      </div>
-      <div class="cv-hero">${heroArt(key, t)}</div>
-      <div class="cv-logo"><img src="ctd-logo.png" alt="CTD"></div>
-      ${foot.replace('pg-foot', 'pg-foot on-dark')}
-    </section></div>`;
 
     const card = (c) => {
       const st = stats(c);
@@ -1461,11 +1424,30 @@
         ${foot}
       </section></div>`);
     }
-    $('#clientSheet').innerHTML = cover + pages.join('');
+    $('#clientSheet').innerHTML = pages.join('');
+    $$('#clientSheet .pc-ph img').forEach(fitImg);
     $('#themeSel').innerHTML = Object.entries(THEMES).map(([k, v]) => `<option value="${k}"${k === key ? ' selected' : ''}>${esc(v.label)}${k === MONTH_THEME[parseYmd(from).getMonth()] ? ` (${mes})` : ''}</option>`).join('');
     fitPages();
     return { from, to, key };
   }
+  // html2canvas ignora object-fit y estira las fotos: se calcula el tamaño exacto que cabe
+  // en el recuadro sin deformarse (también agranda las fotos chicas)
+  function fitImg(img) {
+    const fit = () => {
+      const box = img.parentElement, cs = getComputedStyle(box);
+      const combo = box.classList.contains('combo');
+      let bw = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const bh = box.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      if (combo) bw = (bw - 6) / 2;
+      if (!img.naturalWidth || !img.naturalHeight || bw <= 0 || bh <= 0) return;
+      const k = Math.min(bw / img.naturalWidth, bh / img.naturalHeight);
+      img.style.maxWidth = img.style.maxHeight = 'none';
+      img.style.width = Math.round(img.naturalWidth * k) + 'px';
+      img.style.height = Math.round(img.naturalHeight * k) + 'px';
+    };
+    if (img.complete) fit(); else img.addEventListener('load', fit, { once: true });
+  }
+
   // Las hojas miden 816×1056 (carta a 96 dpi); en pantalla se escalan al ancho disponible
   function fitPages() {
     $$('#clientSheet .pgwrap').forEach((w) => {
