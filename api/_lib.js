@@ -74,7 +74,9 @@ async function db(method, path, body) {
 const QB_ENV = () => (process.env.QB_ENVIRONMENT === 'production' ? 'production' : 'sandbox');
 const QB_API = () => (QB_ENV() === 'production' ? 'https://quickbooks.api.intuit.com' : 'https://sandbox-quickbooks.api.intuit.com');
 const QB_TOKEN_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
-const basicAuth = () => 'Basic ' + Buffer.from(`${process.env.QB_CLIENT_ID}:${process.env.QB_CLIENT_SECRET}`).toString('base64');
+// Las llaves se pegan a mano en Vercel: se ignoran espacios/saltos de línea al principio y al final
+const env = (k) => String(process.env[k] || '').trim();
+const basicAuth = () => 'Basic ' + Buffer.from(`${env('QB_CLIENT_ID')}:${env('QB_CLIENT_SECRET')}`).toString('base64');
 
 async function qbTokenRequest(params) {
   const r = await fetch(QB_TOKEN_URL, {
@@ -174,5 +176,5 @@ async function tick(by = 'automático') {
 
 module.exports = {
   cors, verifyUser, bearer, db, qbTokenRequest, tokenRecord, qbAuth, qb, qbQuery, qbItem, qbSetPrice, tick, log,
-  todayCT, r2, same, QB_ENV, IA_URL, REDIRECT_URI,
+  todayCT, r2, same, QB_ENV, IA_URL, REDIRECT_URI, env,
 };
