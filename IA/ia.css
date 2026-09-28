@@ -357,15 +357,21 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .pg .pat{position:absolute;inset:0;width:100%;height:100%}
 .pg-foot{position:absolute;left:0;right:0;bottom:26px;text-align:center;font-size:13px;letter-spacing:.02em;color:#5b5346}
 .pg-foot.on-dark{color:var(--t-ink);opacity:.85}
-/* Portada */
+/* Portada (lo importante arriba: WhatsApp solo previsualiza la franja superior) */
 .pg-cover{background:var(--t-bg);color:var(--t-ink)}
-.pg-cover .papel{position:absolute;left:0;top:0;width:100%;height:auto}
-.cv-in{position:absolute;left:64px;right:64px;top:210px;text-align:center}
-.cv-k{margin:0;font-family:var(--mono);font-size:13px;letter-spacing:.3em;text-transform:uppercase;color:var(--t-acc)}
-.cv-t{margin:18px 0 0;font-family:var(--display);font-weight:800;font-size:92px;line-height:.92;letter-spacing:-.04em}
-.cv-tag{margin:22px 0 0;font-size:26px;color:var(--t-acc);font-weight:700}
-.cv-date{display:inline-block;margin:26px 0 0;padding:10px 22px;border-radius:999px;background:var(--t-acc);color:var(--t-bg);font-weight:700;font-size:18px}
-.cv-hero{position:absolute;left:0;right:0;bottom:120px;height:380px}
+.cv-top{position:absolute;left:44px;right:44px;top:30px}
+.cv-row{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.cv-k{margin:0;font-family:var(--mono);font-size:13px;letter-spacing:.24em;text-transform:uppercase;color:var(--t-acc)}
+.cv-logo-sm{background:#fff;border-radius:12px;padding:6px 10px}
+.cv-logo-sm img{display:block;width:74px}
+.cv-pre{margin:18px 0 0;font-family:var(--display);font-weight:800;font-size:40px;line-height:1;letter-spacing:-.02em;color:var(--t-acc)}
+.cv-word{margin:4px 0 0;font-family:var(--display);font-weight:800;line-height:.92;letter-spacing:-.045em;white-space:nowrap}
+.cv-papel{position:absolute;left:0;right:0;top:270px}
+.cv-papel .papel{display:block;width:100%;height:auto}
+.cv-mid{position:absolute;left:64px;right:64px;top:400px;text-align:center}
+.cv-tag{margin:0;font-family:var(--display);font-weight:800;font-size:38px;letter-spacing:-.02em;color:var(--t-acc)}
+.cv-date{display:inline-block;margin:18px 0 0;padding:10px 22px;border-radius:999px;background:var(--t-acc);color:var(--t-bg);font-weight:700;font-size:18px}
+.cv-hero{position:absolute;left:0;right:0;bottom:130px;height:360px}
 .cv-hero .pat{position:absolute;inset:0}
 .cv-logo{position:absolute;left:50%;bottom:66px;transform:translateX(-50%);background:#fff;border-radius:18px;padding:10px 18px}
 .cv-logo img{display:block;width:120px}
