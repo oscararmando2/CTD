@@ -76,6 +76,7 @@
     send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
     gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>',
+    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/>',
     trash: '<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   };
   const icon = (n) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ''}</svg>`;
@@ -1326,39 +1327,182 @@
     }
   });
 
-  /* ================= VISTA CLIENTE ================= */
-  $('#clientBtn').addEventListener('click', () => {
+  /* ================= VISTA CLIENTE (PDF de temporada) ================= */
+  // PDF tamaño carta: portada de temporada + páginas de especiales (9 por hoja), sin costos.
+  // Las fotos pasan por /api/img (Vercel del catálogo) para poder meterlas al PDF.
+  const IMG_PROXY = 'https://catalogo-mexiquense.vercel.app/api/img?u=';
+  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const PER_PAGE = 9;
+
+  // Arte por temporada (SVG simple, colores de cada fiesta)
+  const rng = (seed) => () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+  const SH = {
+    star: (c) => `<path d="M0-10 2.9-3.1 10-3.1 4.3 1.2 6.5 8.1 0 4 -6.5 8.1 -4.3 1.2 -10-3.1 -2.9-3.1Z" fill="${c}"/>`,
+    heart: (c) => `<path d="M0 8C-9 1-10-5-6-8-3-10 0-8 0-5 0-8 3-10 6-8 10-5 9 1 0 8Z" fill="${c}"/>`,
+    snow: (c) => `<g stroke="${c}" stroke-width="1.6" stroke-linecap="round"><path d="M0-10V10M-8.7-5 8.7 5M-8.7 5 8.7-5"/><path d="M-3-7 0-4 3-7M-3 7 0 4 3 7"/></g>`,
+    bat: (c) => `<path d="M0-2C-3-7-8-7-13-3-11-1-11 1-13 3-9 1-6 2-4 5-3 3-1 3 0 5 1 3 3 3 4 5 6 2 9 1 13 3 11 1 11-1 13-3 8-7 3-7 0-2Z" fill="${c}"/><circle cy="-3" r="2.4" fill="${c}"/>`,
+    pumpkin: (c) => `<g><ellipse cx="-4" cy="2" rx="6" ry="7" fill="${c}"/><ellipse cx="4" cy="2" rx="6" ry="7" fill="${c}"/><ellipse cx="0" cy="2" rx="6" ry="7.5" fill="${c}" opacity=".85"/><rect x="-1" y="-8" width="2.4" height="5" rx="1" fill="#3a6b35"/></g>`,
+    flower: (c) => `<g>${[0, 45, 90, 135].map((a) => `<ellipse rx="3" ry="9" fill="${c}" transform="rotate(${a})"/>`).join('')}<circle r="3.2" fill="#7a2e00"/></g>`,
+    dot: (c) => `<circle r="4" fill="${c}"/>`,
+    conf: (c) => `<rect x="-5" y="-2" width="10" height="4" rx="1" fill="${c}"/>`,
+    sun: (c) => `<g><circle r="7" fill="${c}"/>${[0, 45, 90, 135, 180, 225, 270, 315].map((a) => `<rect x="-1" y="-13" width="2" height="4" rx="1" fill="${c}" transform="rotate(${a})"/>`).join('')}</g>`,
+    fish: (c) => `<path d="M-9 0C-5-6 4-6 7 0 4 6-5 6-9 0ZM7 0 12-5V5Z" fill="${c}"/>`,
+    leaf: (c) => `<path d="M0-10C8-4 8 4 0 10-8 4-8-4 0-10Z" fill="${c}"/>`,
+  };
+  // avoid = [x1,y1,x2,y2]: zona libre (ej. el título) donde no cae decoración
+  function scatter(w, h, shapes, colors, n, seed, sMin = 1.2, sMax = 3, avoid = null, op = [0.35, 0.5]) {
+    const r = rng(seed); let out = ''; let tries = 0;
+    for (let i = 0; i < n && tries < n * 20; tries++) {
+      const sh = SH[shapes[Math.floor(r() * shapes.length)]];
+      const c = colors[Math.floor(r() * colors.length)];
+      const x = r() * w, y = r() * h, rot = Math.floor(r() * 360), sc = sMin + r() * (sMax - sMin), o = op[0] + r() * op[1];
+      if (avoid && x > avoid[0] - 14 * sc && x < avoid[2] + 14 * sc && y > avoid[1] - 14 * sc && y < avoid[3] + 14 * sc) continue;
+      i++;
+      out += `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${rot}) scale(${sc.toFixed(2)})" opacity="${o.toFixed(2)}">${sh(c)}</g>`;
+    }
+    return `<svg class="pat" viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${out}</svg>`;
+  }
+  // Papel picado (banderitas con cortes)
+  function papel(w, colors, n = 9) {
+    const fw = w / n; let out = `<path d="M0 6 Q ${w / 2} 22 ${w} 6" stroke="#fff" stroke-opacity=".5" fill="none" stroke-width="2"/>`;
+    for (let i = 0; i < n; i++) {
+      const x = i * fw, y = 6 + Math.sin((i + .5) / n * Math.PI) * 14, c = colors[i % colors.length];
+      out += `<g transform="translate(${x + 4} ${y})"><path d="M0 0H${fw - 8}V${fw * 0.9}l-${(fw - 8) / 4} -10 -${(fw - 8) / 4} 10 -${(fw - 8) / 4} -10 -${(fw - 8) / 4} 10Z" fill="${c}"/>` +
+        `<circle cx="${(fw - 8) / 2}" cy="${fw * 0.35}" r="${fw * 0.12}" fill="#000" opacity=".22"/><path d="M${(fw - 8) * 0.2} ${fw * 0.62}h${(fw - 8) * 0.6}" stroke="#000" stroke-opacity=".22" stroke-width="4" stroke-dasharray="6 5"/></g>`;
+    }
+    return `<svg class="papel" viewBox="0 0 ${w} ${Math.round(w / n + 30)}" aria-hidden="true">${out}</svg>`;
+  }
+  const THEMES = {
+    ctd: { label: 'CTD (sin temporada)', title: 'Especiales de la semana', tag: 'Los mejores precios para tu tienda', bg: '#0F0D0A', ink: '#F6F2E9', acc: '#F2A31E', price: '#D8331B', pat: ['dot'], pc: ['#F2A31E', '#D8331B', '#2E8B3D'] },
+    anio: { label: 'Año Nuevo / Reyes', title: 'Especiales de Año Nuevo', tag: 'Arranca el año surtido', bg: '#14213d', ink: '#fff8e7', acc: '#f2c14e', price: '#c0392b', pat: ['star', 'conf'], pc: ['#f2c14e', '#e5e5e5', '#fca311'] },
+    valentin: { label: 'San Valentín', title: 'Especiales de San Valentín', tag: 'Precios que enamoran', bg: '#7a1030', ink: '#fff0f3', acc: '#ff8fab', price: '#c9184a', pat: ['heart'], pc: ['#ff8fab', '#ffc2d1', '#ff4d6d'] },
+    cuaresma: { label: 'Cuaresma', title: 'Especiales de Cuaresma', tag: 'Todo para la temporada', bg: '#0f4c5c', ink: '#effaf8', acc: '#9ad1d4', price: '#0f4c5c', pat: ['fish', 'dot'], pc: ['#9ad1d4', '#e0fbfc', '#5fa8d3'] },
+    primavera: { label: 'Primavera / Pascua', title: 'Especiales de Primavera', tag: 'Temporada fresca', bg: '#2d6a4f', ink: '#f1faee', acc: '#ffd6a5', price: '#bc4749', pat: ['flower', 'leaf'], pc: ['#ffd6a5', '#fdffb6', '#caffbf'] },
+    mayo: { label: 'Cinco de Mayo / Día de las Madres', title: 'Especiales de Mayo', tag: 'Para celebrar en grande', bg: '#0b6e3a', ink: '#ffffff', acc: '#ffd23f', price: '#c1121f', pat: ['flower', 'dot'], pc: ['#ffffff', '#ffd23f', '#e63946'], papel: ['#e63946', '#ffffff', '#2a9d8f', '#ffd23f', '#f4a261'] },
+    padre: { label: 'Día del Padre', title: 'Especiales del Día del Padre', tag: 'Para el mero mero', bg: '#0b3954', ink: '#f5f9ff', acc: '#ffb703', price: '#d62828', pat: ['star', 'dot'], pc: ['#ffb703', '#8ecae6', '#ffffff'] },
+    verano: { label: 'Verano / 4 de julio', title: 'Especiales de Verano', tag: 'Precios bien frescos', bg: '#e85d04', ink: '#fffbeb', acc: '#ffd166', price: '#d00000', pat: ['sun', 'star'], pc: ['#ffd166', '#ffffff', '#ffba08'] },
+    clases: { label: 'Regreso a clases', title: 'Especiales de Regreso a Clases', tag: 'Surte antes que nadie', bg: '#264653', ink: '#f8f5ee', acc: '#e9c46a', price: '#e76f51', pat: ['star', 'conf'], pc: ['#e9c46a', '#f4a261', '#2a9d8f'] },
+    patrias: { label: 'Fiestas Patrias', title: 'Especiales Patrios', tag: '¡Viva México!', bg: '#006847', ink: '#ffffff', acc: '#ffffff', price: '#ce1126', pat: ['star', 'dot'], pc: ['#ffffff', '#ce1126'], papel: ['#ce1126', '#ffffff', '#00a651', '#ce1126', '#ffffff'] },
+    halloween: { label: 'Halloween', title: 'Especiales de Halloween', tag: 'Precios de miedo', bg: '#16110d', ink: '#fff4e6', acc: '#ff7518', price: '#ff7518', pat: ['bat', 'pumpkin', 'star'], pc: ['#ff7518', '#8338ec', '#ffbe0b'] },
+    muertos: { label: 'Día de Muertos', title: 'Especiales de Día de Muertos', tag: 'Para el altar y la mesa', bg: '#2a1036', ink: '#fff5e1', acc: '#f7a300', price: '#e0457b', pat: ['flower', 'dot'], pc: ['#f7a300', '#e0457b', '#ffb703'], papel: ['#e0457b', '#f7a300', '#7b2cbf', '#00b4d8', '#ffd60a'] },
+    gracias: { label: 'Acción de Gracias', title: 'Especiales de Acción de Gracias', tag: 'Para la mesa en familia', bg: '#5a2a0a', ink: '#fff5e6', acc: '#f4a259', price: '#bc3908', pat: ['leaf'], pc: ['#f4a259', '#e76f51', '#e9c46a'] },
+    navidad: { label: 'Navidad', title: 'Especiales de Navidad', tag: 'Ofertas para las fiestas', bg: '#7c0a02', ink: '#fffaf0', acc: '#f4d35e', price: '#1e5631', pat: ['snow', 'star'], pc: ['#ffffff', '#f4d35e', '#9ee493'] },
+  };
+  const MONTH_THEME = ['anio', 'valentin', 'cuaresma', 'primavera', 'mayo', 'padre', 'verano', 'clases', 'patrias', 'halloween', 'muertos', 'navidad'];
+  // Hero grande de la portada por temporada
+  function heroArt(key, t) {
+    const big = { halloween: ['pumpkin', 'bat'], navidad: ['snow', 'star'], muertos: ['flower'], valentin: ['heart'], patrias: ['star'], anio: ['star', 'conf'], verano: ['sun'], cuaresma: ['fish'], primavera: ['flower'], mayo: ['flower'], gracias: ['leaf'], padre: ['star'], clases: ['star'], ctd: ['dot'] }[key] || ['dot'];
+    return scatter(816, 380, big, t.pc, 11, 7, 3.4, 6.2, null, [0.75, 0.25]);
+  }
+
+  function rangeText(a, b) {
+    const d1 = parseYmd(a), d2 = parseYmd(b);
+    const y = d2.getFullYear();
+    if (d1.getMonth() === d2.getMonth()) return `del ${d1.getDate()} al ${d2.getDate()} de ${MESES[d2.getMonth()]} de ${y}`;
+    return `del ${d1.getDate()} de ${MESES[d1.getMonth()]}${d1.getFullYear() !== y ? ' de ' + d1.getFullYear() : ''} al ${d2.getDate()} de ${MESES[d2.getMonth()]} de ${y}`;
+  }
+  const proxied = (u) => (u ? IMG_PROXY + encodeURIComponent(u) : '');
+
+  let sheetTheme = null;
+  function buildSheet() {
     const froms = S.cards.map((c) => c.from).sort(), tos = S.cards.map((c) => c.to).sort();
-    const range = `${fmtD(froms[0])} – ${fmtD(tos[tos.length - 1])}`;
-    const cards = S.cards.map((c) => {
+    const from = froms[0], to = tos[tos.length - 1];
+    const key = sheetTheme || MONTH_THEME[parseYmd(from).getMonth()];
+    const t = THEMES[key] || THEMES.ctd;
+    const foot = `<div class="pg-foot">Sujetos a disponibilidad ${esc(rangeText(from, to))}</div>`;
+    const style = `--t-bg:${t.bg};--t-ink:${t.ink};--t-acc:${t.acc};--t-price:${t.price}`;
+    const mes = MESES[parseYmd(from).getMonth()];
+
+    const cover = `<div class="pgwrap"><section class="pg pg-cover" style="${style}">
+      ${scatter(816, 1056, t.pat, t.pc, 26, 11, 1.2, 2.6, [60, 150, 756, 540], [0.25, 0.35])}
+      ${t.papel ? papel(816, t.papel) : ''}
+      <div class="cv-in">
+        <p class="cv-k">Central Trade Distribution</p>
+        <h1 class="cv-t">${esc(t.title)}</h1>
+        <p class="cv-tag">${esc(t.tag)}</p>
+        <p class="cv-date">${esc(rangeText(from, to))}</p>
+      </div>
+      <div class="cv-hero">${heroArt(key, t)}</div>
+      <div class="cv-logo"><img src="ctd-logo.png" alt="CTD"></div>
+      ${foot.replace('pg-foot', 'pg-foot on-dark')}
+    </section></div>`;
+
+    const card = (c) => {
       const st = stats(c);
       const name = c.items.map((i) => i.name).join(' + ');
       const brand = [...new Set(c.items.map((i) => i.brand).filter(Boolean))].join(' · ');
-      const imgs = c.items.map((i) => `<img src="${esc(i.photo)}" alt="">`).join('');
+      const imgs = c.items.map((i) => `<img src="${esc(proxied(i.photo))}" crossorigin="anonymous" alt="">`).join('');
       const pack = c.kind === 'combo' ? 'Combo · ' + c.items.length + ' productos' : c.items[0].pack;
-      const own = c.from !== froms[0] || c.to !== tos[tos.length - 1] ? ` · ${fmtD(c.from)}–${fmtD(c.to)}` : '';
-      return `<div class="sh-card">
-        <div class="sh-ph${c.kind === 'combo' ? ' combo' : ''}">${imgs}<span class="sh-off">${c.nx ? `${c.nx}+1` : `-${Math.round(st.off * 100)}%`}</span></div>
-        <div class="sh-b">
-          <div class="sh-brand">${esc(brand)}</div>
-          <div class="sh-name">${esc(name)}</div>
-          ${c.nx ? `<div class="sh-nx">Compra ${c.nx}, llévate 1 gratis</div>
-          <div class="sh-old sh-eq">Precio ${money(c.P)} · equivale a ${money(c.S)} c/u</div>` : `<div class="sh-old">Antes ${money(c.P)}</div>
-          <div class="sh-new">${money(c.S)}</div>`}
-          <div class="sh-pack">${esc(pack || '')}${own}</div>
+      return `<div class="pc">
+        <div class="pc-ph${c.kind === 'combo' ? ' combo' : ''}">${imgs}<span class="pc-off">${c.nx ? `${c.nx}+1` : `-${Math.round(st.off * 100)}%`}</span></div>
+        <div class="pc-b">
+          <div class="pc-brand">${esc(brand)}</div>
+          <div class="pc-name">${esc(name.length > 42 ? name.slice(0, 40).trim() + '…' : name)}</div>
+          ${c.nx ? `<div class="pc-nx">Compra ${c.nx}, llévate 1 gratis</div><div class="pc-old eq">Precio ${money(c.P)} · equivale a ${money(c.S)} c/u</div>`
+            : `<div class="pc-old">Antes ${money(c.P)}</div><div class="pc-new">${money(c.S)}</div>`}
+          <div class="pc-pack">${esc(pack || '')}</div>
         </div></div>`;
-    }).join('');
-    $('#clientSheet').innerHTML = `
-      <div class="sh-head">
-        <div><p>Central Trade Distribution</p><h2>Especiales de la semana</h2><p>Vigencia ${range}</p></div>
-        <img src="ctd-logo.png" alt="CTD">
-      </div>
-      <div class="sh-grid">${cards}</div>
-      <div class="sh-foot"><span>Precios por caja. Sujetos a disponibilidad.</span><span>centraltradedist.com</span></div>`;
-    openModal('#clientModal');
-  });
-  $('#printBtn').addEventListener('click', () => window.print());
+    };
+    const pages = [];
+    for (let i = 0; i < S.cards.length; i += PER_PAGE) {
+      pages.push(`<div class="pgwrap"><section class="pg pg-list" style="${style}">
+        <header class="pl-head">${scatter(816, 170, t.pat, t.pc, 16, 3 + i, 1, 2)}
+          <div><p class="cv-k">Central Trade Distribution</p><h2>${esc(t.title)}</h2><p class="pl-date">${esc(rangeText(from, to))}</p></div>
+          <span class="pl-logo"><img src="ctd-logo.png" alt="CTD"></span>
+        </header>
+        <div class="pl-grid">${S.cards.slice(i, i + PER_PAGE).map(card).join('')}</div>
+        ${foot}
+      </section></div>`);
+    }
+    $('#clientSheet').innerHTML = cover + pages.join('');
+    $('#themeSel').innerHTML = Object.entries(THEMES).map(([k, v]) => `<option value="${k}"${k === key ? ' selected' : ''}>${esc(v.label)}${k === MONTH_THEME[parseYmd(from).getMonth()] ? ` (${mes})` : ''}</option>`).join('');
+    fitPages();
+    return { from, to, key };
+  }
+  // Las hojas miden 816×1056 (carta a 96 dpi); en pantalla se escalan al ancho disponible
+  function fitPages() {
+    $$('#clientSheet .pgwrap').forEach((w) => {
+      const k = Math.min(1, w.clientWidth / 816);
+      const pg = w.firstElementChild;
+      pg.style.transform = `scale(${k})`;
+      w.style.height = 1056 * k + 'px';
+    });
+  }
+  window.addEventListener('resize', () => { if (!$('#clientModal').hidden) fitPages(); });
 
+  $('#clientBtn').addEventListener('click', () => { sheetTheme = null; buildSheet(); openModal('#clientModal'); fitPages(); });
+  $('#themeSel').addEventListener('change', (e) => { sheetTheme = e.target.value; buildSheet(); });
+
+  $('#pdfBtn').addEventListener('click', async () => {
+    const btn = $('#pdfBtn'); btn.disabled = true;
+    const label = btn.innerHTML; btn.textContent = 'Generando PDF…';
+    try {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      const pages = $$('#clientSheet .pg');
+      // Espera las fotos; si alguna no carga, se queda el espacio en blanco
+      await Promise.all($$('#clientSheet img').map((im) => (im.complete ? 0 : new Promise((r) => { im.onload = im.onerror = r; }))));
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+      for (let i = 0; i < pages.length; i++) {
+        const canvas = await window.html2canvas(pages[i], {
+          scale: 2, useCORS: true, backgroundColor: null, width: 816, height: 1056, windowWidth: 816,
+          onclone: (d) => { d.querySelectorAll('.pg').forEach((p) => { p.style.transform = 'none'; }); },
+        });
+        if (i) doc.addPage();
+        doc.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 612, 792);
+      }
+      const froms = S.cards.map((c) => c.from).sort(), tos = S.cards.map((c) => c.to).sort();
+      const d1 = parseYmd(froms[0]), d2 = parseYmd(tos[tos.length - 1]);
+      download(doc.output('blob'), `Especiales-CTD-${d1.getDate()}${MES[d1.getMonth()]}-${d2.getDate()}${MES[d2.getMonth()]}-${d2.getFullYear()}.pdf`);
+      toast('PDF guardado');
+    } catch (e) {
+      toast('No se pudo generar el PDF (' + (e.message || e) + ')');
+    } finally {
+      btn.disabled = false; btn.innerHTML = label;
+    }
+  });
 
   /* ================= VISTAS: Especiales | Órdenes ================= */
   S.view = store.get(K_VIEW, 'esp');

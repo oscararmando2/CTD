@@ -223,11 +223,12 @@
     <div class="modal-head no-print">
       <h3>Vista para clientes <small>(sin costos ni márgenes)</small></h3>
       <div>
-        <button id="printBtn" class="btn btn-oro btn-sm" type="button">Imprimir / Guardar PDF</button>
+        <label class="theme-pick"><span class="sr-only">Temporada</span><select id="themeSel" aria-label="Temporada"></select></label>
+        <button id="pdfBtn" class="btn btn-oro btn-sm" type="button"><i data-icon="download"></i>Guardar PDF</button>
         <button class="icon-btn" data-close type="button" aria-label="Cerrar"><i data-icon="x"></i></button>
       </div>
     </div>
-    <div id="clientSheet" class="sheet"></div>
+    <div id="clientSheet" class="pages"></div>
   </div>
 </div>
 
