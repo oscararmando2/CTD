@@ -1747,6 +1747,15 @@
   const tokens = (s) => new Set(normTxt(s).replace(/[^a-z0-9]+/g, ' ').split(' ').filter((w) => w.length > 1 && !/\d/.test(w) && !STOPW.has(w)));
   // Dice: 2·comunes / (total A + total B) — penaliza nombres con muchas palabras distintas
   function nameScore(a, b) { const A = tokens(a), B = tokens(b); if (A.size < 2 || B.size < 2) return 0; let n = 0; A.forEach((w) => { if (B.has(w)) n++; }); return (2 * n) / (A.size + B.size); }
+  // Tamaño/presentación: números del nombre (24/7OZ → 24, 7). Si los dos traen números, los del más
+  // corto deben estar en el otro; si no, son presentaciones distintas (ej. 12/12 OZ vs 24/7 OZ)
+  const sizeNums = (s) => new Set((normTxt(s).match(/\d+(?:\.\d+)?/g) || []).map((x) => String(parseFloat(x))));
+  function sameSize(a, b) {
+    const A = sizeNums(a), B = sizeNums(b);
+    if (!A.size || !B.size) return true;
+    const [small, big] = A.size <= B.size ? [A, B] : [B, A];
+    return [...small].every((x) => big.has(x));
+  }
 
   function matchLine(l, vmap) {
     const byCode = l.codigo_proveedor && vmap[String(l.codigo_proveedor).trim().replace(/[.#$/[\]\s]+/g, '_')];
@@ -1756,6 +1765,7 @@
     const lineUpc = upcCore(l.upc).length >= 8;
     S.products.forEach((p) => {
       if (lineUpc && upcCore(p.upc).length >= 8) return; // los dos traen UPC y no coincide: es otro producto
+      if (!sameSize(l.producto, p.name)) return;
       const s = nameScore(l.producto, p.name);
       if (s >= 0.7 && (!best || s > best.s)) best = { p, s };
     });
@@ -1790,6 +1800,21 @@
       return l;
     });
     C.saved = false; C.applied = false; C.results = []; C.dup = null; C.busy = false;
+    // UPC de la factura contra el SKU de QuickBooks (en InSitu muchos traen código interno, no UPC)
+    const byUpc = C.lines.filter((l) => upcCore(l.upc).length >= 8 && (l.nuevo || l.how === 'nombre'));
+    if (byUpc.length) {
+      try {
+        const r = await cosCall('lookup', { items: byUpc.map((l) => ({ sku: 'upc:' + l.i, upc: l.upc, name: '' })) });
+        byUpc.forEach((l) => {
+          const q = r.items['upc:' + l.i];
+          if (!q || q.how !== 'sku') return;
+          const p = S.products.find((x) => String(x.id) === String(q.qbId)) || S.products.find((x) => normTxt(x.name) === normTxt(q.qbName));
+          if (!p) return;
+          Object.assign(l, { nuevo: false, sku: String(p.id), nombre: p.name, photo: p.photo, pack: p.pack, costo_antes: r2(p.cost || 0), precio_antes: r2(p.price || 0), how: 'UPC en QuickBooks', review: false });
+          delete l.alta;
+        });
+      } catch (e) { /* sigue con lo que hay */ }
+    }
     // Precio y costo reales de QuickBooks (el dueño) para los emparejados
     const matched = C.lines.filter((l) => !l.nuevo);
     if (matched.length) {
