@@ -178,7 +178,45 @@ async function tick(by = 'automático') {
   return done;
 }
 
+/* ---------- Buscar en QuickBooks el producto de InSitu (Id = código de InSitu, Sku = UPC, o nombre) ---------- */
+const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+function similar(a, b) {
+  const A = new Set(norm(a).split(' ').filter((w) => w.length > 1)), B = new Set(norm(b).split(' ').filter((w) => w.length > 1));
+  if (!A.size || !B.size) return 0;
+  let inter = 0; A.forEach((w) => { if (B.has(w)) inter++; });
+  return inter / Math.min(A.size, B.size);
+}
+const q = (s) => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+const pick = (it, how) => it && { qbId: it.Id, qbName: it.Name, qbSku: it.Sku || '', price: r2(it.UnitPrice || 0), cost: r2(it.PurchaseCost || 0), type: it.Type, active: it.Active !== false, how };
+
+async function matchOne(p) {
+  const sku = String(p.sku || '').trim(), upc = String(p.upc || '').trim(), name = String(p.name || '').trim();
+  // 1) El código de InSitu suele ser el Id del producto en QuickBooks (InSitu copia los productos de QB)
+  if (/^\d+$/.test(sku)) {
+    try { const it = await qbItem(sku); if (it && (similar(it.Name, name) >= 0.5 || norm(it.Name) === norm(name))) return pick(it, 'id'); } catch (e) { /* no existe */ }
+  }
+  // 2) SKU de QuickBooks = código de barras / UPC de InSitu
+  for (const s of [upc, sku].filter(Boolean)) {
+    const r = await qbQuery(`select * from Item where Sku = '${q(s)}'`);
+    if (r.Item && r.Item.length === 1) return pick(r.Item[0], 'sku');
+  }
+  // 3) Nombre exacto
+  if (name) {
+    const r = await qbQuery(`select * from Item where Name = '${q(name)}'`);
+    if (r.Item && r.Item.length) return pick(r.Item[0], 'nombre');
+    // 4) Nombre parecido (primeras palabras) → se elige el más parecido
+    const words = norm(name).split(' ').filter((w) => w.length > 2).slice(0, 2).join('%');
+    if (words) {
+      const r2x = await qbQuery(`select * from Item where Name like '%${q(words)}%' maxresults 20`);
+      const best = (r2x.Item || []).map((it) => ({ it, s: similar(it.Name, name) })).sort((a, b) => b.s - a.s)[0];
+      if (best && best.s >= 0.6) return pick(best.it, 'parecido');
+    }
+  }
+  return null;
+}
+
+
 module.exports = {
   cors, verifyUser, bearer, db, qbTokenRequest, tokenRecord, qbAuth, qb, qbQuery, qbItem, qbSetPrice, tick, log,
-  todayCT, r2, same, QB_ENV, IA_URL, REDIRECT_URI, env,
+  todayCT, r2, same, QB_ENV, IA_URL, REDIRECT_URI, env, matchOne, similar, norm,
 };

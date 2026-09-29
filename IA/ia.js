@@ -78,6 +78,7 @@
     gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>',
     download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/>',
     qb: '<circle cx="12" cy="12" r="10"/><path d="M9 8v8M9 8h2.5a2.5 2.5 0 0 1 0 5H9M15 16V8M15 16h-2.5a2.5 2.5 0 0 1 0-5H15"/>',
+    upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/>',
     trash: '<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   };
   const icon = (n) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n] || ''}</svg>`;
@@ -227,6 +228,7 @@
 
   function showGate() {
     $('#dock').hidden = true;
+    $('#cosDock').hidden = true;
     $('#ordDock').hidden = true;
     $('#app').hidden = true;
     $('#gate').hidden = false;
@@ -628,6 +630,7 @@
   /* ================= PANTALLAS ================= */
   function showConnect() {
     $('#dock').hidden = true;
+    $('#cosDock').hidden = true;
     $('#ordDock').hidden = true;
     $('#dropzone').hidden = false;
     $('#workspace').hidden = true;
@@ -1674,16 +1677,334 @@
     if (r === 'conectado') setTimeout(() => { if (S.who) openQb([]); }, 1500);
   })();
 
+
+  /* ================= COSTEO DE FACTURAS =================
+   * Subes la factura → Claude la lee (api/costeo) → se empareja con tus productos (código del
+   * proveedor aprendido, UPC o nombre) → ves costo antes/ahora, precio y margen, editables →
+   * "Aplicar" cambia precio/costo y da de alta nuevos en QuickBooks (InSitu los recibe cada hora). */
+  const COS_API = 'https://ctd-seven.vercel.app/api/costeo';
+  const C = { head: null, lines: [], saved: false, applied: false, results: [], dup: null, busy: false };
+  const CS = Object.assign({ target: 30, round: true, down: false }, store.get('ctdIA.costeoSettings', {}));
+
+  async function cosCall(action, extra = {}) {
+    if (!auth || !auth.currentUser) throw new Error('Vuelve a entrar a la IA');
+    const token = await auth.currentUser.getIdToken();
+    const r = await fetch(COS_API, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ action, ...extra }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || d.error) throw Object.assign(new Error(d.error || `Error ${r.status}`), { code: d.code });
+    return d;
+  }
+
+  // ---- Archivo → imágenes JPEG (PDF por hoja con pdf.js; fotos reducidas) ----
+  const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+  async function fileToJpegs(file) {
+    const toJpeg = (canvas) => canvas.toDataURL('image/jpeg', 0.72).split(',')[1];
+    if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
+      await loadScript(PDFJS + 'pdf.min.js');
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + 'pdf.worker.min.js';
+      const pdf = await window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+      const out = [];
+      for (let i = 1; i <= Math.min(pdf.numPages, 12); i++) {
+        const page = await pdf.getPage(i);
+        const v1 = page.getViewport({ scale: 1 });
+        const vp = page.getViewport({ scale: Math.min(2.2, 1600 / v1.width) });
+        const cv = document.createElement('canvas'); cv.width = vp.width; cv.height = vp.height;
+        await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+        out.push(toJpeg(cv));
+      }
+      return out;
+    }
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); });
+    const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+    const cv = document.createElement('canvas'); cv.width = Math.round(img.naturalWidth * k); cv.height = Math.round(img.naturalHeight * k);
+    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+    return [toJpeg(cv)];
+  }
+
+  $('#cosFile').addEventListener('change', async (e) => {
+    const files = [...e.target.files]; e.target.value = '';
+    if (!files.length) return;
+    if (C.lines.length && !C.saved && !confirm('Hay una factura sin guardar. ¿Cargar otra de todos modos?')) return;
+    C.busy = true; renderCosteo('Preparando la factura…');
+    try {
+      let images = [];
+      for (const f of files) images = images.concat(await fileToJpegs(f));
+      renderCosteo(`Claude está leyendo la factura (${images.length} ${images.length === 1 ? 'hoja' : 'hojas'})… puede tardar 1 minuto`);
+      const d = await cosCall('parse', { images: images.slice(0, 12) });
+      await loadInvoice(d);
+    } catch (err) {
+      toast('No se pudo leer: ' + err.message);
+      C.busy = false; renderCosteo();
+    }
+  });
+  $('#cosNew').addEventListener('click', () => $('#cosFile').click());
+
+  // ---- Emparejar renglones con tus productos ----
+  const upcCore = (u) => String(u || '').replace(/\D/g, '').replace(/^0+/, '');
+  const sameUpc = (a, b) => { const x = upcCore(a), y = upcCore(b); if (!x || !y || x.length < 6 || y.length < 6) return false; return x === y || x === y.slice(0, -1) || y === x.slice(0, -1); };
+  // Palabras que no distinguen un producto de otro (medidas, empaques, conectores)
+  const STOPW = new Set(['oz', 'ml', 'lt', 'lts', 'lb', 'lbs', 'gr', 'grs', 'kg', 'ct', 'cj', 'cs', 'pk', 'pz', 'pcs', 'unds', 'und', 'caja', 'case', 'de', 'la', 'el', 'los', 'las', 'con', 'y', 'en', 'cr', 'lf']);
+  const tokens = (s) => new Set(normTxt(s).replace(/[^a-z0-9]+/g, ' ').split(' ').filter((w) => w.length > 1 && !/\d/.test(w) && !STOPW.has(w)));
+  // Dice: 2·comunes / (total A + total B) — penaliza nombres con muchas palabras distintas
+  function nameScore(a, b) { const A = tokens(a), B = tokens(b); if (A.size < 2 || B.size < 2) return 0; let n = 0; A.forEach((w) => { if (B.has(w)) n++; }); return (2 * n) / (A.size + B.size); }
+
+  function matchLine(l, vmap) {
+    const byCode = l.codigo_proveedor && vmap[String(l.codigo_proveedor).trim().replace(/[.#$/[\]\s]+/g, '_')];
+    if (byCode) { const p = S.products.find((x) => String(x.id) === String(byCode.sku)); if (p) return { p, how: 'código del proveedor' }; }
+    if (l.upc) { const p = S.products.find((x) => sameUpc(x.upc, l.upc)); if (p) return { p, how: 'UPC' }; }
+    let best = null;
+    const lineUpc = upcCore(l.upc).length >= 8;
+    S.products.forEach((p) => {
+      if (lineUpc && upcCore(p.upc).length >= 8) return; // los dos traen UPC y no coincide: es otro producto
+      const s = nameScore(l.producto, p.name);
+      if (s >= 0.7 && (!best || s > best.s)) best = { p, s };
+    });
+    return best ? { p: best.p, how: 'nombre', review: true } : null;
+  }
+
+  const priceFor = (cost) => { const raw = cost / (1 - CS.target / 100); return CS.round ? psychUp(raw) : r2(raw); };
+  const marginOf = (price, cost) => (price > 0 ? (price - cost) / price : 0);
+
+  function decide(l) {
+    // Precio nuevo según el costo de la factura: sube si el margen queda abajo del objetivo;
+    // si el costo baja, solo baja cuando está activado "bajar precio"
+    const cost = l.costo_caja, P = l.precio_antes;
+    if (l.nuevo) { l.precio_nuevo = priceFor(cost); l.aplicar = true; return; }
+    const sug = priceFor(cost);
+    if (marginOf(P, cost) < CS.target / 100 - 1e-9) l.precio_nuevo = Math.max(P, sug);
+    else if (CS.down && cost < (l.costo_antes || 0) - 0.005) l.precio_nuevo = Math.min(P, sug);
+    else l.precio_nuevo = P;
+    l.aplicar = !same2(l.precio_nuevo, P) || !same2(cost, l.costo_antes);
+  }
+  const same2 = (a, b) => Math.abs((Number(a) || 0) - (Number(b) || 0)) < 0.005;
+
+  async function loadInvoice(d) {
+    let vmap = {};
+    try { vmap = (await cosCall('map', { proveedor: d.proveedor })).map || {}; } catch (e) { /* sin memoria */ }
+    C.head = { proveedor: d.proveedor, factura: d.factura, fecha: d.fecha, total_factura: d.total_factura, total_calculado: d.total_calculado, mercancia: d.mercancia, cuadra: d.cuadra, flete: d.flete, creditos: d.creditos, otros_cargos: d.otros_cargos, dudas: d.dudas || [], modelo: d.modelo };
+    C.lines = (d.items || []).map((it, i) => {
+      const m = matchLine(it, vmap);
+      const l = { i, ...it, costo_caja: r2(Number(it.costo_caja) || 0), duda: (d.dudas || []).filter((x) => x.renglon === i + 1).map((x) => x.nota).join(' ') };
+      if (m) Object.assign(l, { sku: String(m.p.id), nombre: m.p.name, photo: m.p.photo, pack: m.p.pack, costo_antes: r2(m.p.cost || 0), precio_antes: r2(m.p.price || 0), how: m.how, review: !!m.review, nuevo: false });
+      else Object.assign(l, { nuevo: true, alta: { name: cleanTitle(it.producto), sku: it.upc || '', photo: '' } });
+      return l;
+    });
+    C.saved = false; C.applied = false; C.results = []; C.dup = null; C.busy = false;
+    // Precio y costo reales de QuickBooks (el dueño) para los emparejados
+    const matched = C.lines.filter((l) => !l.nuevo);
+    if (matched.length) {
+      try {
+        const r = await cosCall('lookup', { items: [...new Map(matched.map((l) => [l.sku, { sku: l.sku, upc: l.upc, name: l.nombre }])).values()] });
+        matched.forEach((l) => {
+          const q = r.items[l.sku];
+          if (q) { l.qb = q; l.precio_antes = q.price; if (q.cost) l.costo_antes = q.cost; } else l.qbMissing = true;
+        });
+      } catch (e) { toast('QuickBooks: ' + e.message); }
+    }
+    C.lines.forEach(decide);
+    try { C.dup = (await cosCall('dup', { proveedor: d.proveedor, factura: d.factura })).dup; } catch (e) { /* ok */ }
+    renderCosteo();
+    window.scrollTo({ top: $('#cosHead').offsetTop - 80, behavior: 'smooth' });
+  }
+  const cleanTitle = (s) => String(s || '').replace(/\s+/g, ' ').trim().toUpperCase().slice(0, 100);
+
+  // ---- Pantalla ----
+  function renderCosteo(busyMsg) {
+    $('#cosTarget').value = CS.target; $('#cosRound').checked = CS.round; $('#cosDown').checked = CS.down;
+    if (busyMsg) { $('#cosInfo').innerHTML = `<span class="age old">⟳ ${esc(busyMsg)}</span>`; return; }
+    $('#cosInfo').textContent = C.lines.length ? '' : 'Sube la factura del proveedor: se lee sola, se compara con tu costo y precio, y aplicas los cambios en QuickBooks.';
+    renderCosPhotos();
+    const has = C.lines.length > 0;
+    $('#cosHead').hidden = !has; $('#cosKpis').hidden = !has;
+    $('#cosApply').disabled = !has || C.applied || !C.lines.some((l) => l.aplicar && (!l.nuevo || l.alta));
+    $('#cosSave').disabled = !has || C.saved;
+    if (!has) { $('#cosList').innerHTML = ''; loadCosRecent(); return; }
+    const h = C.head;
+    const cuadra = h.cuadra === true ? '<span class="pill ok">Cuadra</span>' : h.cuadra === false ? `<span class="pill bad">No cuadra: factura ${money(h.total_factura)} vs calculado ${money(h.total_calculado)}</span>` : '';
+    $('#cosHead').innerHTML = `
+      <div class="cos-h1"><div><p class="hud">Factura</p><h2>${esc(h.proveedor || 'Proveedor')}</h2>
+        <p class="status">#${esc(h.factura || '—')} · ${esc(h.fecha || 'sin fecha')} · ${C.lines.length} renglones · total ${h.total_factura != null ? money(h.total_factura) : '—'}${h.flete ? ` · flete ${money(h.flete)}` : ''}${h.creditos ? ` · créditos ${money(h.creditos)}` : ''}</p></div>${cuadra}</div>
+      ${C.dup ? `<p class="qb-warn">⚠ Esta factura ya se guardó el ${fmtTs(C.dup.ts)} por ${esc(C.dup.by || '')}. Revisa antes de aplicar otra vez.</p>` : ''}
+      ${C.applied ? '<p class="qb-msg ok">● Cambios aplicados en QuickBooks. InSitu los recibe en su siguiente sincronización (máx. 1 hora).</p>' : ''}`;
+    const up = C.lines.filter((l) => !l.nuevo && l.costo_caja > (l.costo_antes || 0) + 0.005).length;
+    const nuevos = C.lines.filter((l) => l.nuevo).length;
+    const cambiosP = C.lines.filter((l) => !l.nuevo && l.aplicar && !same2(l.precio_nuevo, l.precio_antes)).length;
+    $('#cosKpis').innerHTML = `
+      <div class="kpi"><span class="lbl">Renglones</span><div class="kpi-v">${C.lines.length}</div></div>
+      <div class="kpi"><span class="lbl">Costo subió</span><div class="kpi-v">${up}</div></div>
+      <div class="kpi"><span class="lbl">Cambios de precio</span><div class="kpi-v">${cambiosP}</div></div>
+      <div class="kpi"><span class="lbl">Productos nuevos</span><div class="kpi-v">${nuevos}</div></div>`;
+    $('#cosList').innerHTML = C.lines.map(lineCosHTML).join('');
+  }
+
+  function lineCosHTML(l) {
+    const img = l.photo ? `<img src="${esc(l.photo)}" alt="" loading="lazy" onerror="this.remove()">` : '';
+    const delta = l.nuevo ? 0 : l.costo_caja - (l.costo_antes || 0);
+    const pctD = l.costo_antes ? delta / l.costo_antes : 0;
+    const m1 = marginOf(l.precio_nuevo, l.costo_caja);
+    const badges = [
+      l.nuevo ? '<span class="pill new">NUEVO</span>' : '',
+      !l.nuevo && delta > 0.005 ? `<span class="pill bad">▲ costo +${money(delta)} (${pct(pctD)})</span>` : '',
+      !l.nuevo && delta < -0.005 ? `<span class="pill ok">▼ costo ${money(delta)} (${pct(pctD)})</span>` : '',
+      m1 < CS.target / 100 - 1e-9 ? `<span class="pill warn">margen ${pct(m1)} &lt; ${CS.target}%</span>` : '',
+      l.review ? '<span class="pill warn">encontrado por nombre: revisa</span>' : '',
+      l.qb && l.qb.special ? `<span class="pill warn">especial activo hasta ${fmtD(l.qb.special.to)}: el precio se aplica al terminar</span>` : '',
+      l.qbMissing ? '<span class="pill bad">no está en QuickBooks</span>' : '',
+      l.duda ? `<span class="pill warn">revisa: ${esc(l.duda)}</span>` : '',
+      l.result ? (l.result.ok ? '<span class="pill ok">✓ aplicado</span>' : `<span class="pill bad">✗ ${esc(l.result.error)}</span>`) : '',
+    ].join('');
+    const nuevo = l.nuevo ? `
+      <div class="cos-alta">
+        <label class="field"><span>Nombre en QuickBooks</span><input data-a="name" value="${esc(l.alta.name)}"></label>
+        <label class="field"><span>SKU / UPC</span><input data-a="sku" value="${esc(l.alta.sku)}"></label>
+        <label class="field"><span>Foto (URL)</span><input data-a="photo" placeholder="https://…" value="${esc(l.alta.photo)}"></label>
+        <button class="btn-link" type="button" data-link>¿Ya existe? buscar y ligar</button>
+      </div>` : '';
+    return `<article class="ol cos-l${l.aplicar ? '' : ' off'}" data-i="${l.i}">
+      <div class="ol-ph">${img}</div>
+      <div class="ol-main">
+        <div class="ol-name">${esc(l.nuevo ? l.producto : l.nombre)}</div>
+        <div class="meta">Factura: ${esc(l.producto)} · ${esc(l.empaque || '')}${l.upc ? ' · UPC ' + esc(l.upc) : ''}${l.codigo_proveedor ? ' · código ' + esc(l.codigo_proveedor) : ''}${!l.nuevo ? ` · SKU ${esc(l.sku)} · por ${esc(l.how)}` : ''}</div>
+        <div class="cos-badges">${badges}</div>
+        <div class="cos-grid">
+          <span><small>Cant.</small><b>${nfmt(l.cantidad)}</b></span>
+          <label><small>Costo factura</small><input type="number" step="0.01" inputmode="decimal" data-f="cost" value="${l.costo_caja.toFixed(2)}"></label>
+          <span><small>Costo antes</small><b>${l.nuevo ? '—' : money(l.costo_antes || 0)}</b></span>
+          <span><small>Precio actual</small><b>${l.nuevo ? '—' : money(l.precio_antes)}</b></span>
+          <label><small>Precio nuevo</small><input type="number" step="0.01" inputmode="decimal" data-f="price" value="${(l.precio_nuevo || 0).toFixed(2)}"></label>
+          <span><small>Margen</small><b class="${m1 < CS.target / 100 - 1e-9 ? 'warn' : 'okc'}" data-v="m">${pct(m1)}</b></span>
+          <span><small>Sugerido ${CS.target}%</small><b>${money(priceFor(l.costo_caja))}</b></span>
+        </div>
+        ${nuevo}
+      </div>
+      <label class="cos-apply"><input type="checkbox" data-f="aplicar"${l.aplicar ? ' checked' : ''}${C.applied ? ' disabled' : ''}><span>${l.nuevo ? 'Dar de alta' : 'Aplicar'}</span></label>
+    </article>`;
+  }
+
+  // Edición en vivo: costo/precio → margen
+  $('#cosList').addEventListener('input', (e) => {
+    const el = e.target.closest('.cos-l'); if (!el) return;
+    const l = C.lines[Number(el.dataset.i)]; if (!l) return;
+    const f = e.target.dataset.f, a = e.target.dataset.a;
+    if (f === 'cost') { const v = parseFloat(e.target.value); if (v >= 0) { l.costo_caja = r2(v); const keep = l.precio_nuevo; decide(l); if (document.activeElement !== el.querySelector('[data-f="price"]')) el.querySelector('[data-f="price"]').value = l.precio_nuevo.toFixed(2); else l.precio_nuevo = keep; } }
+    else if (f === 'price') { const v = parseFloat(e.target.value); if (v > 0) { l.precio_nuevo = r2(v); l.aplicar = true; el.querySelector('[data-f="aplicar"]').checked = true; } }
+    else if (f === 'aplicar') { l.aplicar = e.target.checked; }
+    else if (a) { l.alta[a] = e.target.value; }
+    const m1 = marginOf(l.precio_nuevo, l.costo_caja), mv = el.querySelector('[data-v="m"]');
+    mv.textContent = pct(m1); mv.className = m1 < CS.target / 100 - 1e-9 ? 'warn' : 'okc';
+    el.classList.toggle('off', !l.aplicar);
+    C.saved = false; $('#cosSave').disabled = false;
+    $('#cosApply').disabled = C.applied || !C.lines.some((x) => x.aplicar);
+  });
+  // Ligar un "nuevo" a un producto que ya existe
+  $('#cosList').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-link]'); if (!b) return;
+    const l = C.lines[Number(b.closest('.cos-l').dataset.i)];
+    const q = prompt('Escribe parte del nombre, SKU o UPC del producto existente:', l.producto.split(' ').slice(0, 3).join(' '));
+    if (!q) return;
+    const words = normTxt(q).split(/\s+/).filter(Boolean);
+    const res = S.products.filter((p) => { const t = normTxt(`${p.name} ${p.id} ${p.upc}`); return words.every((w) => t.includes(w)); }).slice(0, 8);
+    if (!res.length) { toast('Sin resultados'); return; }
+    const pickN = prompt(res.map((p, i) => `${i + 1}. ${p.name} (SKU ${p.id}, ${money(p.price)})`).join('\n') + '\n\nEscribe el número:', '1');
+    const p = res[Number(pickN) - 1]; if (!p) return;
+    Object.assign(l, { nuevo: false, sku: String(p.id), nombre: p.name, photo: p.photo, costo_antes: r2(p.cost || 0), precio_antes: r2(p.price || 0), how: 'elegido a mano', review: false });
+    delete l.alta;
+    cosCall('lookup', { items: [{ sku: l.sku, upc: p.upc, name: p.name }] }).then((r) => { const qd = r.items[l.sku]; if (qd) { l.qb = qd; l.precio_antes = qd.price; if (qd.cost) l.costo_antes = qd.cost; } else l.qbMissing = true; decide(l); renderCosteo(); }).catch(() => { decide(l); renderCosteo(); });
+  });
+
+  ['#cosTarget', '#cosRound', '#cosDown'].forEach((id) => $(id).addEventListener('change', () => {
+    CS.target = Math.min(80, Math.max(0, parseFloat($('#cosTarget').value) || 0)); CS.round = $('#cosRound').checked; CS.down = $('#cosDown').checked;
+    store.set('ctdIA.costeoSettings', CS);
+    if (!C.applied) C.lines.forEach(decide);
+    renderCosteo();
+  }));
+
+  // ---- Aplicar en QuickBooks ----
+  $('#cosApply').addEventListener('click', async () => {
+    const sel = C.lines.filter((l) => l.aplicar);
+    const changes = sel.filter((l) => !l.nuevo && l.qb).map((l) => ({ qbId: l.qb.qbId, price: same2(l.precio_nuevo, l.precio_antes) ? null : l.precio_nuevo, cost: same2(l.costo_caja, l.costo_antes) ? null : l.costo_caja })).filter((c) => c.price != null || c.cost != null);
+    const creates = sel.filter((l) => l.nuevo).map((l) => ({ name: l.alta.name, sku: l.alta.sku, price: l.precio_nuevo, cost: l.costo_caja, photo: l.alta.photo, description: l.producto }));
+    const nP = changes.filter((c) => c.price != null).length, nC = changes.filter((c) => c.cost != null).length;
+    if (!changes.length && !creates.length) { toast('No hay cambios que aplicar'); return; }
+    if (!confirm(`¿Aplicar en QuickBooks?\n\n• ${nP} cambios de precio\n• ${nC} cambios de costo\n• ${creates.length} productos nuevos\n\nInSitu los recibe en su siguiente sincronización (máx. 1 hora).`)) return;
+    const btn = $('#cosApply'); btn.disabled = true;
+    try {
+      const d = await cosCall('apply', { changes, creates, factura: `${C.head.proveedor} #${C.head.factura}` });
+      C.results = d.results;
+      d.results.forEach((r) => {
+        const l = r.create ? C.lines.find((x) => x.nuevo && x.alta && cleanTitle(x.alta.name) === cleanTitle(r.create)) : C.lines.find((x) => x.qb && x.qb.qbId === r.qbId);
+        if (l) { l.result = r; if (r.qbId && l.nuevo) l.qbId = r.qbId; if (r.note) l.duda = r.note; }
+      });
+      const bad = d.results.filter((r) => !r.ok).length;
+      C.applied = !bad;
+      toast(bad ? `${d.results.length - bad} aplicados · ${bad} con error (revisa los renglones)` : 'Aplicado en QuickBooks ✓');
+      await saveCosteo(true);
+    } catch (e) { toast('No se pudo aplicar: ' + e.message); }
+    finally { renderCosteo(); }
+  });
+
+  async function saveCosteo(silent) {
+    const f = { ...C.head, lines: C.lines.map((l) => ({ producto: l.producto, upc: l.upc, codigo_proveedor: l.codigo_proveedor, cantidad: l.cantidad, empaque: l.empaque, costo_caja: l.costo_caja, sku: l.sku || '', qbId: (l.qb && l.qb.qbId) || l.qbId || '', nombre: l.nombre || (l.alta && l.alta.name) || '', costo_antes: l.costo_antes ?? null, precio_antes: l.precio_antes ?? null, precio_nuevo: l.precio_nuevo, aplicado: !!(l.result && l.result.ok), nuevo: !!l.nuevo })) };
+    try { await cosCall('save', { factura: f, results: C.results }); C.saved = true; if (!silent) toast('Factura guardada · ya la ve ' + PEOPLE.filter((x) => x !== S.who).join(' y ')); loadCosRecent(); }
+    catch (e) { toast('No se pudo guardar: ' + e.message); }
+    renderCosteo();
+  }
+  $('#cosSave').addEventListener('click', () => saveCosteo(false));
+
+  async function loadCosRecent() {
+    const box = $('#cosRecent');
+    try {
+      const d = await cosCall('list');
+      box.innerHTML = d.list.length ? d.list.map((f) => `<div class="hist-item" data-cid="${esc(f.id)}"><div class="hi-txt"><b>${esc(f.proveedor)} · #${esc(f.factura)}</b>${esc(f.fecha || '')} · ${f.lines} renglones · ${f.total_factura != null ? money(f.total_factura) : ''} · ${esc(f.by || '')} · ${fmtTs(f.ts)}</div><button class="btn btn-ghost btn-sm" data-c="open" type="button">Ver</button></div>`).join('')
+        : '<p class="data-info">Todavía no hay facturas guardadas.</p>';
+    } catch (e) { box.innerHTML = `<p class="data-info">${esc(e.message)}</p>`; }
+  }
+  $('#cosRecent').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-c="open"]'); if (!b) return;
+    try {
+      const { factura: f } = await cosCall('get', { id: b.closest('.hist-item').dataset.cid });
+      C.head = { ...f, dudas: [] };
+      C.lines = (f.lines || []).map((l, i) => ({ i, ...l, photo: (S.products.find((p) => String(p.id) === l.sku) || {}).photo, aplicar: false, result: l.aplicado ? { ok: true } : null, alta: l.nuevo ? { name: l.nombre, sku: l.upc, photo: '' } : null }));
+      C.saved = true; C.applied = true; C.dup = null;
+      renderCosteo();
+      window.scrollTo({ top: $('#cosHead').offsetTop - 80, behavior: 'smooth' });
+    } catch (err) { toast(err.message); }
+  });
+
+  // ---- Fotos de productos dados de alta: se ponen en InSitu cuando el producto ya llegó de QuickBooks ----
+  let cosPhotos = null;
+  async function renderCosPhotos() {
+    if (cosPhotos === null) { cosPhotos = {}; try { cosPhotos = (await cosCall('photos')).photos || {}; } catch (e) { cosPhotos = {}; } }
+    const ready = Object.entries(cosPhotos).map(([qbId, f]) => ({ qbId, ...f, p: S.products.find((x) => String(x.id) === qbId || normTxt(x.name) === normTxt(f.name)) })).filter((x) => x.p);
+    if (!ready.length || C.lines.length) return;
+    $('#cosInfo').innerHTML += ` <button id="cosPhotoBtn" class="btn-link" type="button">Poner ${ready.length} ${ready.length === 1 ? 'foto' : 'fotos'} de productos nuevos en InSitu</button>`;
+    $('#cosPhotoBtn').addEventListener('click', async () => {
+      if (!confirm(`¿Poner la foto a ${ready.length} producto(s) en InSitu?`)) return;
+      let ok = 0;
+      for (const x of ready) {
+        try {
+          const r = await fetch(INSITU + '/products/bulk/operations', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + Insitu.token() }, body: JSON.stringify([{ code: String(x.p.id), name: x.p.name, photourl: x.photo }]) });
+          if (r.ok) { ok++; await cosCall('photo_done', { qbId: x.qbId }); delete cosPhotos[x.qbId]; }
+        } catch (e) { /* sigue */ }
+      }
+      toast(`${ok} de ${ready.length} fotos puestas en InSitu`);
+      renderCosteo();
+    });
+  }
+
   /* ================= VISTAS: Especiales | Órdenes ================= */
   S.view = store.get(K_VIEW, 'esp');
   function applyView() {
     if ($('#workspace').hidden) return;
-    const ord = S.view === 'ord';
+    const ord = S.view === 'ord', cos = S.view === 'cos';
     $$('#viewTabs button').forEach((b) => { const on = b.dataset.v === S.view; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
-    $('#espView').hidden = ord;
+    $('#espView').hidden = ord || cos;
     $('#ordView').hidden = !ord;
-    $('#dock').hidden = ord;
+    $('#cosView').hidden = !cos;
+    $('#dock').hidden = ord || cos;
     $('#ordDock').hidden = !ord || O.vendor === null;
+    $('#cosDock').hidden = !cos;
+    if (cos) renderCosteo();
     if (ord) {
       if (!O.lines.length && !O.touched) suggestOrder(); else renderOrders();
       // Datos viejos sin compras (de antes de Órdenes): se bajan solas
