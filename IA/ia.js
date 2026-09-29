@@ -1776,15 +1776,13 @@
   const priceFor = (cost) => { const raw = cost / (1 - CS.target / 100); return CS.round ? psychUp(raw) : r2(raw); };
   const marginOf = (price, cost) => (price > 0 ? (price - cost) / price : 0);
 
+  // El precio se queda como está en el sistema: "precio nuevo" va en blanco y solo cambia si lo escribes.
+  // Se aplica si cambió el costo (se actualiza en QuickBooks) o si escribiste un precio nuevo.
+  const effPrice = (l) => (l.precio_nuevo != null ? l.precio_nuevo : l.nuevo ? priceFor(l.costo_caja) : l.precio_antes);
+  const priceChanged = (l) => l.precio_nuevo != null && !same2(l.precio_nuevo, l.precio_antes);
   function decide(l) {
-    // Precio nuevo según el costo de la factura: sube si el margen queda abajo del objetivo;
-    // si el costo baja, el precio NO baja
-    const cost = l.costo_caja, P = l.precio_antes;
-    if (l.nuevo) { l.precio_nuevo = priceFor(cost); l.aplicar = true; return; }
-    const sug = priceFor(cost);
-    if (marginOf(P, cost) < CS.target / 100 - 1e-9) l.precio_nuevo = Math.max(P, sug);
-    else l.precio_nuevo = P;
-    l.aplicar = !same2(l.precio_nuevo, P) || !same2(cost, l.costo_antes);
+    if (l.nuevo) { l.aplicar = true; return; }
+    l.aplicar = priceChanged(l) || !same2(l.costo_caja, l.costo_antes);
   }
   const same2 = (a, b) => Math.abs((Number(a) || 0) - (Number(b) || 0)) < 0.005;
 
@@ -1794,7 +1792,7 @@
     C.head = { proveedor: d.proveedor, factura: d.factura, fecha: d.fecha, total_factura: d.total_factura, total_calculado: d.total_calculado, mercancia: d.mercancia, cuadra: d.cuadra, flete: d.flete, creditos: d.creditos, otros_cargos: d.otros_cargos, dudas: d.dudas || [], modelo: d.modelo };
     C.lines = (d.items || []).map((it, i) => {
       const m = matchLine(it, vmap);
-      const l = { i, ...it, costo_caja: r2(Number(it.costo_caja) || 0), duda: (d.dudas || []).filter((x) => x.renglon === i + 1).map((x) => x.nota).join(' ') };
+      const l = { i, ...it, precio_nuevo: null, costo_caja: r2(Number(it.costo_caja) || 0), duda: (d.dudas || []).filter((x) => x.renglon === i + 1).map((x) => x.nota).join(' ') };
       if (m) Object.assign(l, { sku: String(m.p.id), nombre: m.p.name, photo: m.p.photo, pack: m.p.pack, costo_antes: r2(m.p.cost || 0), precio_antes: r2(m.p.price || 0), how: m.how, review: !!m.review, nuevo: false });
       else Object.assign(l, { nuevo: true, alta: { name: cleanTitle(it.producto), sku: it.upc || '', photo: '' } });
       return l;
@@ -1853,7 +1851,7 @@
       ${C.applied ? '<p class="qb-msg ok">● Cambios aplicados en QuickBooks. InSitu los recibe en su siguiente sincronización (máx. 1 hora).</p>' : ''}`;
     const up = C.lines.filter((l) => !l.nuevo && l.costo_caja > (l.costo_antes || 0) + 0.005).length;
     const nuevos = C.lines.filter((l) => l.nuevo).length;
-    const cambiosP = C.lines.filter((l) => !l.nuevo && l.aplicar && !same2(l.precio_nuevo, l.precio_antes)).length;
+    const cambiosP = C.lines.filter((l) => !l.nuevo && l.aplicar && priceChanged(l)).length;
     $('#cosKpis').innerHTML = `
       <div class="kpi"><span class="lbl">Renglones</span><div class="kpi-v">${C.lines.length}</div></div>
       <div class="kpi"><span class="lbl">Costo subió</span><div class="kpi-v">${up}</div></div>
@@ -1866,7 +1864,8 @@
     const img = l.photo ? `<img src="${esc(l.photo)}" alt="" loading="lazy" onerror="this.remove()">` : '';
     const delta = l.nuevo ? 0 : l.costo_caja - (l.costo_antes || 0);
     const pctD = l.costo_antes ? delta / l.costo_antes : 0;
-    const m1 = marginOf(l.precio_nuevo, l.costo_caja);
+    const m1 = marginOf(effPrice(l), l.costo_caja);
+    const m0 = !l.nuevo && l.costo_antes ? marginOf(l.precio_antes, l.costo_antes) : null;
     const badges = [
       l.nuevo ? '<span class="pill new">NUEVO</span>' : '',
       !l.nuevo && delta > 0.005 ? `<span class="pill bad">▲ costo +${money(delta)} (${pct(pctD)})</span>` : '',
@@ -1896,8 +1895,8 @@
           <label><small>Costo factura</small><input type="number" step="0.01" inputmode="decimal" data-f="cost" value="${l.costo_caja.toFixed(2)}"></label>
           <span><small>Costo antes</small><b>${l.nuevo ? '—' : money(l.costo_antes || 0)}</b></span>
           <span><small>Precio actual</small><b>${l.nuevo ? '—' : money(l.precio_antes)}</b></span>
-          <label><small>Precio nuevo</small><input type="number" step="0.01" inputmode="decimal" data-f="price" value="${(l.precio_nuevo || 0).toFixed(2)}"></label>
-          <span><small>Margen</small><b class="${m1 < CS.target / 100 - 1e-9 ? 'warn' : 'okc'}" data-v="m">${pct(m1)}</b></span>
+          <label><small>Precio nuevo</small><input type="number" step="0.01" inputmode="decimal" data-f="price" placeholder="${l.nuevo ? money(priceFor(l.costo_caja)) : money(l.precio_antes)}" value="${l.precio_nuevo != null ? l.precio_nuevo.toFixed(2) : ''}"></label>
+          <span><small>Margen</small><b class="${m1 < CS.target / 100 - 1e-9 ? 'warn' : 'okc'}" data-v="m">${pct(m1)}</b>${m0 != null ? `<em class="m-antes">antes ${pct(m0)}</em>` : ''}</span>
           <span><small>Sugerido ${CS.target}%</small><b>${money(priceFor(l.costo_caja))}</b></span>
         </div>
         ${nuevo}
@@ -1911,11 +1910,11 @@
     const el = e.target.closest('.cos-l'); if (!el) return;
     const l = C.lines[Number(el.dataset.i)]; if (!l) return;
     const f = e.target.dataset.f, a = e.target.dataset.a;
-    if (f === 'cost') { const v = parseFloat(e.target.value); if (v >= 0) { l.costo_caja = r2(v); const keep = l.precio_nuevo; decide(l); if (document.activeElement !== el.querySelector('[data-f="price"]')) el.querySelector('[data-f="price"]').value = l.precio_nuevo.toFixed(2); else l.precio_nuevo = keep; } }
-    else if (f === 'price') { const v = parseFloat(e.target.value); if (v > 0) { l.precio_nuevo = r2(v); l.aplicar = true; el.querySelector('[data-f="aplicar"]').checked = true; } }
+    if (f === 'cost') { const v = parseFloat(e.target.value); if (v >= 0) { l.costo_caja = r2(v); decide(l); el.querySelector('[data-f="aplicar"]').checked = l.aplicar; } }
+    else if (f === 'price') { const v = parseFloat(e.target.value); l.precio_nuevo = v > 0 ? r2(v) : null; decide(l); el.querySelector('[data-f="aplicar"]').checked = l.aplicar; }
     else if (f === 'aplicar') { l.aplicar = e.target.checked; }
     else if (a) { l.alta[a] = e.target.value; }
-    const m1 = marginOf(l.precio_nuevo, l.costo_caja), mv = el.querySelector('[data-v="m"]');
+    const m1 = marginOf(effPrice(l), l.costo_caja), mv = el.querySelector('[data-v="m"]');
     mv.textContent = pct(m1); mv.className = m1 < CS.target / 100 - 1e-9 ? 'warn' : 'okc';
     el.classList.toggle('is-off', !l.aplicar);
     C.saved = false; $('#cosSave').disabled = false;
@@ -1947,11 +1946,12 @@
   // ---- Aplicar en QuickBooks ----
   $('#cosApply').addEventListener('click', async () => {
     const sel = C.lines.filter((l) => l.aplicar);
-    const changes = sel.filter((l) => !l.nuevo && l.qb).map((l) => ({ qbId: l.qb.qbId, price: same2(l.precio_nuevo, l.precio_antes) ? null : l.precio_nuevo, cost: same2(l.costo_caja, l.costo_antes) ? null : l.costo_caja })).filter((c) => c.price != null || c.cost != null);
-    const creates = sel.filter((l) => l.nuevo).map((l) => ({ name: l.alta.name, sku: l.alta.sku, price: l.precio_nuevo, cost: l.costo_caja, photo: l.alta.photo, description: l.producto }));
+    const changes = sel.filter((l) => !l.nuevo && l.qb).map((l) => ({ qbId: l.qb.qbId, price: priceChanged(l) ? l.precio_nuevo : null, cost: same2(l.costo_caja, l.costo_antes) ? null : l.costo_caja })).filter((c) => c.price != null || c.cost != null);
+    const creates = sel.filter((l) => l.nuevo).map((l) => ({ name: l.alta.name, sku: l.alta.sku, price: effPrice(l), cost: l.costo_caja, photo: l.alta.photo, description: l.producto }));
+    const sinPrecio = sel.filter((l) => l.nuevo && l.precio_nuevo == null).length;
     const nP = changes.filter((c) => c.price != null).length, nC = changes.filter((c) => c.cost != null).length;
     if (!changes.length && !creates.length) { toast('No hay cambios que aplicar'); return; }
-    if (!confirm(`¿Aplicar en QuickBooks?\n\n• ${nP} cambios de precio\n• ${nC} cambios de costo\n• ${creates.length} productos nuevos\n\nInSitu los recibe en su siguiente sincronización (máx. 1 hora).`)) return;
+    if (!confirm(`¿Aplicar en QuickBooks?\n\n• ${nP} cambios de precio\n• ${nC} cambios de costo\n• ${creates.length} productos nuevos${sinPrecio ? ` (${sinPrecio} sin precio escrito: se usa el sugerido de ${CS.target}%)` : ''}\n\nInSitu los recibe en su siguiente sincronización (máx. 1 hora).`)) return;
     const btn = $('#cosApply'); btn.disabled = true;
     try {
       const d = await cosCall('apply', { changes, creates, factura: `${C.head.proveedor} #${C.head.factura}` });
