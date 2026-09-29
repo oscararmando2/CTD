@@ -85,7 +85,8 @@ async function qbTokenRequest(params) {
     body: new URLSearchParams(params).toString(),
   });
   const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error('QuickBooks rechazó la autorización: ' + (d.error_description || d.error || r.status));
+  const tid = r.headers.get('intuit_tid') || '';
+  if (!r.ok) throw Object.assign(new Error('QuickBooks rechazó la autorización: ' + (d.error_description || d.error || r.status) + (tid ? ` (intuit_tid ${tid})` : '')), { intuitTid: tid });
   return d;
 }
 function tokenRecord(d, extra) {
@@ -113,9 +114,11 @@ async function qb(method, path, body) {
     body: body ? JSON.stringify(body) : undefined,
   });
   const d = await r.json().catch(() => ({}));
+  // intuit_tid: número de rastreo de Intuit; se guarda con cada error para que soporte de Intuit lo encuentre
+  const tid = r.headers.get('intuit_tid') || '';
   if (!r.ok) {
     const f = d.Fault && d.Fault.Error && d.Fault.Error[0];
-    throw new Error('QuickBooks: ' + (f ? `${f.Message} ${f.Detail || ''}` : r.status));
+    throw Object.assign(new Error('QuickBooks: ' + (f ? `${f.Message} ${f.Detail || ''}` : r.status) + (tid ? ` (intuit_tid ${tid})` : '')), { intuitTid: tid });
   }
   return d;
 }
@@ -167,7 +170,8 @@ async function tick(by = 'automático') {
         }
       }
     } catch (err) {
-      await db('PATCH', 'qbEspeciales/' + id, { lastError: String(err.message || err), lastErrorAt: Date.now() });
+      await db('PATCH', 'qbEspeciales/' + id, { lastError: String(err.message || err), lastErrorAt: Date.now(), intuitTid: err.intuitTid || '' });
+      await log({ id, action: 'error', name: e.name, error: String(err.message || err), intuitTid: err.intuitTid || '', by }).catch(() => {});
       if (err.code === 'not_connected') break;
     }
   }
