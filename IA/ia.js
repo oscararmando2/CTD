@@ -1547,7 +1547,13 @@
       return;
     }
     $('#qbStatus').innerHTML = `<p class="qb-msg ok">● Conectado a <b>${esc(s.company || 'QuickBooks')}</b>${s.connectedBy ? ` · lo conectó ${esc(s.connectedBy)}` : ''}</p>` +
-      (s.env !== 'production' ? '<button id="qbTest" class="btn btn-ghost btn-sm" type="button">Probar cambio de precio</button>' : '');
+      `<span class="qb-actions">${s.env !== 'production' ? '<button id="qbTest" class="btn btn-ghost btn-sm" type="button">Probar cambio de precio</button>' : ''}` +
+      '<button id="qbDisc" class="btn btn-ghost btn-sm" type="button">Desconectar</button></span>';
+    $('#qbDisc').addEventListener('click', async () => {
+      if (!confirm('¿Desconectar QuickBooks? Los especiales programados no se aplicarán ni regresarán hasta que vuelvas a conectar.')) return;
+      try { await qbCall('disconnect'); toast('QuickBooks desconectado'); qbState = { connected: false, env: s.env }; renderQbStatus(); $('#qbPlan').hidden = true; }
+      catch (e) { toast('No se pudo desconectar: ' + e.message); }
+    });
     const tb = $('#qbTest');
     if (tb) tb.addEventListener('click', async () => {
       tb.disabled = true; tb.textContent = 'Probando…';
