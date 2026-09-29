@@ -180,7 +180,16 @@ async function tick(by = 'automático') {
 
 /* ---------- Buscar en QuickBooks el producto de InSitu (Id = código de InSitu, Sku = UPC, o nombre) ---------- */
 const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+// Presentaciones distintas (12/12 OZ vs 24/7 OZ) nunca son el mismo producto
+function sameSizeSrv(a, b) {
+  const nums = (s) => new Set((norm(s).match(/\d+(?:\.\d+)?/g) || []).map((x) => String(parseFloat(x))));
+  const A = nums(a), B = nums(b);
+  if (!A.size || !B.size) return true;
+  const [s, g] = A.size <= B.size ? [A, B] : [B, A];
+  return [...s].every((x) => g.has(x));
+}
 function similar(a, b) {
+  if (!sameSizeSrv(a, b)) return 0;
   const A = new Set(norm(a).split(' ').filter((w) => w.length > 1)), B = new Set(norm(b).split(' ').filter((w) => w.length > 1));
   if (!A.size || !B.size) return 0;
   let inter = 0; A.forEach((w) => { if (B.has(w)) inter++; });
