@@ -1885,7 +1885,7 @@
         <label class="field"><span>Foto (URL)</span><input data-a="photo" placeholder="https://…" value="${esc(l.alta.photo)}"></label>
         <button class="btn-link" type="button" data-link>¿Ya existe? buscar y ligar</button>
       </div>` : '';
-    return `<article class="ol cos-l${l.aplicar ? '' : ' off'}" data-i="${l.i}">
+    return `<article class="ol cos-l${l.aplicar ? '' : ' is-off'}" data-i="${l.i}">
       <div class="ol-ph">${img}</div>
       <div class="ol-main">
         <div class="ol-name">${esc(l.nuevo ? l.producto : l.nombre)}</div>
@@ -1917,7 +1917,7 @@
     else if (a) { l.alta[a] = e.target.value; }
     const m1 = marginOf(l.precio_nuevo, l.costo_caja), mv = el.querySelector('[data-v="m"]');
     mv.textContent = pct(m1); mv.className = m1 < CS.target / 100 - 1e-9 ? 'warn' : 'okc';
-    el.classList.toggle('off', !l.aplicar);
+    el.classList.toggle('is-off', !l.aplicar);
     C.saved = false; $('#cosSave').disabled = false;
     $('#cosApply').disabled = C.applied || !C.lines.some((x) => x.aplicar);
   });
