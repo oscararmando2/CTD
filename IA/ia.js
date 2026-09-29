@@ -651,14 +651,17 @@
       `<span id="ageInfo" class="age"></span> · <b>${S.products.length}</b> productos · ${esc(m.source || '')}` +
       (m.sales ? ` · ventas desde ${fmtD(m.from)} (${m.invoices} facturas)${m.stock ? ' + inventario' : ''}` : ' · sin datos de venta') +
       ` · ${conn ? '<button id="resync" class="btn-link" type="button">actualizar de InSitu</button> · ' : ''}` +
-      `<button id="changeSrc" class="btn-link" type="button">${conn ? 'desconectar' : 'conectar InSitu'}</button> · ` +
+      `<button id="changeSrc" class="btn-link" type="button">${conn ? 'desconectar InSitu' : 'conectar InSitu'}</button> · ` +
       `<button id="qbOpen" class="btn-link" type="button">QuickBooks</button> <span id="syncInfo"></span>`;
     $('#qbOpen').addEventListener('click', () => openQb([]));
     renderAge();
     const rs = $('#resync');
     if (rs) rs.addEventListener('click', () => { syncInsitu({ silent: true }).catch(() => {}); });
     $('#changeSrc').addEventListener('click', () => {
-      if (conn) { store.del(K_TOKEN); toast('InSitu desconectado en este dispositivo'); renderDataInfo(); }
+      if (conn) {
+        if (!confirm('¿Desconectar InSitu en este dispositivo? Tendrás que volver a entrar con tu usuario de InSitu para actualizar datos.')) return;
+        store.del(K_TOKEN); toast('InSitu desconectado en este dispositivo'); renderDataInfo();
+      }
       else showConnect();
     });
   }
