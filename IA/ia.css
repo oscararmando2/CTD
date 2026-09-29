@@ -364,7 +364,7 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .cos-alta{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px;padding:12px;border-radius:14px;background:rgba(242,163,30,.06)}
 .cos-apply{grid-column:1/-1;display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;margin-top:8px}
 .cos-apply input{width:20px;height:20px;accent-color:var(--oro)}
-.cos-l.off{opacity:.55}
+.cos-l.is-off{opacity:.55}
 .cos-l{animation:none}
 .cos-l .ol-ph img{mix-blend-mode:normal}
 
