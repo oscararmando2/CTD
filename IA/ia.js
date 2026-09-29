@@ -972,6 +972,38 @@
     render(false, nc.uid);
   }
 
+  /* ---- Agregar un producto a mano (buscador de Especiales) ----
+   * Se arma igual que las generadas (precio especial sugerido, margen, ventas, motivo) y queda
+   * fijada para que no se pierda al volver a generar. */
+  const normTxt = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  $('#espSearch').addEventListener('input', (e) => {
+    const q = normTxt(e.target.value.trim());
+    const box = $('#espResults');
+    if (q.length < 2) { box.hidden = true; return; }
+    const words = q.split(/\s+/);
+    const inCards = new Set(S.cards.flatMap((c) => c.items.map((i) => String(i.id))));
+    const res = S.products.filter((p) => { const t = normTxt(`${p.name} ${p.brand} ${p.id} ${p.upc}`); return words.every((w) => t.includes(w)); }).slice(0, 12);
+    box.innerHTML = res.length ? res.map((p) => {
+      const ok = p.price > 0 && p.cost > 0 && p.cost < p.price;
+      const why = p.why && p.why !== 'normal' && WHY[p.why] ? ' · ' + WHY[p.why].label : '';
+      return `<button type="button" role="option" data-add="${esc(p.id)}"${ok && !inCards.has(String(p.id)) ? '' : ' disabled'}>${p.photo ? `<img src="${esc(p.photo)}" alt="">` : ''}<span>${esc(p.name)}<small>SKU ${esc(p.id)} · ${money(p.price)}${p.stock != null ? ' · stock ' + nfmt(p.stock) : ''}${why}${inCards.has(String(p.id)) ? ' · ya está' : ok ? '' : ' · sin precio o costo'}</small></span></button>`;
+    }).join('') : '<p class="data-info" style="padding:10px">Sin resultados</p>';
+    box.hidden = false;
+  });
+  $('#espResults').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-add]'); if (!b || b.disabled) return;
+    const p = S.products.find((x) => String(x.id) === b.dataset.add); if (!p) return;
+    const s = specialPrice(p.price, p.cost, p.why) || r2(Math.max(psychUp(minPrice(p.cost)), p.price * 0.97));
+    const c = makeCard([p], p.price, p.cost, Math.min(s, p.price));
+    c.pinned = true; c.manual = true;
+    S.cards.unshift(c);
+    $('#espSearch').value = ''; $('#espResults').hidden = true;
+    render(true);
+    toast('Agregado: ' + p.name + ' · queda fijado');
+    window.scrollTo({ top: $('#grid').offsetTop - 80, behavior: 'smooth' });
+  });
+  document.addEventListener('click', (e) => { if (!e.target.closest('.esp-search')) $('#espResults').hidden = true; });
+
   /* ================= RENDER ================= */
   const stats = (c) => {
     const m0 = (c.P - c.C) / c.P, m1 = (c.S - c.C) / c.S;
