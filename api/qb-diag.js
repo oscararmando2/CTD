@@ -13,5 +13,6 @@ module.exports = async (req, res) => {
     QB_CLIENT_ID: check(process.env.QB_CLIENT_ID),
     QB_CLIENT_SECRET: (({ set, length, inner_spaces }) => ({ set, length, inner_spaces }))(check(process.env.QB_CLIENT_SECRET)),
     CTD_FIREBASE_SA: { set: !!process.env.CTD_FIREBASE_SA },
+    ANTHROPIC_API_KEY: (({ set, length, prefix, inner_spaces }) => ({ set, length, prefix, inner_spaces }))(check(process.env.ANTHROPIC_API_KEY)),
   });
 };
