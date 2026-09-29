@@ -7,7 +7,8 @@
 //   list       → especiales programados/activos/terminados + últimos cambios
 //   tick       → aplica/regresa lo que toque hoy (respaldo de la tarea diaria)
 //   selftest   → solo sandbox: cambia y regresa el precio de un producto de prueba
-const { cors, verifyUser, bearer, db, qb, qbQuery, qbItem, qbSetPrice, tick, log, todayCT, r2, same, QB_ENV } = require('./_lib');
+//   disconnect → revoca el permiso en Intuit y borra los tokens guardados
+const { cors, verifyUser, bearer, db, qb, qbQuery, qbItem, qbSetPrice, tick, log, todayCT, r2, same, QB_ENV, env } = require('./_lib');
 
 const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 function similar(a, b) {
@@ -132,6 +133,19 @@ module.exports = async (req, res) => {
         await qbSetPrice(it.Id, before);
         const after = r2((await qbItem(it.Id)).UnitPrice);
         return res.json({ ok: mid === test && after === before, name: it.Name, before, test, mid, after });
+      }
+      case 'disconnect': {
+        const t = await db('GET', 'qb/tokens');
+        if (t && t.refresh_token) {
+          await fetch('https://developer.api.intuit.com/v2/oauth2/tokens/revoke', {
+            method: 'POST',
+            headers: { Authorization: 'Basic ' + Buffer.from(`${env('QB_CLIENT_ID')}:${env('QB_CLIENT_SECRET')}`).toString('base64'), Accept: 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: t.refresh_token }),
+          }).catch(() => {});
+        }
+        await db('DELETE', 'qb/tokens');
+        await log({ action: 'desconectar', by: who });
+        return res.json({ ok: true });
       }
       default:
         return res.status(400).json({ error: 'Acción desconocida' });

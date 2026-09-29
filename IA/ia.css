@@ -313,6 +313,7 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .qb-status{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px}
 .qb-status .btn .ico{width:18px;height:18px}
 .qb-msg{margin:0;font-size:15px;color:var(--muted)}
+.qb-actions{display:flex;gap:8px;flex-wrap:wrap}
 .qb-msg.ok{color:var(--verde-2)}
 .qb-msg b{color:var(--hueso)}
 .qb-plan{margin-top:14px;padding:16px 0;border-top:1px solid var(--linea);display:flex;flex-direction:column;gap:10px}
