@@ -1684,7 +1684,8 @@
    * "Aplicar" cambia precio/costo y da de alta nuevos en QuickBooks (InSitu los recibe cada hora). */
   const COS_API = 'https://ctd-seven.vercel.app/api/costeo';
   const C = { head: null, lines: [], saved: false, applied: false, results: [], dup: null, busy: false };
-  const CS = Object.assign({ target: 30, round: true, down: false }, store.get('ctdIA.costeoSettings', {}));
+  const CS = Object.assign({ target: 20, round: true }, store.get('ctdIA.costeoSettings', {}));
+  delete CS.down; // si el costo baja, el precio se queda (decisión de Oscar)
 
   async function cosCall(action, extra = {}) {
     if (!auth || !auth.currentUser) throw new Error('Vuelve a entrar a la IA');
@@ -1777,12 +1778,11 @@
 
   function decide(l) {
     // Precio nuevo según el costo de la factura: sube si el margen queda abajo del objetivo;
-    // si el costo baja, solo baja cuando está activado "bajar precio"
+    // si el costo baja, el precio NO baja
     const cost = l.costo_caja, P = l.precio_antes;
     if (l.nuevo) { l.precio_nuevo = priceFor(cost); l.aplicar = true; return; }
     const sug = priceFor(cost);
     if (marginOf(P, cost) < CS.target / 100 - 1e-9) l.precio_nuevo = Math.max(P, sug);
-    else if (CS.down && cost < (l.costo_antes || 0) - 0.005) l.precio_nuevo = Math.min(P, sug);
     else l.precio_nuevo = P;
     l.aplicar = !same2(l.precio_nuevo, P) || !same2(cost, l.costo_antes);
   }
@@ -1835,7 +1835,7 @@
 
   // ---- Pantalla ----
   function renderCosteo(busyMsg) {
-    $('#cosTarget').value = CS.target; $('#cosRound').checked = CS.round; $('#cosDown').checked = CS.down;
+    $('#cosTarget').value = CS.target; $('#cosRound').checked = CS.round;
     if (busyMsg) { $('#cosInfo').innerHTML = `<span class="age old">⟳ ${esc(busyMsg)}</span>`; return; }
     $('#cosInfo').textContent = C.lines.length ? '' : 'Sube la factura del proveedor: se lee sola, se compara con tu costo y precio, y aplicas los cambios en QuickBooks.';
     renderCosPhotos();
@@ -1937,8 +1937,8 @@
     cosCall('lookup', { items: [{ sku: l.sku, upc: p.upc, name: p.name }] }).then((r) => { const qd = r.items[l.sku]; if (qd) { l.qb = qd; l.precio_antes = qd.price; if (qd.cost) l.costo_antes = qd.cost; } else l.qbMissing = true; decide(l); renderCosteo(); }).catch(() => { decide(l); renderCosteo(); });
   });
 
-  ['#cosTarget', '#cosRound', '#cosDown'].forEach((id) => $(id).addEventListener('change', () => {
-    CS.target = Math.min(80, Math.max(0, parseFloat($('#cosTarget').value) || 0)); CS.round = $('#cosRound').checked; CS.down = $('#cosDown').checked;
+  ['#cosTarget', '#cosRound'].forEach((id) => $(id).addEventListener('change', () => {
+    CS.target = Math.min(80, Math.max(0, parseFloat($('#cosTarget').value) || 0)); CS.round = $('#cosRound').checked;
     store.set('ctdIA.costeoSettings', CS);
     if (!C.applied) C.lines.forEach(decide);
     renderCosteo();
