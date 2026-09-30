@@ -1,4 +1,4 @@
-// Costeo de facturas de proveedor para la IA de CTD (solo Oscar y Luis).
+// Costeo de facturas de proveedor para la IA de CTD (solo usuarios de la IA).
 // POST {action, ...}:
 //   parse   → lee la factura (imágenes JPEG en base64) con Claude y regresa los renglones
 //   dup     → ¿ya se subió esa factura de ese proveedor?

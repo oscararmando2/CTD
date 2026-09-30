@@ -5,7 +5,7 @@
 const crypto = require('crypto');
 
 const ALLOWED_ORIGINS = ['https://www.centraltradedist.com', 'https://centraltradedist.com', 'https://ctd-seven.vercel.app'];
-const ALLOWED_EMAILS = ['oscar@ctd-ia.firebaseapp.com', 'luis@ctd-ia.firebaseapp.com'];
+const ALLOWED_EMAILS = ['oscar@ctd-ia.firebaseapp.com', 'luis@ctd-ia.firebaseapp.com', 'diego@ctd-ia.firebaseapp.com'];
 const FIREBASE_WEB_KEY = 'AIzaSyBhJuY0Wdh_UeZL0KHNn5WofWYPhQiVTuU'; // llave web pública del proyecto ctd-ia
 const DB_URL = 'https://ctd-ia-default-rtdb.firebaseio.com';
 const IA_URL = 'https://www.centraltradedist.com/IA/';
@@ -30,7 +30,8 @@ async function verifyUser(idToken) {
   const d = await r.json();
   const email = String((d.users && d.users[0] && d.users[0].email) || '').toLowerCase();
   if (!ALLOWED_EMAILS.includes(email)) return null;
-  return email.startsWith('oscar') ? 'Oscar' : 'Luis';
+  const n = email.split('@')[0];
+  return n.charAt(0).toUpperCase() + n.slice(1); // Oscar, Luis, Diego
 }
 const bearer = (req) => String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
 
