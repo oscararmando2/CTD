@@ -314,6 +314,20 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .btn-back{display:inline-flex;align-items:center;gap:8px;min-height:44px;border:0;background:none;color:var(--oro);font-weight:700;font-size:15px;padding:0;margin-bottom:14px}
 .display-md{font-size:clamp(34px,8vw,72px);margin-top:6px}
 
+/* Vendedores */
+.ven-grid{margin-top:26px}
+.vcard .vs em{font-style:normal;font-family:var(--mono);font-size:12px;margin-left:4px}
+.vcard .vs em.up{color:var(--verde-2)}.vcard .vs em.dn{color:#ff9a88}
+.ven-h{font-family:var(--display);font-weight:800;font-size:clamp(30px,6vw,52px);letter-spacing:-.03em;margin:6px 0 0;line-height:1}
+#venDetail .btn .ico{width:18px;height:18px}
+.ven-list{margin-top:24px}
+.ven-c{padding:14px 0;border-top:1px solid var(--linea)}
+.ven-c.due{box-shadow:inset 3px 0 0 var(--oro);padding-left:14px}
+.ven-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ven-top b{font-family:var(--display);font-size:17px}
+.ven-lost{margin-top:6px;font-size:13.5px;color:var(--hueso)}
+.ven-lost small{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--oro)}
+
 /* Revisión con Claude */
 .ai-review{margin-top:24px}
 .ai-review .btn .ico{width:18px;height:18px;color:var(--oro)}

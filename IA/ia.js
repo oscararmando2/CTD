@@ -28,6 +28,7 @@
   const EXCLUDE_CATS = ['Spoilage', 'Shipping', 'TEST'];
   const MODES = { equilibrado: [6, 12], agresivo: [12, 22], cuidar: [3, 7] };
   const STALE_MS = 3 * 36e5; // si los datos tienen más de 3 h, se actualizan solos al abrir
+  const K_SALES = 'ctdIA.sales';
   const K_VIEW = 'ctdIA.view', K_ORD = 'ctdIA.orderDraft', K_ORDSET = 'ctdIA.orderSettings';
   const WHATSAPP_LUIS = '13146095131'; // las órdenes siempre se mandan a Luis
   // Revisión con Claude: función en el Vercel del catálogo (ahí vive ANTHROPIC_API_KEY)
@@ -246,6 +247,7 @@
     const data = store.get(K_DATA, null);
     if (data && Array.isArray(data.items) && data.items.length) {
       S.products = data.items;
+      S.sales = store.get(K_SALES, null);
       S.meta = data.meta;
       showWorkspace();
       autoSync();
@@ -362,6 +364,8 @@
       catch (e) { if (e.auth) throw e; recs = null; } // sin compras, las órdenes usan valores por defecto
 
       const { items, withDetail } = buildDataset(prods, invs, stocks, today, recs);
+      S.sales = computeSales(invs, today, items);
+      store.set(K_SALES, S.sales);
       if (!items.length) throw new Error('InSitu no regresó productos con precio y costo.');
       S.products = items;
       S.meta = {
@@ -2090,20 +2094,143 @@
     });
   }
 
+
+  /* ================= VENDEDORES =================
+   * De las facturas de 12 meses: ventas por vendedor, sus clientes, a quién ya le toca pedir
+   * (días desde el último pedido vs. cada cuánto compra) y qué dejó de comprar. */
+  function parseInvDate(s) {
+    const t = String(s || '');
+    const m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); // MM/DD/YYYY
+    if (m) return new Date(+m[3], +m[1] - 1, +m[2]).getTime();
+    const x = Date.parse(t.replace(' ', 'T'));
+    return isFinite(x) ? x : NaN;
+  }
+  function computeSales(invs, today, items) {
+    const T = today.getTime();
+    const names = {};
+    (items || []).forEach((p) => { names[String(p.id)] = p.name; });
+    const sellers = {}, clients = {};
+    for (const inv of invs) {
+      if (inv.cancelled === true || inv.cancelled === 1 || /cancel|void|anulad/i.test(inv.status || '')) continue;
+      const t = parseInvDate(inv.invoice_date || inv.invoice_ship_date);
+      if (!isFinite(t)) continue;
+      const age = Math.floor((T - t) / DAY);
+      const mu = inv.mobile_user || {};
+      const sid = String(inv.mobile_user_login || mu.login || inv.mobile_user_id || 'sin-vendedor');
+      const s = (sellers[sid] = sellers[sid] || { id: sid, name: mu.name || inv.mobile_user_login || 'Sin vendedor', phone: mu.phone || '', s30: 0, p30: 0, s90: 0, inv30: 0, clients90: {} });
+      if (!s.phone && mu.phone) s.phone = mu.phone;
+      const net = Number(inv.invoice_netvalue) || 0;
+      if (age <= 30) { s.s30 += net; s.inv30++; } else if (age <= 60) s.p30 += net;
+      const cid = String(inv.client_nit || inv.account_number || inv.client_branch_code || inv.client_branch_name || '?');
+      if (age <= 90) { s.s90 += net; s.clients90[cid] = 1; }
+      const c = (clients[cid] = clients[cid] || { id: cid, name: inv.client_branch_name || cid, seller: sid, days: {}, last: 0, s90: 0, prods: {} });
+      if (t >= c.last) { c.last = t; c.seller = sid; }
+      c.days[ymd(new Date(t))] = 1;
+      if (age <= 90) c.s90 += net;
+      for (const l of inv.invoiceDetailList || []) {
+        const code = String(l.product_code || '').trim(); const q = Number(l.quantity) || 0;
+        if (!code || q <= 0) continue;
+        const pr = (c.prods[code] = c.prods[code] || { recent: 0, before: 0, n: 0, last: 0 });
+        if (age <= 45) pr.recent += q; else if (age <= 180) { pr.before += q; pr.n++; }
+        if (t > pr.last) pr.last = t;
+      }
+    }
+    const clientList = Object.values(clients).map((c) => {
+      const d = Object.keys(c.days).sort();
+      const gaps = [];
+      for (let i = 1; i < d.length; i++) gaps.push(Math.round((Date.parse(d[i]) - Date.parse(d[i - 1])) / DAY));
+      const g = gaps.filter((x) => x > 0).sort((a, b) => a - b);
+      const every = g.length >= 2 ? g[Math.floor(g.length / 2)] : null;
+      const since = Math.floor((T - c.last) / DAY);
+      // "Dejó de comprar": lo compró 2+ veces entre 45 y 180 días atrás y nada en los últimos 45
+      const lost = Object.entries(c.prods).filter(([, x]) => x.n >= 2 && x.recent === 0).sort((a, b) => b[1].before - a[1].before).slice(0, 5)
+        .map(([code, x]) => ({ code, name: names[code] || code, before: r2(x.before) }));
+      return { id: c.id, name: c.name, seller: c.seller, orders: d.length, last: ymd(new Date(c.last)), since, every, s90: r2(c.s90),
+        due: every != null && since >= Math.max(3, Math.round(every * 1.15)), late: every != null ? since - every : null, lost };
+    });
+    const sellerList = Object.values(sellers).map((s) => ({
+      id: s.id, name: s.name, phone: s.phone, s30: r2(s.s30), p30: r2(s.p30), s90: r2(s.s90), inv30: s.inv30,
+      active90: Object.keys(s.clients90).length, due: clientList.filter((c) => c.seller === s.id && c.due).length,
+    })).sort((a, b) => b.s30 - a.s30);
+    return { at: Date.now(), sellers: sellerList, clients: clientList };
+  }
+
+  let venSel = null;
+  function renderVendors() {
+    const sd = S.sales;
+    if (!sd || !sd.sellers || !sd.sellers.length) {
+      $('#venInfo').innerHTML = 'Faltan los datos de vendedores. Dale <button id="venSync" class="btn-link" type="button">actualizar de InSitu</button> (se sacan de las facturas).';
+      const b = $('#venSync'); if (b) b.addEventListener('click', () => syncInsitu({ silent: true }).then(renderVendors, () => {}));
+      $('#venGrid').innerHTML = ''; $('#venDetail').hidden = true;
+      return;
+    }
+    $('#venInfo').textContent = `Según ${S.meta && S.meta.invoices ? S.meta.invoices + ' facturas' : 'las facturas'} de InSitu · actualizado ${fmtTs(sd.at)}`;
+    if (venSel) { renderVenDetail(); return; }
+    $('#venDetail').hidden = true; $('#venGrid').hidden = false;
+    $('#venGrid').innerHTML = sd.sellers.map((s) => {
+      const ch = s.p30 ? (s.s30 - s.p30) / s.p30 : null;
+      return `<button type="button" class="vcard" data-sid="${esc(s.id)}">
+        ${s.due ? `<span class="due">${s.due} por pedir</span>` : ''}
+        <span class="vn">${esc(s.name)}</span>
+        <span class="vs"><b>${money(s.s30)}</b> en 30 días${ch != null ? ` <em class="${ch >= 0 ? 'up' : 'dn'}">${ch >= 0 ? '▲' : '▼'} ${pct(Math.abs(ch), 0)}</em>` : ''}</span>
+        <span class="vm">${s.inv30} facturas · ticket ${money(s.inv30 ? s.s30 / s.inv30 : 0)} · ${s.active90} clientes activos (90 días)</span>
+      </button>`;
+    }).join('');
+  }
+  $('#venGrid').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-sid]'); if (!b) return;
+    venSel = b.dataset.sid; renderVendors(); window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  function renderVenDetail() {
+    const sd = S.sales, s = sd.sellers.find((x) => x.id === venSel);
+    if (!s) { venSel = null; renderVendors(); return; }
+    const mine = sd.clients.filter((c) => c.seller === s.id).sort((a, b) => (b.due - a.due) || ((b.late ?? -999) - (a.late ?? -999)) || (b.s90 - a.s90));
+    $('#venGrid').hidden = true;
+    const box = $('#venDetail'); box.hidden = false;
+    const promos = (vigData || []).filter((e) => e.status === 'activo');
+    box.innerHTML = `
+      <button id="venBack" class="btn-back" type="button"><span aria-hidden="true">←</span> Todos los vendedores</button>
+      <div class="cos-h1"><div><p class="hud">Vendedor</p><h2 class="ven-h">${esc(s.name)}</h2>
+        <p class="status">${money(s.s30)} en 30 días · ${money(s.s90)} en 90 · ${mine.length} clientes · <b>${s.due}</b> ya les toca pedir</p></div>
+        <button id="venSend" class="btn btn-oro" type="button"><i data-icon="send"></i>Mandar a ${esc(s.name.split(' ')[0])}</button></div>
+      <div class="ven-list">${mine.map((c) => `
+        <div class="ven-c${c.due ? ' due' : ''}">
+          <div class="ven-top"><b>${esc(c.name)}</b>${c.due ? `<span class="pill warn">le toca pedir${c.late > 0 ? ` · ${c.late} días tarde` : ''}</span>` : ''}</div>
+          <div class="meta">Último pedido ${fmtD(c.last)} (hace ${c.since} ${c.since === 1 ? 'día' : 'días'})${c.every ? ` · compra cada ~${c.every} días` : ''} · ${c.orders} pedidos · ${money(c.s90)} en 90 días</div>
+          ${c.lost.length ? `<div class="ven-lost"><small>Dejó de comprar:</small> ${c.lost.map((x) => esc(x.name)).join(' · ')}</div>` : ''}
+        </div>`).join('') || '<p class="data-info">Sin clientes en las facturas.</p>'}</div>`;
+    fillIcons(box);
+    $('#venBack').addEventListener('click', () => { venSel = null; renderVendors(); });
+    $('#venSend').addEventListener('click', async () => {
+      const due = mine.filter((c) => c.due).slice(0, 15);
+      const lines = due.map((c, i) => `${i + 1}. ${c.name} — último pedido hace ${c.since} días${c.every ? ` (compra cada ~${c.every})` : ''}${c.lost.length ? `\n   Ofrécele (dejó de comprar): ${c.lost.slice(0, 3).map((x) => x.name).join(', ')}` : ''}`);
+      const txt = `Hola ${s.name.split(' ')[0]}, clientes que ya les toca pedir:\n\n${lines.join('\n') || '(ninguno por ahora)'}` +
+        (promos.length ? `\n\nPromos vigentes:\n${promos.map((e) => `• ${e.name}: ${money(e.special)}${e.original ? ` (antes ${money(e.original)})` : ''} hasta ${fmtD(e.to)}`).join('\n')}` : '');
+      const phone = String(s.phone || '').replace(/\D/g, '');
+      const num = phone.length === 10 ? '1' + phone : phone;
+      if (window.matchMedia('(pointer: coarse)').matches && navigator.share && !num) { try { await navigator.share({ text: txt }); } catch (e) { /* cancelado */ } return; }
+      window.open(`https://wa.me/${num}?text=${encodeURIComponent(txt)}`, '_blank', 'noopener');
+      if (!num) toast('No tengo su teléfono en InSitu: elige el chat en WhatsApp');
+    });
+  }
+
   /* ================= VISTAS: Especiales | Órdenes ================= */
   S.view = store.get(K_VIEW, 'esp');
   function applyView() {
     if ($('#workspace').hidden) return;
-    const ord = S.view === 'ord', cos = S.view === 'cos';
+    const ord = S.view === 'ord', cos = S.view === 'cos', ven = S.view === 'ven';
     $$('#viewTabs button').forEach((b) => { const on = b.dataset.v === S.view; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
-    $('#espView').hidden = ord || cos;
+    $('#espView').hidden = ord || cos || ven;
+    $('#venView').hidden = !ven;
     $('#ordView').hidden = !ord;
     $('#cosView').hidden = !cos;
-    $('#dock').hidden = ord || cos;
+    $('#dock').hidden = ord || cos || ven;
     $('#ordDock').hidden = !ord || O.vendor === null;
     $('#cosDock').hidden = !cos;
     if (cos) renderCosteo();
-    if (!ord && !cos) loadVigentes();
+    if (!ord && !cos && !ven) loadVigentes();
+    if (ven) renderVendors();
     if (ord) {
       if (!O.lines.length && !O.touched) suggestOrder(); else renderOrders();
       // Datos viejos sin compras (de antes de Órdenes): se bajan solas
