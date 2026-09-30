@@ -63,6 +63,7 @@
       <button type="button" role="tab" data-v="esp" class="on">Especiales</button>
       <button type="button" role="tab" data-v="ord">Órdenes</button>
       <button type="button" role="tab" data-v="cos">Costeo</button>
+      <button type="button" role="tab" data-v="ven">Vendors</button>
     </div>
     <div class="topbar-r">
       <span id="whoami" class="whoami"></span>
@@ -178,6 +179,15 @@
       <p class="lbl">Facturas guardadas <small>(todos ven lo mismo)</small></p>
       <div id="cosRecent" class="hist-list"></div>
     </section>
+   </div>
+   <!-- Vendedores -->
+   <div id="venView" hidden>
+    <section class="hero">
+      <h1 class="display">Vendedores</h1>
+      <p id="venInfo" class="status"></p>
+    </section>
+    <section id="venGrid" class="vgrid ven-grid"></section>
+    <section id="venDetail" hidden></section>
    </div>
   </main>
 
