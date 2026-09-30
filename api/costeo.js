@@ -6,9 +6,11 @@
 //   apply   → cambia precio/costo en QuickBooks y da de alta productos nuevos
 //   save    → guarda la factura (con lo que se decidió) y aprende códigos de proveedor
 //   list    → últimas facturas;  get → una factura;  map → códigos aprendidos de un proveedor
+//   recibo_save / recibo_list / recibo_get → Recibo de mercancía (Jonathan revisa qué llegó y las caducidades)
+//   recibo_costeado → la factura ya pasó por Costeo;  lotes → caducidades por producto (lote = fecha)
 // QuickBooks es el dueño de productos y precios: InSitu recibe los cambios en su sincronización (cada hora).
 const crypto = require('crypto');
-const { cors, verifyUser, bearer, db, qb, qbQuery, qbItem, log, todayCT, r2, same, env, matchOne, norm } = require('./_lib');
+const { RECIBO_ONLY, cors, verifyUser, bearer, db, qb, qbQuery, qbItem, log, todayCT, r2, same, env, matchOne, norm } = require('./_lib');
 
 const MODEL = 'claude-opus-5';
 const MAX_IMAGES = 12;
@@ -23,6 +25,7 @@ Extrae TODOS los renglones de producto de la factura, en el orden en que aparece
 - unidades_por_caja: número de unidades en la caja si se puede saber del empaque (ej. 12/16 OZ → 12), si no null.
 - costo_caja: precio por caja (unit price de la factura; si la factura cobra por pieza y trae unidades por caja, multiplícalo).
 - total_linea: importe del renglón.
+- caducidad: si junto al renglón hay una fecha de caducidad escrita a mano (ej. "OCT-25-27", "07-22-27", "DIC-26-26", "15-mar-28"), conviértela a YYYY-MM-DD (en EE.UU. suele ser mes-día-año; el año de 2 dígitos es 20XX). Si no hay, cadena vacía. No confundas la fecha de la factura con una caducidad.
 Aparte: flete/freight, otros cargos y créditos/descuentos/devoluciones NO son productos; van en sus campos.
 Si un dato no se lee con claridad, pon lo más probable y márcalo en "dudas" con el número de renglón (empezando en 1).`;
 
@@ -41,12 +44,13 @@ const SCHEMA = {
       type: 'array',
       items: {
         type: 'object', additionalProperties: false,
-        required: ['upc', 'codigo_proveedor', 'producto', 'cantidad', 'empaque', 'unidades_por_caja', 'costo_caja', 'total_linea'],
+        required: ['upc', 'codigo_proveedor', 'producto', 'cantidad', 'empaque', 'unidades_por_caja', 'costo_caja', 'total_linea', 'caducidad'],
         properties: {
           upc: { type: 'string' }, codigo_proveedor: { type: 'string' }, producto: { type: 'string' },
           cantidad: { type: 'number' }, empaque: { type: 'string' },
           unidades_por_caja: { anyOf: [{ type: 'integer' }, { type: 'null' }] },
           costo_caja: { type: 'number' }, total_linea: { type: 'number' },
+          caducidad: { type: 'string', description: 'YYYY-MM-DD escrita a mano, o vacío' },
         },
       },
     },
@@ -115,6 +119,7 @@ module.exports = async (req, res) => {
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }
   body = body || {};
+  if (RECIBO_ONLY.includes(who) && !RECIBO_ACTIONS.includes(body.action)) return res.status(403).json({ error: 'Tu usuario solo tiene acceso a Recibo.' });
 
   try {
     switch (body.action) {
@@ -239,6 +244,85 @@ module.exports = async (req, res) => {
         await db('DELETE', 'costeoFotos/' + String(body.qbId || ''));
         return res.json({ ok: true });
       }
+      case 'catalogo': {
+        // Lista corta de productos de QuickBooks (el Id es el mismo código que en InSitu) para emparejar en Recibo
+        const out = [];
+        for (let start = 1; start < 6000; start += 1000) {
+          const r = await qbQuery(`select Id, Name, Sku, Active from Item startposition ${start} maxresults 1000`);
+          const items = r.Item || [];
+          items.forEach((i) => { if (i.Active !== false && ['Inventory', 'NonInventory'].includes(i.Type || 'Inventory')) out.push({ id: String(i.Id), name: i.Name, upc: i.Sku || '' }); });
+          if (items.length < 1000) break;
+        }
+        return res.json({ items: out });
+      }
+      case 'recibo_save': {
+        const r = body.recibo || {};
+        const id = /^[a-z0-9]{6,32}$/.test(String(r.id || '')) ? String(r.id) : Date.now().toString(36) + crypto.randomBytes(3).toString('hex');
+        const prev = await db('GET', 'recibos/' + id);
+        if (prev && prev.status === 'costeado') return res.status(409).json({ error: 'Este recibo ya se costeó; ya no se puede cambiar.' });
+        const final = body.final === true || (prev && prev.status === 'revisado');
+        const now = Date.now();
+        const h = r.head || {};
+        const rec = {
+          id, key: vendorKey(r.proveedor) + '|' + codeKey(r.factura),
+          proveedor: str(r.proveedor, 120), factura: str(r.factura, 60), fecha: str(r.fecha, 10),
+          head: { total_factura: num(h.total_factura), total_calculado: num(h.total_calculado), mercancia: num(h.mercancia), cuadra: h.cuadra ?? null,
+            flete: num(h.flete), creditos: num(h.creditos), otros_cargos: num(h.otros_cargos) },
+          lines: (Array.isArray(r.lines) ? r.lines : []).slice(0, 300).map((l) => ({
+            producto: str(l.producto, 160), upc: str(l.upc, 40), codigo_proveedor: str(l.codigo_proveedor, 40), cantidad: num(l.cantidad),
+            empaque: str(l.empaque, 40), unidades_por_caja: Number.isInteger(l.unidades_por_caja) ? l.unidades_por_caja : null,
+            costo_caja: num(l.costo_caja), total_linea: num(l.total_linea),
+            sku: str(l.sku, 40), nombre: str(l.nombre, 160), how: str(l.how, 40),
+            estado: ESTADOS.includes(l.estado) ? l.estado : '', recibido: num(l.recibido),
+            caducidad: ymdOk(l.caducidad), leida: ymdOk(l.leida), nota: str(l.nota, 300),
+          })),
+          nota: str(r.nota, 1500),
+          status: final ? 'revisado' : 'borrador',
+          by: (prev && prev.by) || who, ts: (prev && prev.ts) || now, updated: now, updatedBy: who,
+          doneAt: final ? ((prev && prev.doneAt) || now) : null,
+        };
+        await db('PUT', 'recibos/' + id, rec);
+        if (final) await syncLotes(id, prev, rec);
+        return res.json({ id, status: rec.status });
+      }
+      case 'recibo_list': {
+        const all = (await db('GET', 'recibos')) || {};
+        const list = Object.values(all).map((f) => {
+          const L = f.lines || [];
+          const c = (e) => L.filter((l) => l.estado === e).length;
+          return { id: f.id, proveedor: f.proveedor, factura: f.factura, fecha: f.fecha, status: f.status, by: f.by, ts: f.ts, updated: f.updated, doneAt: f.doneAt || null,
+            lines: L.length, ok: c('ok'), parcial: c('parcial'), no: c('no'), pendiente: c('pendiente'), sinRevisar: c(''),
+            fechas: L.filter((l) => l.caducidad).length, costeoId: f.costeoId || null };
+        }).sort((a, b) => (b.updated || b.ts) - (a.updated || a.ts)).slice(0, 60);
+        return res.json({ list });
+      }
+      case 'recibo_get': {
+        const f = await db('GET', 'recibos/' + codeKey(body.id));
+        if (!f) return res.status(404).json({ error: 'No existe' });
+        return res.json({ recibo: f });
+      }
+      case 'recibo_costeado': {
+        const id = codeKey(body.id);
+        const f = await db('GET', 'recibos/' + id);
+        if (!f) return res.status(404).json({ error: 'No existe' });
+        await db('PATCH', 'recibos/' + id, { status: 'costeado', costeoId: str(body.costeoId, 40), costeadoBy: who, costeadoAt: Date.now() });
+        return res.json({ ok: true });
+      }
+      case 'lotes': {
+        // { sku: { nombre, fechas: { 'YYYY-MM-DD': cajas recibidas con esa caducidad } } }
+        const all = (await db('GET', 'lotes')) || {};
+        const out = {};
+        Object.entries(all).forEach(([sku, v]) => {
+          const fechas = {};
+          Object.entries(v.f || {}).forEach(([d, x]) => {
+            const q = Object.values(x.e || {}).reduce((a, e) => a + (Number(e.q) || 0), 0);
+            const last = Object.values(x.e || {}).reduce((a, e) => Math.max(a, e.ts || 0), 0);
+            if (q > 0) fechas[d] = { q: r2(q), ts: last };
+          });
+          if (Object.keys(fechas).length) out[sku] = { nombre: v.n || '', fechas };
+        });
+        return res.json({ lotes: out });
+      }
       default:
         return res.status(400).json({ error: 'Acción desconocida' });
     }
@@ -246,6 +330,27 @@ module.exports = async (req, res) => {
     return res.status(e.code === 'not_connected' ? 409 : 500).json({ error: String(e.message || e), code: e.code || '' });
   }
 };
+
+const RECIBO_ACTIONS = ['parse', 'map', 'lookup', 'catalogo', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
+const ESTADOS = ['', 'ok', 'parcial', 'no', 'pendiente'];
+const ymdOk = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '');
+
+// Lotes = producto + fecha de caducidad. Cada recibo deja su entrada (lotes/{sku}/f/{fecha}/e/{recibo_renglón}):
+// la misma fecha suma, otra fecha es otro lote. Al volver a guardar un recibo se reemplazan sus entradas.
+// No toca el inventario de InSitu ni de QuickBooks.
+async function syncLotes(id, prev, rec) {
+  const up = {};
+  ((prev && prev.lines) || []).forEach((l, i) => {
+    if (l.sku && l.caducidad) up[`lotes/${codeKey(l.sku)}/f/${l.caducidad}/e/${id}_${i}`] = null;
+  });
+  rec.lines.forEach((l, i) => {
+    const q = l.estado === 'ok' ? (l.recibido ?? l.cantidad) : l.estado === 'parcial' ? l.recibido : 0;
+    if (!l.sku || !l.caducidad || !(q > 0)) return;
+    up[`lotes/${codeKey(l.sku)}/f/${l.caducidad}/e/${id}_${i}`] = { q, f: rec.factura, p: rec.proveedor, ts: Date.now() };
+    up[`lotes/${codeKey(l.sku)}/n`] = l.nombre || l.producto;
+  });
+  if (Object.keys(up).length) await db('PATCH', '', up);
+}
 
 function str(v, n) { return String(v == null ? '' : v).slice(0, n); }
 function num(v) { return typeof v === 'number' && isFinite(v) ? Math.round(v * 100) / 100 : null; }

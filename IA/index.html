@@ -8,7 +8,7 @@
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="theme-color" content="#0F0D0A">
 <title>Sistema Inteligente · Central Trade</title>
-<meta name="description" content="Especiales, órdenes y costeo de Central Trade Distribution, conectados a InSitu y QuickBooks.">
+<meta name="description" content="Especiales, órdenes, recibo y costeo de Central Trade Distribution, conectados a InSitu y QuickBooks.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Central Trade Distribution">
 <meta property="og:title" content="Sistema Inteligente · Central Trade">
@@ -62,6 +62,7 @@
     <div class="tabs" id="viewTabs" role="tablist" aria-label="Sección">
       <button type="button" role="tab" data-v="esp" class="on">Especiales</button>
       <button type="button" role="tab" data-v="ord">Órdenes</button>
+      <button type="button" role="tab" data-v="rec">Recibo</button>
       <button type="button" role="tab" data-v="cos">Costeo</button>
       <button type="button" role="tab" data-v="ven">Vendors</button>
     </div>
@@ -157,6 +158,27 @@
       <div id="ordRecent" class="hist-list"></div>
     </section>
    </div>
+   <!-- Recibo de mercancía (bodega): qué llegó y caducidades → pasa a Costeo -->
+   <div id="recView" hidden>
+    <section class="hero" id="recHero">
+      <h1 class="display">Recibo<br>de mercancía</h1>
+      <p id="recInfo" class="status"></p>
+      <label class="cos-drop">
+        <i data-icon="upload"></i>
+        <span><b>Subir factura que llegó</b><small>Foto o PDF · puedes elegir varias hojas</small></span>
+        <input id="recFile" type="file" accept="application/pdf,image/*" multiple hidden>
+      </label>
+    </section>
+    <section id="recWork" class="rec-work" hidden aria-live="polite"></section>
+    <section class="ord-recent">
+      <p class="lbl">Recibos <small>(todos ven lo mismo)</small></p>
+      <div id="recRecent" class="hist-list"></div>
+    </section>
+    <section id="recLotsWrap" class="ord-recent" hidden>
+      <p class="lbl">Caducidades · lo que vence primero</p>
+      <div id="recLotList" class="lot-list"></div>
+    </section>
+   </div>
    <!-- Costeo de facturas de proveedor -->
    <div id="cosView" hidden>
     <section class="hero">
@@ -171,6 +193,10 @@
         <label class="field"><span>Margen objetivo %</span><input id="cosTarget" type="number" inputmode="decimal" min="0" max="80" step="1" value="20"></label>
         <label class="switch"><input id="cosRound" type="checkbox" checked><span class="switch-ui" aria-hidden="true"></span><span>Redondear a .49 / .99</span></label>
       </div>
+    </section>
+    <section id="cosPendWrap" class="ord-recent cos-pend" hidden>
+      <p class="lbl">Listas para costear · ya las revisó bodega</p>
+      <div id="cosPend" class="hist-list"></div>
     </section>
     <section id="cosHead" class="cos-head" hidden></section>
     <section id="cosKpis" class="kpis" hidden></section>

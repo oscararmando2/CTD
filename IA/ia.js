@@ -20,7 +20,7 @@
     appId: '1:914488691883:web:57d809a1e899c6b0be3bee',
   };
   const INSITU = 'https://app.b2bmobilesales.com/api/v1';
-  const PEOPLE = ['Oscar', 'Luis', 'Diego'];
+  const PEOPLE = ['Oscar', 'Luis', 'Diego', 'Jonathan'];
   // Firebase Auth pide un correo: cada nombre usa uno interno (no recibe mensajes)
   const emailOf = (name) => name.toLowerCase() + '@ctd-ia.firebaseapp.com';
   const nameOf = (email) => PEOPLE.find((p) => emailOf(p) === String(email || '').toLowerCase()) || null;
@@ -241,6 +241,17 @@
     $('#whoami').innerHTML = 'Hola, <b>' + esc(name) + '</b>';
     $('#gate').hidden = true;
     $('#app').hidden = false;
+    // Jonathan (bodega): solo Recibo, sin InSitu ni QuickBooks
+    const only = recOnly();
+    $$('#viewTabs button').forEach((b) => { b.hidden = only && b.dataset.v !== 'rec'; });
+    $('#histBtn').hidden = only;
+    if (only) {
+      S.view = 'rec';
+      $('#dropzone').hidden = true;
+      $('#workspace').hidden = false;
+      applyView();
+      return;
+    }
     listenHist();
     listenOrders();
     if (S.products.length) return;
@@ -642,6 +653,7 @@
 
   function showWorkspace() {
     stockTrusted = null;
+    if (!R.lotes) loadLotes().then(() => { if (S.cards.length) render(); });
     $('#dropzone').hidden = true;
     $('#workspace').hidden = false;
     buildFilters();
@@ -1105,6 +1117,13 @@
       </div>`;
   }
 
+  // Caducidad más próxima (de Recibo) en la tarjeta del especial
+  function expHTML(c) {
+    if (!R.lotes) return '';
+    const e = c.items.map((i) => nextExpiry(i.id)).filter(Boolean).sort((a, b) => (a.d < b.d ? -1 : 1))[0];
+    if (!e || e.dias > 180) return '';
+    return `<div class="exp${e.dias <= 60 || e.riesgo ? ' hot' : ''}">Vence ${esc(fmtLong(e.d))}${e.quedan != null ? ` · ~${nfmt(e.quedan)} cajas` : ''}</div>`;
+  }
   function viewHTML(c) {
     const st = stats(c), fl = floorF();
     const name = c.items.map((i) => i.name).join(' + ');
@@ -1120,6 +1139,7 @@
         <div class="brand">${esc(brand)}</div>
         <h3 class="name">${esc(name)}</h3>
         <div class="meta">${meta}</div>
+        ${expHTML(c)}
       </div>
       ${c.nx ? `<div class="prices nx">
         <span class="p-nx">Compra ${c.nx}<small>llévate 1 gratis</small></span>
@@ -1760,7 +1780,7 @@
    * proveedor aprendido, UPC o nombre) → ves costo antes/ahora, precio y margen, editables →
    * "Aplicar" cambia precio/costo y da de alta nuevos en QuickBooks (InSitu los recibe cada hora). */
   const COS_API = 'https://ctd-seven.vercel.app/api/costeo';
-  const C = { head: null, lines: [], saved: false, applied: false, results: [], dup: null, busy: false };
+  const C = { head: null, lines: [], saved: false, applied: false, results: [], dup: null, busy: false, recibo: null, reciboNota: '', reciboBy: '' };
   const CS = Object.assign({ target: 20, round: true }, store.get('ctdIA.costeoSettings', {}));
   delete CS.down; // si el costo baja, el precio se queda (decisión de Oscar)
 
@@ -1809,6 +1829,7 @@
       for (const f of files) images = images.concat(await fileToJpegs(f));
       renderCosteo(`Claude está leyendo la factura (${images.length} ${images.length === 1 ? 'hoja' : 'hojas'})… puede tardar 1 minuto`);
       const d = await cosCall('parse', { images: images.slice(0, 12) });
+      C.recibo = null; C.reciboNota = '';
       await loadInvoice(d);
     } catch (err) {
       toast('No se pudo leer: ' + err.message);
@@ -1838,6 +1859,12 @@
   function matchLine(l, vmap) {
     const byCode = l.codigo_proveedor && vmap[String(l.codigo_proveedor).trim().replace(/[.#$/[\]\s]+/g, '_')];
     if (byCode) { const p = S.products.find((x) => String(x.id) === String(byCode.sku)); if (p) return { p, how: 'código del proveedor' }; }
+    // Muchos proveedores usan como código el mismo número que está como código de barras en InSitu (ej. Cortes 1168)
+    const cc = String(l.codigo_proveedor || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (cc.length >= 3) {
+      const p = S.products.find((x) => String(x.upc || '').toLowerCase().replace(/[^a-z0-9]/g, '') === cc && sameSize(l.producto, x.name) && nameScore(l.producto, x.name) >= 0.34);
+      if (p) return { p, how: 'código' };
+    }
     if (l.upc) { const p = S.products.find((x) => sameUpc(x.upc, l.upc)); if (p) return { p, how: 'UPC' }; }
     let best = null;
     const lineUpc = upcCore(l.upc).length >= 8;
@@ -1918,6 +1945,7 @@
     $('#cosHead').hidden = !has; $('#cosKpis').hidden = !has;
     $('#cosApply').disabled = !has || C.applied || !C.lines.some((l) => l.aplicar && (!l.nuevo || l.alta));
     $('#cosSave').disabled = !has || C.saved;
+    loadCosPend();
     if (!has) { $('#cosList').innerHTML = ''; loadCosRecent(); return; }
     const h = C.head;
     const cuadra = h.cuadra === true ? '<span class="pill ok">Cuadra</span>' : h.cuadra === false ? `<span class="pill bad">No cuadra: factura ${money(h.total_factura)} vs calculado ${money(h.total_calculado)}</span>` : '';
@@ -1925,6 +1953,7 @@
       <div class="cos-h1"><div><p class="hud">Factura</p><h2>${esc(h.proveedor || 'Proveedor')}</h2>
         <p class="status">#${esc(h.factura || '—')} · ${esc(h.fecha || 'sin fecha')} · ${C.lines.length} renglones · total ${h.total_factura != null ? money(h.total_factura) : '—'}${h.flete ? ` · flete ${money(h.flete)}` : ''}${h.creditos ? ` · créditos ${money(h.creditos)}` : ''}</p></div>${cuadra}</div>
       ${C.dup ? `<p class="qb-warn">⚠ Esta factura ya se guardó el ${fmtTs(C.dup.ts)} por ${esc(C.dup.by || '')}. Revisa antes de aplicar otra vez.</p>` : ''}
+      ${C.recibo ? `<p class="status">Revisada en bodega${C.reciboBy ? ' por ' + esc(C.reciboBy) : ''}.${C.reciboNota ? ' Nota: <b>' + esc(C.reciboNota) + '</b>' : ''}</p>` : ''}
       ${C.applied ? '<p class="qb-msg ok">● Cambios aplicados en QuickBooks. InSitu los recibe en su siguiente sincronización (máx. 1 hora).</p>' : ''}`;
     const up = C.lines.filter((l) => !l.nuevo && l.costo_caja > (l.costo_antes || 0) + 0.005).length;
     const nuevos = C.lines.filter((l) => l.nuevo).length;
@@ -1952,6 +1981,12 @@
       l.qb && l.qb.special ? `<span class="pill warn">especial activo hasta ${fmtD(l.qb.special.to)}: el precio se aplica al terminar</span>` : '',
       l.qbMissing ? '<span class="pill bad">no está en QuickBooks</span>' : '',
       l.duda ? `<span class="pill warn">revisa: ${esc(l.duda)}</span>` : '',
+      l.rec && l.rec.estado === 'parcial' ? `<span class="pill warn">bodega: llegaron ${nfmt(l.rec.recibido || 0)} de ${nfmt(l.cantidad)}</span>` : '',
+      l.rec && l.rec.estado === 'no' ? '<span class="pill bad">bodega: no llegó</span>' : '',
+      l.rec && l.rec.estado === 'pendiente' ? '<span class="pill warn">bodega: pendiente</span>' : '',
+      l.rec && l.rec.estado === '' ? '<span class="pill warn">bodega: sin revisar</span>' : '',
+      l.rec && l.rec.caducidad ? `<span class="pill">vence ${esc(fmtLong(l.rec.caducidad))}</span>` : '',
+      l.rec && l.rec.nota ? `<span class="pill warn">nota: ${esc(l.rec.nota)}</span>` : '',
       l.result ? (l.result.ok ? '<span class="pill ok">✓ aplicado</span>' : `<span class="pill bad">✗ ${esc(l.result.error)}</span>`) : '',
     ].join('');
     const nuevo = l.nuevo ? `
@@ -2047,7 +2082,11 @@
 
   async function saveCosteo(silent) {
     const f = { ...C.head, lines: C.lines.map((l) => ({ producto: l.producto, upc: l.upc, codigo_proveedor: l.codigo_proveedor, cantidad: l.cantidad, empaque: l.empaque, costo_caja: l.costo_caja, sku: l.sku || '', qbId: (l.qb && l.qb.qbId) || l.qbId || '', nombre: l.nombre || (l.alta && l.alta.name) || '', costo_antes: l.costo_antes ?? null, precio_antes: l.precio_antes ?? null, precio_nuevo: l.precio_nuevo, aplicado: !!(l.result && l.result.ok), nuevo: !!l.nuevo })) };
-    try { await cosCall('save', { factura: f, results: C.results }); C.saved = true; if (!silent) toast('Factura guardada · ya la ve ' + PEOPLE.filter((x) => x !== S.who).join(', ')); loadCosRecent(); }
+    try {
+      const d = await cosCall('save', { factura: f, results: C.results }); C.saved = true;
+      if (C.recibo) { try { await cosCall('recibo_costeado', { id: C.recibo, costeoId: d.id }); } catch (e) { /* queda en la lista */ } C.recibo = null; loadCosPend(true); }
+      if (!silent) toast('Factura guardada · ya la ven todos'); loadCosRecent();
+    }
     catch (e) { toast('No se pudo guardar: ' + e.message); }
     renderCosteo();
   }
@@ -2067,10 +2106,44 @@
       const { factura: f } = await cosCall('get', { id: b.closest('.hist-item').dataset.cid });
       C.head = { ...f, dudas: [] };
       C.lines = (f.lines || []).map((l, i) => ({ i, ...l, photo: (S.products.find((p) => String(p.id) === l.sku) || {}).photo, aplicar: false, result: l.aplicado ? { ok: true } : null, alta: l.nuevo ? { name: l.nombre, sku: l.upc, photo: '' } : null }));
-      C.saved = true; C.applied = true; C.dup = null;
+      C.saved = true; C.applied = true; C.dup = null; C.recibo = null; C.reciboNota = '';
       renderCosteo();
       window.scrollTo({ top: $('#cosHead').offsetTop - 80, behavior: 'smooth' });
     } catch (err) { toast(err.message); }
+  });
+
+  // ---- Facturas que ya revisó bodega (Recibo) → se costean aquí con lo que llegó y sus caducidades ----
+  let cosPendAt = 0;
+  async function loadCosPend(force) {
+    if (!force && Date.now() - cosPendAt < 20000) return;
+    cosPendAt = Date.now();
+    try {
+      const list = ((await cosCall('recibo_list')).list || []).filter((f) => f.status === 'revisado');
+      $('#cosPendWrap').hidden = !list.length;
+      $('#cosPend').innerHTML = list.map((f) => `
+        <div class="hist-item" data-rid="${esc(f.id)}"><div class="hi-txt"><b>${esc(f.proveedor)} · #${esc(f.factura)}</b>${f.lines} productos${f.parcial ? ` · ${f.parcial} llegaron menos` : ''}${f.no ? ` · ${f.no} no llegaron` : ''}${f.pendiente ? ` · ${f.pendiente} pendientes` : ''} · revisó ${esc(f.by || '')} · ${fmtTs(f.doneAt || f.updated)}</div>
+          <button class="btn btn-oro btn-sm" data-c="cost" type="button">Costear</button></div>`).join('');
+    } catch (e) { $('#cosPendWrap').hidden = true; }
+  }
+  $('#cosPend').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-c="cost"]'); if (!b) return;
+    if (C.lines.length && !C.saved && !confirm('Hay una factura sin guardar. ¿Cargar esta de todos modos?')) return;
+    C.busy = true; renderCosteo('Cargando la factura que revisó bodega…');
+    try {
+      const { recibo: r } = await cosCall('recibo_get', { id: b.closest('.hist-item').dataset.rid });
+      const L = r.lines || [];
+      await loadInvoice({ proveedor: r.proveedor, factura: r.factura, fecha: r.fecha, ...(r.head || {}), dudas: [],
+        items: L.map((l) => ({ upc: l.upc, codigo_proveedor: l.codigo_proveedor, producto: l.producto, cantidad: l.cantidad, empaque: l.empaque, unidades_por_caja: l.unidades_por_caja, costo_caja: l.costo_caja, total_linea: l.total_linea })) });
+      C.recibo = r.id; C.reciboNota = r.nota || ''; C.reciboBy = r.by || '';
+      C.lines.forEach((l) => {
+        const x = L[l.i]; if (!x) return;
+        l.rec = { estado: x.estado || '', recibido: x.recibido, caducidad: x.caducidad, nota: x.nota };
+        // Bodega ya lo ligó a un producto y aquí no se encontró: se usa el de bodega
+        const p = (l.nuevo || l.review) && x.sku && !/revisa/.test(x.how || '') ? S.products.find((q) => String(q.id) === String(x.sku)) : null;
+        if (p) { Object.assign(l, { nuevo: false, sku: String(p.id), nombre: p.name, photo: p.photo, pack: p.pack, costo_antes: r2(p.cost || 0), precio_antes: r2(p.price || 0), how: 'bodega', review: false }); delete l.alta; decide(l); }
+      });
+      renderCosteo();
+    } catch (err) { toast(err.message); C.busy = false; renderCosteo(); }
   });
 
   // ---- Fotos de productos dados de alta: se ponen en InSitu cuando el producto ya llegó de QuickBooks ----
@@ -2094,6 +2167,325 @@
     });
   }
 
+
+  /* ================= RECIBO DE MERCANCÍA =================
+   * Jonathan (bodega) sube la factura que llegó → Claude la lee → la revisa producto por producto:
+   * llegó / llegó menos / no llegó / pendiente, y su caducidad. Al terminar pasa a Costeo.
+   * Caducidades = lotes en la IA (producto + fecha: la misma fecha suma, otra fecha es otro lote).
+   * NO mueven inventario en InSitu ni en QuickBooks. */
+  const RECIBO_ONLY = ['Jonathan'];
+  const recOnly = () => RECIBO_ONLY.includes(S.who);
+  const K_REC = 'ctdIA.recibo';
+  const R = { rec: store.get(K_REC, null), cur: 0, busy: false, lotes: null, cat: null, list: null, saveT: null };
+  const EST = { ok: 'Llegó', parcial: 'Llegó menos', no: 'No llegó', pendiente: 'Pendiente', '': 'Sin revisar' };
+  const ymdOk = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
+  const fmtLong = (s) => { if (!ymdOk(s)) return '—'; const d = parseYmd(s); return `${d.getDate()} ${MES[d.getMonth()]} ${d.getFullYear()}`; };
+  const daysTo = (s) => Math.round((parseYmd(s) - parseYmd(ymd(new Date()))) / 864e5);
+  const skuKey = (s) => String(s || '').trim().replace(/[.#$/[\]\s]+/g, '_');
+  const codeCore = (s) => normTxt(s).replace(/[^a-z0-9]/g, '');
+
+  async function loadLotes(force) {
+    if (R.lotes && !force) return R.lotes;
+    try { R.lotes = (await cosCall('lotes')).lotes || {}; } catch (e) { R.lotes = R.lotes || {}; }
+    return R.lotes;
+  }
+  // Productos para emparejar: los de InSitu si este dispositivo ya los tiene; si no, el catálogo de QuickBooks (mismo código)
+  async function recProducts() {
+    if (S.products.length) return S.products;
+    if (!R.cat) { try { R.cat = (await cosCall('catalogo')).items || []; } catch (e) { R.cat = []; } }
+    return R.cat;
+  }
+  // Emparejar: código aprendido del proveedor → código del proveedor = código de barras/SKU → UPC → nombre (misma presentación)
+  function recMatch(l, vmap, list) {
+    const byCode = l.codigo_proveedor && vmap[skuKey(l.codigo_proveedor)];
+    if (byCode) { const p = list.find((x) => String(x.id) === String(byCode.sku)); if (p) return { p, how: 'código del proveedor' }; }
+    const cc = codeCore(l.codigo_proveedor);
+    if (cc.length >= 3) {
+      const p = list.find((x) => codeCore(x.upc) === cc && sameSize(l.producto, x.name) && nameScore(l.producto, x.name) >= 0.34);
+      if (p) return { p, how: 'código' };
+    }
+    if (l.upc) { const p = list.find((x) => sameUpc(x.upc, l.upc)); if (p) return { p, how: 'UPC' }; }
+    let best = null;
+    list.forEach((p) => {
+      if (!sameSize(l.producto, p.name)) return;
+      const s = nameScore(l.producto, p.name);
+      if (s >= 0.7 && (!best || s > best.s)) best = { p, s };
+    });
+    return best ? { p: best.p, how: 'nombre', review: true } : null;
+  }
+
+  $('#recFile').addEventListener('change', async (e) => {
+    const files = [...e.target.files]; e.target.value = '';
+    if (!files.length) return;
+    if (R.rec && R.rec.status === 'borrador' && R.rec.lines.some((l) => l.estado) && !confirm('Tienes un recibo a medias (queda guardado en la lista). ¿Empezar otro?')) return;
+    R.busy = true; renderRecibo('Preparando la factura…');
+    try {
+      let images = [];
+      for (const f of files) images = images.concat(await fileToJpegs(f));
+      renderRecibo(`Claude está leyendo la factura (${images.length} ${images.length === 1 ? 'hoja' : 'hojas'})… puede tardar 1 minuto`);
+      const d = await cosCall('parse', { images: images.slice(0, 12) });
+      await startRecibo(d);
+    } catch (err) {
+      toast('No se pudo leer: ' + err.message);
+    } finally { R.busy = false; renderRecibo(); }
+  });
+
+  async function startRecibo(d) {
+    let vmap = {};
+    try { vmap = (await cosCall('map', { proveedor: d.proveedor })).map || {}; } catch (e) { /* sin memoria */ }
+    const [list] = await Promise.all([recProducts(), loadLotes(true)]);
+    const lines = (d.items || []).map((it) => {
+      const l = { producto: it.producto, upc: it.upc || '', codigo_proveedor: it.codigo_proveedor || '', cantidad: Number(it.cantidad) || 0, empaque: it.empaque || '',
+        unidades_por_caja: it.unidades_por_caja ?? null, costo_caja: r2(Number(it.costo_caja) || 0), total_linea: it.total_linea ?? null,
+        sku: '', nombre: '', how: '', estado: '', recibido: null, caducidad: '', leida: ymdOk(it.caducidad) ? it.caducidad : '', nota: '' };
+      const m = recMatch(l, vmap, list);
+      if (m) Object.assign(l, { sku: String(m.p.id), nombre: m.p.name, how: m.how + (m.review ? ' (revisa)' : '') });
+      return l;
+    });
+    R.rec = { id: '', proveedor: d.proveedor || '', factura: d.factura || '', fecha: d.fecha || '', status: 'borrador', nota: '', by: S.who,
+      head: { total_factura: d.total_factura, total_calculado: d.total_calculado, mercancia: d.mercancia, cuadra: d.cuadra, flete: d.flete, creditos: d.creditos, otros_cargos: d.otros_cargos },
+      lines };
+    R.cur = 0;
+    await saveRecibo(false);
+    renderRecibo();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Guardado: en este dispositivo al instante y en la nube (para seguir en otro teléfono / que lo vea Costeo)
+  function touchRec() {
+    store.set(K_REC, R.rec);
+    clearTimeout(R.saveT);
+    R.saveT = setTimeout(() => saveRecibo(false).catch(() => {}), 1200);
+  }
+  async function saveRecibo(final) {
+    if (!R.rec) return;
+    clearTimeout(R.saveT);
+    const d = await cosCall('recibo_save', { recibo: R.rec, final: !!final });
+    R.rec.id = d.id; R.rec.status = d.status;
+    store.set(K_REC, R.rec);
+    R.list = null;
+  }
+
+  const lineDone = (l) => !!l.estado;
+  function setEstado(i, est) {
+    const l = R.rec.lines[i];
+    l.estado = est;
+    if (est === 'ok') l.recibido = l.cantidad;
+    else if (est === 'parcial') l.recibido = l.recibido != null && l.recibido < l.cantidad ? l.recibido : Math.max(0, l.cantidad - 1);
+    else l.recibido = 0;
+    touchRec();
+  }
+  function nextCard() {
+    const n = R.rec.lines.length;
+    for (let k = 1; k <= n; k++) { const j = (R.cur + k) % n; if (!lineDone(R.rec.lines[j])) { R.cur = j; return; } }
+    R.cur = n; // todos revisados → pantalla de terminar
+  }
+
+  function renderRecibo(busyMsg) {
+    const box = $('#recWork');
+    const hasRec = !!(R.rec && R.rec.lines && R.rec.lines.length && R.rec.status !== 'costeado');
+    $('#recHero').hidden = hasRec && !busyMsg;
+    if (busyMsg) { box.hidden = true; $('#recInfo').innerHTML = `<span class="age old">⟳ ${esc(busyMsg)}</span>`; return; }
+    $('#recInfo').textContent = 'Sube la factura que llegó y revisa producto por producto: qué llegó, qué faltó y su fecha de caducidad. Al terminar pasa a Costeo.';
+    box.hidden = !hasRec;
+    renderRecList();
+    renderLotes();
+    if (!hasRec) return;
+    const L = R.rec.lines, done = L.filter(lineDone).length;
+    if (R.cur > L.length) R.cur = L.length;
+    const head = `
+      <div class="rec-top">
+        <button class="btn-back" type="button" data-r="close"><span aria-hidden="true">←</span> Recibos</button>
+        <p class="hud">${esc(R.rec.status === 'revisado' ? 'Recibo · ya en Costeo (puedes corregir)' : 'Recibo')}</p>
+        <h2 class="rec-title">${esc(R.rec.proveedor || 'Proveedor')} <small>#${esc(R.rec.factura || '—')}</small></h2>
+        <div class="rec-prog"><span style="width:${L.length ? (done / L.length) * 100 : 0}%"></span></div>
+        <p class="status">${done} de ${L.length} revisados${R.rec.fecha ? ' · factura del ' + esc(fmtLong(R.rec.fecha)) : ''}</p>
+      </div>`;
+    box.innerHTML = head + (R.cur >= L.length ? finishHTML() : cardRecHTML(R.cur)) + stripHTML();
+    const di = $('#recDate');
+    if (di) di.addEventListener('change', () => { const l = L[R.cur]; l.caducidad = ymdOk(di.value) ? di.value : ''; touchRec(); renderRecibo(); });
+    const ni = $('#recNote');
+    if (ni) ni.addEventListener('input', () => { L[R.cur].nota = ni.value.slice(0, 300); touchRec(); });
+    const gi = $('#recNotaGen');
+    if (gi) gi.addEventListener('input', () => { R.rec.nota = gi.value.slice(0, 1500); touchRec(); });
+    const qi = $('#recQty');
+    if (qi) qi.addEventListener('change', () => { const l = L[R.cur]; l.recibido = Math.max(0, Math.min(l.cantidad, Number(qi.value) || 0)); touchRec(); renderRecibo(); });
+  }
+
+  function cardRecHTML(i) {
+    const l = R.rec.lines[i];
+    const lots = (R.lotes && l.sku && R.lotes[skuKey(l.sku)]) ? Object.entries(R.lotes[skuKey(l.sku)].fechas) : [];
+    lots.sort((a, b) => (b[1].ts || 0) - (a[1].ts || 0));
+    const opts = [];
+    if (l.leida) opts.push({ d: l.leida, t: 'escrita en la factura' });
+    lots.slice(0, 3).forEach(([d]) => { if (!opts.some((o) => o.d === d)) opts.push({ d, t: opts.length || l.leida ? 'anterior' : 'la de la vez pasada' }); });
+    const got = l.estado === 'ok' || l.estado === 'parcial';
+    const chip = (o) => `<button type="button" class="chip${l.caducidad === o.d ? ' on' : ''}" data-r="date" data-d="${o.d}">${esc(fmtLong(o.d))}<small>${esc(o.t)}</small></button>`;
+    const soon = l.caducidad && daysTo(l.caducidad) < 120 ? `<p class="qb-warn">⚠ Vence en ${daysTo(l.caducidad)} días</p>` : '';
+    return `
+      <article class="rec-card" data-i="${i}">
+        <p class="rec-n">${i + 1} de ${R.rec.lines.length}${l.estado ? ` · <span class="rec-st ${l.estado}">${EST[l.estado]}</span>` : ''}</p>
+        <h3 class="rec-name">${esc(l.producto)}</h3>
+        <p class="meta">${l.codigo_proveedor ? 'Código ' + esc(l.codigo_proveedor) + ' · ' : ''}${esc(l.empaque || '')}${l.sku ? ` · en sistema: <b>${esc(l.nombre)}</b> (${esc(l.sku)})` : ' · <span class="pill warn">no lo encontré en el sistema</span>'}</p>
+        <p class="rec-qty">Factura dice <b>${nfmt(l.cantidad)}</b> ${l.cantidad === 1 ? 'caja' : 'cajas'}</p>
+        <div class="rec-acts">
+          <button type="button" class="rec-b ok${l.estado === 'ok' ? ' on' : ''}" data-r="ok">✓ Llegó completo</button>
+          <button type="button" class="rec-b warn${l.estado === 'parcial' ? ' on' : ''}" data-r="parcial">Llegó menos</button>
+          <button type="button" class="rec-b bad${l.estado === 'no' ? ' on' : ''}" data-r="no">✗ No llegó</button>
+          <button type="button" class="rec-b${l.estado === 'pendiente' ? ' on' : ''}" data-r="pendiente">Pendiente</button>
+        </div>
+        ${l.estado === 'parcial' ? `
+        <div class="rec-step">
+          <span class="lbl">¿Cuántas llegaron?</span>
+          <div class="qty"><button type="button" data-r="minus" aria-label="Menos">−</button><input id="recQty" type="number" inputmode="numeric" min="0" max="${l.cantidad}" value="${l.recibido ?? 0}"><button type="button" data-r="plus" aria-label="Más">+</button></div>
+          <span class="status">de ${nfmt(l.cantidad)}</span>
+        </div>` : ''}
+        ${got ? `
+        <div class="rec-date">
+          <span class="lbl">Fecha de caducidad</span>
+          <div class="chips">${opts.map(chip).join('')}
+            <button type="button" class="chip${l.caducidad === '' && l.sinFecha ? ' on' : ''}" data-r="nodate">Sin fecha</button></div>
+          <label class="field rec-other"><span>${opts.length ? 'Otra fecha' : 'Escoge la fecha'}</span><input id="recDate" type="date" value="${esc(l.caducidad && !opts.some((o) => o.d === l.caducidad) ? l.caducidad : '')}"></label>
+          ${l.caducidad ? `<p class="status">Caducidad: <b>${esc(fmtLong(l.caducidad))}</b></p>` : ''}${soon}
+        </div>` : ''}
+        <label class="field"><span>Nota (opcional)</span><input id="recNote" type="text" maxlength="300" placeholder="Dañado, regresó, llegó otro sabor…" value="${esc(l.nota)}"></label>
+        <div class="rec-nav">
+          <button type="button" class="btn btn-ghost" data-r="prev"${i === 0 ? ' disabled' : ''}>← Anterior</button>
+          <button type="button" class="btn btn-oro" data-r="next">${R.rec.lines.filter(lineDone).length === R.rec.lines.length ? 'Terminar →' : 'Siguiente →'}</button>
+        </div>
+      </article>`;
+  }
+
+  function finishHTML() {
+    const L = R.rec.lines;
+    const c = (e) => L.filter((l) => l.estado === e).length;
+    const sinFecha = L.filter((l) => (l.estado === 'ok' || l.estado === 'parcial') && !l.caducidad).length;
+    const falt = L.filter((l) => l.estado === 'parcial' || l.estado === 'no' || l.estado === 'pendiente');
+    return `
+      <article class="rec-card rec-fin">
+        <h3 class="rec-name">Resumen</h3>
+        <div class="kpis rec-kpis">
+          <div class="kpi"><span class="lbl">Llegó</span><div class="kpi-v">${c('ok')}</div></div>
+          <div class="kpi"><span class="lbl">Llegó menos</span><div class="kpi-v">${c('parcial')}</div></div>
+          <div class="kpi"><span class="lbl">No llegó</span><div class="kpi-v">${c('no')}</div></div>
+          <div class="kpi"><span class="lbl">Pendiente</span><div class="kpi-v">${c('pendiente')}</div></div>
+        </div>
+        ${c('') ? `<p class="qb-warn">Faltan ${c('')} productos por revisar.</p>` : ''}
+        ${sinFecha ? `<p class="status">${sinFecha} de lo que llegó no tiene fecha de caducidad.</p>` : ''}
+        ${falt.length ? `<ul class="rec-falt">${falt.map((l) => `<li><b>${esc(EST[l.estado])}</b> · ${esc(l.producto)}${l.estado === 'parcial' ? ` — llegaron ${nfmt(l.recibido || 0)} de ${nfmt(l.cantidad)}` : ''}${l.nota ? ` · <i>${esc(l.nota)}</i>` : ''}</li>`).join('')}</ul>` : ''}
+        <label class="field"><span>Notas del recibo</span><textarea id="recNotaGen" rows="3" maxlength="1500" placeholder="Algo que regresó, que faltó, que venía dañado…">${esc(R.rec.nota || '')}</textarea></label>
+        <div class="rec-nav">
+          <button type="button" class="btn btn-ghost" data-r="prev">← Revisar</button>
+          <button type="button" class="btn btn-oro" data-r="finish">${R.rec.status === 'revisado' ? 'Guardar cambios' : 'Terminar y mandar a Costeo'}</button>
+        </div>
+      </article>`;
+  }
+
+  function stripHTML() {
+    return `<div class="rec-strip">${R.rec.lines.map((l, i) => `
+      <button type="button" class="rec-row${i === R.cur ? ' cur' : ''}" data-r="go" data-i="${i}">
+        <span class="rec-dot ${l.estado || 'none'}" aria-hidden="true"></span>
+        <span class="rec-row-n">${esc(l.producto)}</span>
+        <span class="rec-row-d">${l.estado === 'parcial' ? nfmt(l.recibido || 0) + '/' : ''}${nfmt(l.cantidad)}${l.caducidad ? ' · ' + esc(fmtD(l.caducidad)) + ' ' + parseYmd(l.caducidad).getFullYear() % 100 : ''}</span>
+      </button>`).join('')}
+      <button type="button" class="rec-row${R.cur >= R.rec.lines.length ? ' cur' : ''}" data-r="go" data-i="${R.rec.lines.length}"><span class="rec-dot fin" aria-hidden="true"></span><span class="rec-row-n"><b>Terminar</b></span></button>
+    </div>`;
+  }
+
+  $('#recWork').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-r]'); if (!b || !R.rec) return;
+    const a = b.dataset.r, L = R.rec.lines, l = L[R.cur];
+    if (a === 'close') { R.rec = null; store.del(K_REC); renderRecibo(); window.scrollTo({ top: 0 }); return; }
+    if (a === 'go') { R.cur = Number(b.dataset.i); renderRecibo(); $('#recWork').scrollIntoView({ behavior: 'smooth' }); return; }
+    if (a === 'prev') { R.cur = Math.max(0, R.cur - 1); renderRecibo(); return; }
+    if (a === 'next') { nextCard(); renderRecibo(); $('#recWork').scrollIntoView({ behavior: 'smooth' }); return; }
+    if (a === 'finish') {
+      const pend = L.filter((x) => !x.estado).length;
+      if (pend && !confirm(`Hay ${pend} productos sin revisar. ¿Mandar a Costeo de todos modos? (quedan como "sin revisar")`)) return;
+      b.disabled = true;
+      try {
+        await saveRecibo(true);
+        toast('Recibo listo ✓ · ya lo ve Costeo');
+        R.rec = null; store.del(K_REC); await loadLotes(true);
+      } catch (err) { toast('No se pudo guardar: ' + err.message); b.disabled = false; return; }
+      renderRecibo(); window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (!l) return;
+    if (a === 'ok' || a === 'parcial') { setEstado(R.cur, a); renderRecibo(); return; }
+    if (a === 'no' || a === 'pendiente') { setEstado(R.cur, a); l.caducidad = ''; nextCard(); renderRecibo(); return; }
+    if (a === 'minus' || a === 'plus') { l.recibido = Math.max(0, Math.min(l.cantidad, (l.recibido || 0) + (a === 'plus' ? 1 : -1))); touchRec(); renderRecibo(); return; }
+    if (a === 'date') { l.caducidad = b.dataset.d; l.sinFecha = false; touchRec(); nextCard(); renderRecibo(); return; }
+    if (a === 'nodate') { l.caducidad = ''; l.sinFecha = true; touchRec(); nextCard(); renderRecibo(); }
+  });
+
+  // ---- Lista de recibos (en curso / en Costeo / costeados) ----
+  async function renderRecList() {
+    const box = $('#recRecent');
+    if (!box) return;
+    if (!R.list) {
+      box.innerHTML = '<p class="data-info">Cargando…</p>';
+      try { R.list = (await cosCall('recibo_list')).list || []; } catch (e) { box.innerHTML = `<p class="data-info">${esc(e.message)}</p>`; return; }
+    }
+    const ST = { borrador: 'en revisión', revisado: 'en Costeo', costeado: 'costeado' };
+    box.innerHTML = R.list.length ? R.list.map((f) => `
+      <div class="hist-item" data-rid="${esc(f.id)}"><div class="hi-txt"><b>${esc(f.proveedor)} · #${esc(f.factura)}</b>
+        ${f.lines} productos${f.parcial ? ` · ${f.parcial} llegaron menos` : ''}${f.no ? ` · ${f.no} no llegaron` : ''}${f.pendiente ? ` · ${f.pendiente} pendientes` : ''} · ${f.fechas} con fecha · ${esc(f.by || '')} · ${fmtTs(f.updated || f.ts)}</div>
+        <span class="st${f.status === 'costeado' ? ' sent' : ''}">${ST[f.status] || f.status}</span>
+        ${f.status !== 'costeado' ? '<button class="btn btn-ghost btn-sm" data-c="open" type="button">Abrir</button>' : ''}</div>`).join('')
+      : '<p class="data-info">Todavía no hay recibos.</p>';
+  }
+  $('#recRecent').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-c="open"]'); if (!b) return;
+    try {
+      const { recibo } = await cosCall('recibo_get', { id: b.closest('.hist-item').dataset.rid });
+      await loadLotes();
+      R.rec = { ...recibo, lines: recibo.lines || [] };
+      R.cur = 0; nextCard(); if (R.cur >= R.rec.lines.length && R.rec.lines.some((l) => !lineDone(l))) R.cur = 0;
+      store.set(K_REC, R.rec);
+      renderRecibo(); window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) { toast(err.message); }
+  });
+
+  // ---- Caducidades: lo que vence primero. Cuántas quedan de cada fecha se estima con el stock real
+  // (lo más viejo se vende primero); sin stock de InSitu en este dispositivo se muestra lo que llegó. ----
+  function lotRows() {
+    const out = [];
+    Object.entries(R.lotes || {}).forEach(([sku, v]) => {
+      const p = S.products.find((x) => skuKey(x.id) === sku);
+      const dates = Object.entries(v.fechas).map(([d, x]) => ({ d, q: x.q })).sort((a, b) => (a.d < b.d ? 1 : -1)); // nuevo → viejo
+      let left = p && p.stock != null ? Math.max(0, p.stock) : null;
+      dates.forEach((x) => {
+        const quedan = left == null ? null : Math.min(x.q, left);
+        if (left != null) left -= quedan;
+        if (quedan === 0) return;
+        const perDay = p && p.st ? (p.st.u90 || 0) / 90 : 0;
+        const dias = daysTo(x.d);
+        const venta = perDay > 0 && quedan != null ? Math.ceil(quedan / perDay) : null;
+        out.push({ sku, nombre: p ? p.name : v.nombre, d: x.d, recibido: x.q, quedan, dias, venta, riesgo: venta != null && venta > dias });
+      });
+    });
+    return out.sort((a, b) => (a.d < b.d ? -1 : 1));
+  }
+  function renderLotes() {
+    const box = $('#recLotList');
+    if (!box) return;
+    if (!R.lotes) { loadLotes().then(renderLotes); return; }
+    const rows = lotRows().slice(0, 80);
+    $('#recLotsWrap').hidden = !rows.length;
+    box.innerHTML = rows.map((r) => `
+      <div class="lot-row${r.dias < 0 ? ' dead' : r.dias <= 60 || r.riesgo ? ' hot' : r.dias <= 120 ? ' warm' : ''}">
+        <div class="lot-d"><b>${esc(fmtD(r.d))}</b><small>${parseYmd(r.d).getFullYear()}</small></div>
+        <div class="lot-m"><div class="ol-name">${esc(r.nombre)}</div>
+          <div class="meta">${r.dias < 0 ? `venció hace ${-r.dias} días` : `vence en ${r.dias} días`} · ${r.quedan != null ? `quedan ~${nfmt(r.quedan)} de ${nfmt(r.recibido)}` : `llegaron ${nfmt(r.recibido)}`}${r.venta != null ? ` · se venden en ~${r.venta} días` : ''}${r.riesgo ? ' · <b>no alcanza a venderse: ponlo en especial</b>' : ''}</div></div>
+      </div>`).join('');
+  }
+
+  // Caducidad más próxima de un producto (para Especiales / Costeo)
+  function nextExpiry(sku) {
+    const r = lotRows().filter((x) => x.sku === skuKey(sku));
+    return r.length ? r[0] : null;
+  }
 
   /* ================= VENDEDORES =================
    * De las facturas de 12 meses: ventas por vendedor, sus clientes, a quién ya le toca pedir
@@ -2219,17 +2611,20 @@
   S.view = store.get(K_VIEW, 'esp');
   function applyView() {
     if ($('#workspace').hidden) return;
-    const ord = S.view === 'ord', cos = S.view === 'cos', ven = S.view === 'ven';
+    if (recOnly()) S.view = 'rec';
+    const ord = S.view === 'ord', cos = S.view === 'cos', ven = S.view === 'ven', rec = S.view === 'rec';
     $$('#viewTabs button').forEach((b) => { const on = b.dataset.v === S.view; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
-    $('#espView').hidden = ord || cos || ven;
+    $('#espView').hidden = ord || cos || ven || rec;
     $('#venView').hidden = !ven;
+    $('#recView').hidden = !rec;
+    if (rec) { R.list = null; renderRecibo(); }
     $('#ordView').hidden = !ord;
     $('#cosView').hidden = !cos;
-    $('#dock').hidden = ord || cos || ven;
+    $('#dock').hidden = ord || cos || ven || rec;
     $('#ordDock').hidden = !ord || O.vendor === null;
     $('#cosDock').hidden = !cos;
     if (cos) renderCosteo();
-    if (!ord && !cos && !ven) loadVigentes();
+    if (!ord && !cos && !ven && !rec) loadVigentes();
     if (ven) renderVendors();
     if (ord) {
       if (!O.lines.length && !O.touched) suggestOrder(); else renderOrders();
