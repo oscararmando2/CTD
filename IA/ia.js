@@ -2614,6 +2614,9 @@
     if (recOnly()) S.view = 'rec';
     const ord = S.view === 'ord', cos = S.view === 'cos', ven = S.view === 'ven', rec = S.view === 'rec';
     $$('#viewTabs button').forEach((b) => { const on = b.dataset.v === S.view; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+    // En el celular las pestañas se deslizan: la activa siempre a la vista (y el botón de salir fijo a la derecha)
+    const act = $('#viewTabs button.on'), bar = $('#viewTabs');
+    if (act) bar.scrollLeft = Math.max(0, act.offsetLeft - (bar.clientWidth - act.offsetWidth) / 2);
     $('#espView').hidden = ord || cos || ven || rec;
     $('#venView').hidden = !ven;
     $('#recView').hidden = !rec;
