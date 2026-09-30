@@ -654,6 +654,7 @@
   function showWorkspace() {
     stockTrusted = null;
     if (!R.lotes) loadLotes().then(() => { if (S.cards.length) render(); });
+    pushCatalog();
     $('#dropzone').hidden = true;
     $('#workspace').hidden = false;
     buildFilters();
@@ -2184,6 +2185,15 @@
   const skuKey = (s) => String(s || '').trim().replace(/[.#$/[\]\s]+/g, '_');
   const codeCore = (s) => normTxt(s).replace(/[^a-z0-9]/g, '');
 
+  async function pushCatalog() {
+    if (recOnly() || !S.products.length || !S.meta || S.meta.source !== 'InSitu') return;
+    const k = 'ctdIA.catPushed';
+    if (store.get(k, 0) === S.meta.at) return;
+    try {
+      await cosCall('catalogo_save', { items: S.products.map((p) => ({ id: p.id, name: p.name, upc: p.upc, photo: p.photo })) });
+      store.set(k, S.meta.at);
+    } catch (e) { /* se intenta en la siguiente */ }
+  }
   async function loadLotes(force) {
     if (R.lotes && !force) return R.lotes;
     try { R.lotes = (await cosCall('lotes')).lotes || {}; } catch (e) { R.lotes = R.lotes || {}; }
@@ -2237,9 +2247,10 @@
     const lines = (d.items || []).map((it) => {
       const l = { producto: it.producto, upc: it.upc || '', codigo_proveedor: it.codigo_proveedor || '', cantidad: Number(it.cantidad) || 0, empaque: it.empaque || '',
         unidades_por_caja: it.unidades_por_caja ?? null, costo_caja: r2(Number(it.costo_caja) || 0), total_linea: it.total_linea ?? null,
-        sku: '', nombre: '', how: '', estado: '', recibido: null, caducidad: '', leida: ymdOk(it.caducidad) ? it.caducidad : '', nota: '' };
+        sku: '', nombre: '', how: '', photo: '', upcSis: '', estado: '', recibido: null, caducidad: '', leida: ymdOk(it.caducidad) ? it.caducidad : '', nota: '' };
+      l.caducidad = l.leida; // la fecha escrita en la factura ya viene puesta
       const m = recMatch(l, vmap, list);
-      if (m) Object.assign(l, { sku: String(m.p.id), nombre: m.p.name, how: m.how + (m.review ? ' (revisa)' : '') });
+      if (m) Object.assign(l, { sku: String(m.p.id), nombre: m.p.name, photo: m.p.photo || '', upcSis: m.p.upc || '', how: m.how + (m.review ? ' (revisa)' : '') });
       return l;
     });
     R.rec = { id: '', proveedor: d.proveedor || '', factura: d.factura || '', fecha: d.fecha || '', status: 'borrador', nota: '', by: S.who,
@@ -2303,7 +2314,19 @@
       </div>`;
     box.innerHTML = head + (R.cur >= L.length ? finishHTML() : cardRecHTML(R.cur)) + stripHTML();
     const di = $('#recDate');
-    if (di) di.addEventListener('change', () => { const l = L[R.cur]; l.caducidad = ymdOk(di.value) ? di.value : ''; touchRec(); renderRecibo(); });
+    if (di) {
+      const setDate = (ymdv) => { L[R.cur].caducidad = ymdv; touchRec(); di.blur(); renderRecibo(); };
+      di.addEventListener('input', () => {
+        const d = di.value.replace(/\D/g, '').slice(0, 6);
+        di.value = fmtMask(d);
+        const pv = $('#recDatePrev');
+        if (d.length === 6) { const y = parseMask(d); if (y) return setDate(y); pv.innerHTML = '<span class="bad">Fecha no válida</span>'; }
+        else pv.textContent = d.length ? 'mes / día / año' : 'Sin fecha';
+      });
+      di.addEventListener('focus', () => { if (L[R.cur].caducidad) di.select(); });
+      di.addEventListener('blur', () => { const d = di.value.replace(/\D/g, ''); if (d.length === 4) { const y = parseMask(d, true); if (y) setDate(y); } });
+      di.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') di.blur(); });
+    }
     const ni = $('#recNote');
     if (ni) ni.addEventListener('input', () => { L[R.cur].nota = ni.value.slice(0, 300); touchRec(); });
     const gi = $('#recNotaGen');
@@ -2312,24 +2335,59 @@
     if (qi) qi.addEventListener('change', () => { const l = L[R.cur]; l.recibido = Math.max(0, Math.min(l.cantidad, Number(qi.value) || 0)); touchRec(); renderRecibo(); });
   }
 
+  // Fecha rápida: 6 números mes-día-año como en la factura (102527 = 25 oct 2027); 4 números = mes-año (fin de mes)
+  const pad2 = (n) => String(n).padStart(2, '0');
+  function mkYmd(y, m, d) {
+    if (!(m >= 1 && m <= 12) || !(y >= 2024 && y <= 2045)) return '';
+    const last = new Date(y, m, 0).getDate();
+    if (d === 0) d = last;
+    return d >= 1 && d <= last ? `${y}-${pad2(m)}-${pad2(d)}` : '';
+  }
+  function parseMask(v, loose) {
+    const d = String(v).replace(/\D/g, '');
+    if (d.length === 6) return mkYmd(2000 + +d.slice(4), +d.slice(0, 2), +d.slice(2, 4));
+    if (loose && d.length === 4) return mkYmd(2000 + +d.slice(2), +d.slice(0, 2), 0);
+    return '';
+  }
+  const fmtMask = (d) => d.slice(0, 2) + (d.length > 2 ? ' / ' + d.slice(2, 4) : '') + (d.length > 4 ? ' / ' + d.slice(4, 6) : '');
+  const ymdToMask = (s) => (ymdOk(s) ? `${s.slice(5, 7)} / ${s.slice(8, 10)} / ${s.slice(2, 4)}` : '');
+  const thumb = (l, cls) => (l.sku ? `<span class="${cls}">${l.photo ? `<img src="${esc(l.photo)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>` : '');
+
   function cardRecHTML(i) {
     const l = R.rec.lines[i];
     const lots = (R.lotes && l.sku && R.lotes[skuKey(l.sku)]) ? Object.entries(R.lotes[skuKey(l.sku)].fechas) : [];
     lots.sort((a, b) => (b[1].ts || 0) - (a[1].ts || 0));
     const opts = [];
-    if (l.leida) opts.push({ d: l.leida, t: 'escrita en la factura' });
-    lots.slice(0, 3).forEach(([d]) => { if (!opts.some((o) => o.d === d)) opts.push({ d, t: opts.length || l.leida ? 'anterior' : 'la de la vez pasada' }); });
-    const got = l.estado === 'ok' || l.estado === 'parcial';
+    if (l.leida) opts.push({ d: l.leida, t: 'factura' });
+    lots.slice(0, 3).forEach(([d]) => { if (!opts.some((o) => o.d === d)) opts.push({ d, t: 'la vez pasada' }); });
     const chip = (o) => `<button type="button" class="chip${l.caducidad === o.d ? ' on' : ''}" data-r="date" data-d="${o.d}">${esc(fmtLong(o.d))}<small>${esc(o.t)}</small></button>`;
-    const soon = l.caducidad && daysTo(l.caducidad) < 120 ? `<p class="qb-warn">⚠ Vence en ${daysTo(l.caducidad)} días</p>` : '';
+    const dd = l.caducidad ? daysTo(l.caducidad) : null;
+    const prev = l.caducidad ? `Vence <b>${esc(fmtLong(l.caducidad))}</b>${dd < 0 ? ' · <span class="bad">ya venció</span>' : dd < 120 ? ` · <span class="warn">en ${dd} días</span>` : ''}` : 'Sin fecha';
+    const same = l.sku && normTxt(l.nombre).replace(/\W/g, '') === normTxt(l.producto).replace(/\W/g, '');
     return `
       <article class="rec-card" data-i="${i}">
-        <p class="rec-n">${i + 1} de ${R.rec.lines.length}${l.estado ? ` · <span class="rec-st ${l.estado}">${EST[l.estado]}</span>` : ''}</p>
-        <h3 class="rec-name">${esc(l.producto)}</h3>
-        <p class="meta">${l.codigo_proveedor ? 'Código ' + esc(l.codigo_proveedor) + ' · ' : ''}${esc(l.empaque || '')}${l.sku ? ` · en sistema: <b>${esc(l.nombre)}</b> (${esc(l.sku)})` : ' · <span class="pill warn">no lo encontré en el sistema</span>'}</p>
-        <p class="rec-qty">Factura dice <b>${nfmt(l.cantidad)}</b> ${l.cantidad === 1 ? 'caja' : 'cajas'}</p>
+        <p class="rec-n">${i + 1} de ${R.rec.lines.length}${l.estado ? ` · <span class="rec-st ${l.estado}">${EST[l.estado]}${l.estado === 'parcial' ? ` ${nfmt(l.recibido || 0)} de ${nfmt(l.cantidad)}` : ''}</span>` : ''}</p>
+        <div class="rec-prod">
+          ${thumb(l, 'rec-ph')}
+          <div class="rec-pinfo">
+            <h3 class="rec-name">${esc(l.sku ? l.nombre : l.producto)}</h3>
+            ${l.sku ? `<p class="meta">${l.upcSis || l.upc ? 'UPC ' + esc(l.upcSis || l.upc) + ' · ' : ''}SKU ${esc(l.sku)}</p>` : '<p class="meta"><span class="pill warn">no está en el sistema</span></p>'}
+            ${l.sku && !same ? `<p class="meta">Factura: ${esc(l.producto)}</p>` : ''}
+          </div>
+        </div>
+        <p class="rec-qty">Factura dice <b>${nfmt(l.cantidad)}</b> ${l.cantidad === 1 ? 'caja' : 'cajas'}${l.empaque ? ` <small>${esc(l.empaque)}</small>` : ''}</p>
+
+        <div class="rec-date">
+          <label class="lbl" for="recDate">Caducidad <small>mes · día · año</small></label>
+          <div class="rec-dline">
+            <input id="recDate" class="rec-dinput" type="text" inputmode="numeric" autocomplete="off" enterkeyhint="done" placeholder="10 / 25 / 27" value="${esc(ymdToMask(l.caducidad))}">
+            <p id="recDatePrev" class="rec-dprev">${prev}</p>
+          </div>
+          ${opts.length || l.caducidad ? `<div class="chips">${opts.map(chip).join('')}${l.caducidad ? '<button type="button" class="chip" data-r="nodate">Quitar fecha</button>' : ''}</div>` : ''}
+        </div>
+
         <div class="rec-acts">
-          <button type="button" class="rec-b ok${l.estado === 'ok' ? ' on' : ''}" data-r="ok">✓ Llegó completo</button>
+          <button type="button" class="rec-b ok${l.estado === 'ok' ? ' on' : ''}" data-r="ok">✓ Llegó completo<small>${l.caducidad ? 'vence ' + esc(fmtLong(l.caducidad)) : 'sin fecha'} · siguiente →</small></button>
           <button type="button" class="rec-b warn${l.estado === 'parcial' ? ' on' : ''}" data-r="parcial">Llegó menos</button>
           <button type="button" class="rec-b bad${l.estado === 'no' ? ' on' : ''}" data-r="no">✗ No llegó</button>
           <button type="button" class="rec-b${l.estado === 'pendiente' ? ' on' : ''}" data-r="pendiente">Pendiente</button>
@@ -2339,19 +2397,13 @@
           <span class="lbl">¿Cuántas llegaron?</span>
           <div class="qty"><button type="button" data-r="minus" aria-label="Menos">−</button><input id="recQty" type="number" inputmode="numeric" min="0" max="${l.cantidad}" value="${l.recibido ?? 0}"><button type="button" data-r="plus" aria-label="Más">+</button></div>
           <span class="status">de ${nfmt(l.cantidad)}</span>
+          <button type="button" class="btn btn-oro rec-listo" data-r="next">Listo, siguiente →</button>
         </div>` : ''}
-        ${got ? `
-        <div class="rec-date">
-          <span class="lbl">Fecha de caducidad</span>
-          <div class="chips">${opts.map(chip).join('')}
-            <button type="button" class="chip${l.caducidad === '' && l.sinFecha ? ' on' : ''}" data-r="nodate">Sin fecha</button></div>
-          <label class="field rec-other"><span>${opts.length ? 'Otra fecha' : 'Escoge la fecha'}</span><input id="recDate" type="date" value="${esc(l.caducidad && !opts.some((o) => o.d === l.caducidad) ? l.caducidad : '')}"></label>
-          ${l.caducidad ? `<p class="status">Caducidad: <b>${esc(fmtLong(l.caducidad))}</b></p>` : ''}${soon}
-        </div>` : ''}
-        <label class="field"><span>Nota (opcional)</span><input id="recNote" type="text" maxlength="300" placeholder="Dañado, regresó, llegó otro sabor…" value="${esc(l.nota)}"></label>
+        ${l.nota || R.noteOpen ? `<label class="field"><span>Nota</span><input id="recNote" type="text" maxlength="300" placeholder="Dañado, regresó, llegó otro sabor…" value="${esc(l.nota)}"></label>`
+          : '<button type="button" class="btn-link rec-addnote" data-r="note">+ Agregar nota</button>'}
         <div class="rec-nav">
           <button type="button" class="btn btn-ghost" data-r="prev"${i === 0 ? ' disabled' : ''}>← Anterior</button>
-          <button type="button" class="btn btn-oro" data-r="next">${R.rec.lines.filter(lineDone).length === R.rec.lines.length ? 'Terminar →' : 'Siguiente →'}</button>
+          <button type="button" class="btn btn-ghost" data-r="next">Saltar →</button>
         </div>
       </article>`;
   }
@@ -2385,20 +2437,27 @@
     return `<div class="rec-strip">${R.rec.lines.map((l, i) => `
       <button type="button" class="rec-row${i === R.cur ? ' cur' : ''}" data-r="go" data-i="${i}">
         <span class="rec-dot ${l.estado || 'none'}" aria-hidden="true"></span>
-        <span class="rec-row-n">${esc(l.producto)}</span>
+        ${thumb(l, 'rec-th')}
+        <span class="rec-row-n">${esc(l.sku ? l.nombre : l.producto)}</span>
         <span class="rec-row-d">${l.estado === 'parcial' ? nfmt(l.recibido || 0) + '/' : ''}${nfmt(l.cantidad)}${l.caducidad ? ' · ' + esc(fmtD(l.caducidad)) + ' ' + parseYmd(l.caducidad).getFullYear() % 100 : ''}</span>
       </button>`).join('')}
       <button type="button" class="rec-row${R.cur >= R.rec.lines.length ? ' cur' : ''}" data-r="go" data-i="${R.rec.lines.length}"><span class="rec-dot fin" aria-hidden="true"></span><span class="rec-row-n"><b>Terminar</b></span></button>
     </div>`;
   }
 
+  // Lleva la vista al principio de la tarjeta (debajo de la barra de arriba)
+  function toCard() {
+    const c = $('#recWork .rec-n') || $('#recWork');
+    const top = c.getBoundingClientRect().top + window.scrollY - ($('.topbar').offsetHeight + 12);
+    if (Math.abs(window.scrollY - top) > 8) window.scrollTo({ top, behavior: 'smooth' });
+  }
   $('#recWork').addEventListener('click', async (e) => {
     const b = e.target.closest('[data-r]'); if (!b || !R.rec) return;
     const a = b.dataset.r, L = R.rec.lines, l = L[R.cur];
     if (a === 'close') { R.rec = null; store.del(K_REC); renderRecibo(); window.scrollTo({ top: 0 }); return; }
-    if (a === 'go') { R.cur = Number(b.dataset.i); renderRecibo(); $('#recWork').scrollIntoView({ behavior: 'smooth' }); return; }
-    if (a === 'prev') { R.cur = Math.max(0, R.cur - 1); renderRecibo(); return; }
-    if (a === 'next') { nextCard(); renderRecibo(); $('#recWork').scrollIntoView({ behavior: 'smooth' }); return; }
+    if (a === 'go') { R.noteOpen = false; R.cur = Number(b.dataset.i); renderRecibo(); toCard(); return; }
+    if (a === 'prev') { R.noteOpen = false; R.cur = Math.max(0, R.cur - 1); renderRecibo(); toCard(); return; }
+    if (a === 'next') { R.noteOpen = false; nextCard(); renderRecibo(); toCard(); return; }
     if (a === 'finish') {
       const pend = L.filter((x) => !x.estado).length;
       if (pend && !confirm(`Hay ${pend} productos sin revisar. ¿Mandar a Costeo de todos modos? (quedan como "sin revisar")`)) return;
@@ -2412,11 +2471,14 @@
       return;
     }
     if (!l) return;
-    if (a === 'ok' || a === 'parcial') { setEstado(R.cur, a); renderRecibo(); return; }
-    if (a === 'no' || a === 'pendiente') { setEstado(R.cur, a); l.caducidad = ''; nextCard(); renderRecibo(); return; }
+    const go = () => { R.noteOpen = false; nextCard(); renderRecibo(); toCard(); };
+    if (a === 'ok') { setEstado(R.cur, 'ok'); go(); return; }
+    if (a === 'parcial') { setEstado(R.cur, 'parcial'); renderRecibo(); return; }
+    if (a === 'no' || a === 'pendiente') { setEstado(R.cur, a); l.caducidad = ''; go(); return; }
     if (a === 'minus' || a === 'plus') { l.recibido = Math.max(0, Math.min(l.cantidad, (l.recibido || 0) + (a === 'plus' ? 1 : -1))); touchRec(); renderRecibo(); return; }
-    if (a === 'date') { l.caducidad = b.dataset.d; l.sinFecha = false; touchRec(); nextCard(); renderRecibo(); return; }
-    if (a === 'nodate') { l.caducidad = ''; l.sinFecha = true; touchRec(); nextCard(); renderRecibo(); }
+    if (a === 'date') { l.caducidad = b.dataset.d; touchRec(); renderRecibo(); return; }
+    if (a === 'nodate') { l.caducidad = ''; touchRec(); renderRecibo(); return; }
+    if (a === 'note') { R.noteOpen = true; renderRecibo(); const n = $('#recNote'); if (n) n.focus(); }
   });
 
   // ---- Lista de recibos (en curso / en Costeo / costeados) ----
@@ -2441,6 +2503,8 @@
       const { recibo } = await cosCall('recibo_get', { id: b.closest('.hist-item').dataset.rid });
       await loadLotes();
       R.rec = { ...recibo, lines: recibo.lines || [] };
+      const list = await recProducts();
+      R.rec.lines.forEach((l) => { if (l.sku && !l.photo) { const p = list.find((x) => String(x.id) === String(l.sku)); if (p) { l.photo = p.photo || ''; l.upcSis = l.upcSis || p.upc || ''; } } });
       R.cur = 0; nextCard(); if (R.cur >= R.rec.lines.length && R.rec.lines.some((l) => !lineDone(l))) R.cur = 0;
       store.set(K_REC, R.rec);
       renderRecibo(); window.scrollTo({ top: 0, behavior: 'smooth' });
