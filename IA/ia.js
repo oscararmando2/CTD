@@ -20,7 +20,7 @@
     appId: '1:914488691883:web:57d809a1e899c6b0be3bee',
   };
   const INSITU = 'https://app.b2bmobilesales.com/api/v1';
-  const PEOPLE = ['Oscar', 'Luis'];
+  const PEOPLE = ['Oscar', 'Luis', 'Diego'];
   // Firebase Auth pide un correo: cada nombre usa uno interno (no recibe mensajes)
   const emailOf = (name) => name.toLowerCase() + '@ctd-ia.firebaseapp.com';
   const nameOf = (email) => PEOPLE.find((p) => emailOf(p) === String(email || '').toLowerCase()) || null;
@@ -1007,6 +1007,30 @@
   });
   document.addEventListener('click', (e) => { if (!e.target.closest('.esp-search')) $('#espResults').hidden = true; });
 
+  /* ---- Especiales vigentes (activos o programados en QuickBooks) ---- */
+  async function loadVigentes() {
+    const sec = $('#vigentes');
+    try {
+      const d = await qbCall('list');
+      const today = d.today || ymd(new Date());
+      const vig = (d.list || []).filter((e) => ['activo', 'programado'].includes(e.status) && e.to >= today)
+        .sort((a, b) => (a.status === b.status ? a.from.localeCompare(b.from) : a.status === 'activo' ? -1 : 1));
+      sec.hidden = !vig.length;
+      $('#vigList').innerHTML = vig.map((e) => {
+        const p = S.products.find((x) => String(x.id) === String(e.sku)) || {};
+        const off = e.original ? (e.original - e.special) / e.original : e.regular ? (e.regular - e.special) / e.regular : null;
+        return `<div class="vig-c st-${esc(e.status)}">
+          <div class="vig-ph">${p.photo ? `<img src="${esc(p.photo)}" alt="" loading="lazy">` : ''}</div>
+          <div class="vig-b"><span class="qb-pill">${e.status === 'activo' ? 'Activo' : 'Programado'}</span>
+            <b>${esc(e.name || e.qbName)}</b>
+            <span class="vig-p"><strong>${money(e.special)}</strong>${e.original != null || e.regular ? ` <s>${money(e.original ?? e.regular)}</s>` : ''}${off != null ? ` · -${Math.round(off * 100)}%` : ''}</span>
+            <small>${fmtD(e.from)} – ${fmtD(e.to)} · ${esc(e.by || '')}</small></div>
+        </div>`;
+      }).join('');
+      $('#vigCount').textContent = vig.length;
+    } catch (e) { sec.hidden = true; }
+  }
+
   /* ================= RENDER ================= */
   const stats = (c) => {
     const m0 = (c.P - c.C) / c.P, m1 = (c.S - c.C) / c.S;
@@ -1333,7 +1357,7 @@
         m1: all.reduce((a, s) => a + s.m1, 0) / all.length,
         cards: S.cards.map(({ open, ...c }) => JSON.parse(JSON.stringify(c))),
       });
-      toast('Propuesta guardada 💾 — ya la ve ' + PEOPLE.filter((p) => p !== S.who).join(' y '));
+      toast('Propuesta guardada 💾 — ya la ve ' + PEOPLE.filter((p) => p !== S.who).join(', '));
     } catch (e) {
       toast('No se pudo guardar (' + (e.code || e.message) + ')');
     } finally {
@@ -1366,7 +1390,7 @@
       syncControls();
       render(true);
       $('#histModal').hidden = true;
-    } else if (confirm('¿Quitar esta propuesta del historial? (Oscar y Luis dejan de verla)')) {
+    } else if (confirm('¿Quitar esta propuesta del historial? (nadie más la verá)')) {
       Cloud.del(id).then(renderHist).catch((err) => toast('No se pudo quitar (' + (err.code || err.message) + ')'));
     }
   });
@@ -1637,6 +1661,7 @@
       go.disabled = true; go.textContent = 'Programando…';
       try {
         const d = await qbCall('schedule', { items: chosen.map((c) => { const m = qbMatches[c.items[0].id]; return { qbId: m.qbId, qbName: m.qbName, sku: c.items[0].id, name: c.items[0].name, special: c.S, regular: m.price, from: c.from, to: c.to }; }) });
+        loadVigentes();
         toast(`Programados: ${d.saved.length}${d.applied ? ` · ${d.applied} ya activos hoy` : ''}${d.errors.length ? ` · ${d.errors.length} con error` : ''}`);
         if (d.errors.length) box.insertAdjacentHTML('beforeend', d.errors.map((e) => `<p class="qb-warn">${esc(e.name)}: ${esc(e.error)}</p>`).join(''));
         else box.hidden = true;
@@ -1663,7 +1688,7 @@
     const b = e.target.closest('[data-cancel]'); if (!b) return;
     if (!confirm('¿Cancelar este especial? Si ya está activo, el precio regresa al original ahora mismo.')) return;
     b.disabled = true;
-    try { await qbCall('cancel', { id: b.dataset.cancel }); toast('Especial cancelado'); loadQbList(); }
+    try { await qbCall('cancel', { id: b.dataset.cancel }); toast('Especial cancelado'); loadQbList(); loadVigentes(); }
     catch (err) { toast('No se pudo cancelar: ' + err.message); b.disabled = false; }
   });
 
@@ -1970,7 +1995,7 @@
 
   async function saveCosteo(silent) {
     const f = { ...C.head, lines: C.lines.map((l) => ({ producto: l.producto, upc: l.upc, codigo_proveedor: l.codigo_proveedor, cantidad: l.cantidad, empaque: l.empaque, costo_caja: l.costo_caja, sku: l.sku || '', qbId: (l.qb && l.qb.qbId) || l.qbId || '', nombre: l.nombre || (l.alta && l.alta.name) || '', costo_antes: l.costo_antes ?? null, precio_antes: l.precio_antes ?? null, precio_nuevo: l.precio_nuevo, aplicado: !!(l.result && l.result.ok), nuevo: !!l.nuevo })) };
-    try { await cosCall('save', { factura: f, results: C.results }); C.saved = true; if (!silent) toast('Factura guardada · ya la ve ' + PEOPLE.filter((x) => x !== S.who).join(' y ')); loadCosRecent(); }
+    try { await cosCall('save', { factura: f, results: C.results }); C.saved = true; if (!silent) toast('Factura guardada · ya la ve ' + PEOPLE.filter((x) => x !== S.who).join(', ')); loadCosRecent(); }
     catch (e) { toast('No se pudo guardar: ' + e.message); }
     renderCosteo();
   }
@@ -2030,6 +2055,7 @@
     $('#ordDock').hidden = !ord || O.vendor === null;
     $('#cosDock').hidden = !cos;
     if (cos) renderCosteo();
+    if (!ord && !cos) loadVigentes();
     if (ord) {
       if (!O.lines.length && !O.touched) suggestOrder(); else renderOrders();
       // Datos viejos sin compras (de antes de Órdenes): se bajan solas
@@ -2447,7 +2473,7 @@
     return p;
   }
   $('#ordSave').addEventListener('click', async () => {
-    try { await saveOrder(O.status === 'enviada' ? 'enviada' : 'borrador'); toast('Orden guardada · ya la ve ' + PEOPLE.filter((x) => x !== S.who).join(' y ')); }
+    try { await saveOrder(O.status === 'enviada' ? 'enviada' : 'borrador'); toast('Orden guardada · ya la ve ' + PEOPLE.filter((x) => x !== S.who).join(', ')); }
     catch (e) { toast('No se pudo guardar (' + (e.code || e.message) + ')'); }
   });
 

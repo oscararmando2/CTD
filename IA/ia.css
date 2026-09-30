@@ -63,7 +63,7 @@ i[data-icon]{display:inline-flex}
 .gate-msg.err{color:#ff8a78}
 .gate-msg.ok{color:var(--verde-2)}
 #modeBtn{align-self:center;font-size:14px;padding:6px}
-.who-pick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.who-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}
 .who-pick button{border:0;background:rgba(246,242,233,.06);border-radius:20px;padding:22px 10px;font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:-.02em;transition:background .25s var(--ease),box-shadow .25s var(--ease)}
 .who-pick button small{display:block;font-family:var(--mono);font-weight:500;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted-2);margin-top:4px}
 .who-pick button.on{background:rgba(242,163,30,.14);box-shadow:inset 0 0 0 1.5px var(--oro)}
@@ -116,6 +116,21 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 /* Buscador para agregar a mano */
 .esp-search{position:relative;margin-top:18px;max-width:560px}
 .ord-results button[disabled]{opacity:.45;cursor:default}
+
+/* Especiales vigentes */
+.vig{margin-top:30px}
+.vig-list{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin}
+.vig-c{flex:none;width:260px;display:flex;gap:12px;align-items:center;padding:10px;border-radius:18px;background:rgba(246,242,233,.05)}
+.vig-c.st-activo{box-shadow:inset 0 0 0 1.5px rgba(91,192,108,.45)}
+.vig-ph{width:64px;height:64px;flex:none;border-radius:12px;background:#F4EFE5;display:grid;place-items:center;overflow:hidden}
+.vig-ph img{width:100%;height:100%;object-fit:contain;padding:4px}
+.vig-b{min-width:0;display:flex;flex-direction:column;gap:3px}
+.vig-b b{font-size:13px;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.vig-p{font-size:13px;color:var(--muted)}
+.vig-p strong{font-family:var(--display);font-size:18px;color:var(--oro)}
+.vig-p s{color:var(--muted-2)}
+.vig-b small{font-size:11px;color:var(--muted-2)}
+.vig-b .qb-pill{align-self:flex-start}
 
 /* KPIs sin cajas */
 .kpis{display:grid;grid-template-columns:1fr 1fr;gap:22px 16px;margin:36px 0 8px;padding-top:22px;border-top:1px solid var(--linea)}

@@ -1,4 +1,4 @@
-// API de QuickBooks para la IA de especiales (solo Oscar y Luis, con su token de Firebase).
+// API de QuickBooks para la IA de especiales (solo usuarios de la IA, con su token de Firebase).
 // POST {action, ...}:
 //   status     → ¿conectado?, empresa, ambiente (sandbox/production)
 //   match      → busca en QuickBooks los productos de InSitu (por Id, Sku/UPC o nombre)
