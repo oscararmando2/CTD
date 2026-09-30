@@ -1008,6 +1008,20 @@
   document.addEventListener('click', (e) => { if (!e.target.closest('.esp-search')) $('#espResults').hidden = true; });
 
   /* ---- Especiales vigentes (activos o programados en QuickBooks) ---- */
+  let vigData = [];
+  // Convierte los vigentes en tarjetas para la hoja de clientes (PDF / imagen)
+  function vigToCards() {
+    return vigData.map((e) => {
+      const p = S.products.find((x) => String(x.id) === String(e.sku)) || {};
+      const P = r2(e.original != null ? e.original : e.regular || p.price || e.special);
+      return { uid: uid(), kind: 'single', nx: null, P, C: 0, S: r2(e.special), from: e.from, to: e.to,
+        items: [{ id: String(e.sku || ''), name: e.name || e.qbName, brand: p.brand || '', cat: p.cat || '', photo: p.photo || '', pack: p.pack || '', upc: p.upc || '' }] };
+    });
+  }
+  $('#vigPdf').addEventListener('click', () => {
+    if (!vigData.length) return;
+    sheetCards = vigToCards(); sheetTheme = null; buildSheet(); openModal('#clientModal'); fitPages();
+  });
   async function loadVigentes() {
     const sec = $('#vigentes');
     try {
@@ -1016,6 +1030,7 @@
       const vig = (d.list || []).filter((e) => ['activo', 'programado'].includes(e.status) && e.to >= today)
         .sort((a, b) => (a.status === b.status ? a.from.localeCompare(b.from) : a.status === 'activo' ? -1 : 1));
       sec.hidden = !vig.length;
+      vigData = vig;
       $('#vigList').innerHTML = vig.map((e) => {
         const p = S.products.find((x) => String(x.id) === String(e.sku)) || {};
         const off = e.original ? (e.original - e.special) / e.original : e.regular ? (e.regular - e.special) / e.regular : null;
@@ -1456,8 +1471,11 @@
   const proxied = (u) => (u ? IMG_PROXY + encodeURIComponent(u) : '');
 
   let sheetTheme = null;
+  let sheetCards = null; // null = las tarjetas de la propuesta; si no, las que se pasen (ej. vigentes)
+  const sheetList = () => sheetCards || S.cards;
   function buildSheet() {
-    const froms = S.cards.map((c) => c.from).sort(), tos = S.cards.map((c) => c.to).sort();
+    const list = sheetList();
+    const froms = list.map((c) => c.from).sort(), tos = list.map((c) => c.to).sort();
     const from = froms[0], to = tos[tos.length - 1];
     const key = sheetTheme || MONTH_THEME[parseYmd(from).getMonth()];
     const t = THEMES[key] || THEMES.ctd;
@@ -1482,13 +1500,13 @@
         </div></div>`;
     };
     const pages = [];
-    for (let i = 0; i < S.cards.length; i += PER_PAGE) {
+    for (let i = 0; i < list.length; i += PER_PAGE) {
       pages.push(`<div class="pgwrap"><section class="pg pg-list" style="${style}">
         <header class="pl-head">${scatter(816, 170, t.pat, t.pc, 16, 3 + i, 1, 2)}
           <div><p class="cv-k">Central Trade Distribution</p><h2>${esc(t.title)}</h2><p class="pl-date">${esc(rangeText(from, to))}</p></div>
           <span class="pl-logo"><img src="ctd-logo.png" alt="CTD"></span>
         </header>
-        <div class="pl-grid">${S.cards.slice(i, i + PER_PAGE).map(card).join('')}</div>
+        <div class="pl-grid">${list.slice(i, i + PER_PAGE).map(card).join('')}</div>
         ${foot}
       </section></div>`);
     }
@@ -1527,7 +1545,37 @@
   }
   window.addEventListener('resize', () => { if (!$('#clientModal').hidden) fitPages(); });
 
-  $('#clientBtn').addEventListener('click', () => { sheetTheme = null; buildSheet(); openModal('#clientModal'); fitPages(); });
+  $('#clientBtn').addEventListener('click', () => { sheetCards = null; sheetTheme = null; buildSheet(); openModal('#clientModal'); fitPages(); });
+
+  // Guardar como imagen (JPG por hoja): para WhatsApp o estados. En celular abre compartir.
+  async function renderPages() {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    await Promise.all($$('#clientSheet img').map((im) => (im.complete ? 0 : new Promise((r) => { im.onload = im.onerror = r; }))));
+    const out = [];
+    for (const pg of $$('#clientSheet .pg')) {
+      out.push(await window.html2canvas(pg, { scale: 2, useCORS: true, backgroundColor: null, width: 816, height: 1056, windowWidth: 816,
+        onclone: (d) => { d.querySelectorAll('.pg').forEach((x) => { x.style.transform = 'none'; }); } }));
+    }
+    return out;
+  }
+  $('#imgBtn').addEventListener('click', async () => {
+    const btn = $('#imgBtn'); btn.disabled = true; const label = btn.innerHTML; btn.textContent = 'Generando…';
+    try {
+      const canvases = await renderPages();
+      const blobs = await Promise.all(canvases.map((cv) => new Promise((r) => cv.toBlob(r, 'image/jpeg', 0.9))));
+      const list = sheetList(), d1 = parseYmd(list.map((c) => c.from).sort()[0]);
+      const base = `Especiales-CTD-${d1.getDate()}${MES[d1.getMonth()]}`;
+      const files = blobs.map((b, i) => new File([b], `${base}${blobs.length > 1 ? '-' + (i + 1) : ''}.jpg`, { type: 'image/jpeg' }));
+      if (window.matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files })) {
+        await navigator.share({ files, title: 'Especiales CTD' });
+      } else {
+        files.forEach((f) => download(f, f.name));
+        toast(files.length > 1 ? `${files.length} imágenes guardadas` : 'Imagen guardada');
+      }
+    } catch (e) { if (e && e.name !== 'AbortError') toast('No se pudo generar la imagen (' + (e.message || e) + ')'); }
+    finally { btn.disabled = false; btn.innerHTML = label; }
+  });
   $('#themeSel').addEventListener('change', (e) => { sheetTheme = e.target.value; buildSheet(); });
 
   $('#pdfBtn').addEventListener('click', async () => {
@@ -1550,7 +1598,7 @@
         if (i) doc.addPage();
         doc.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 612, 792);
       }
-      const froms = S.cards.map((c) => c.from).sort(), tos = S.cards.map((c) => c.to).sort();
+      const froms = sheetList().map((c) => c.from).sort(), tos = sheetList().map((c) => c.to).sort();
       const d1 = parseYmd(froms[0]), d2 = parseYmd(tos[tos.length - 1]);
       download(doc.output('blob'), `Especiales-CTD-${d1.getDate()}${MES[d1.getMonth()]}-${d2.getDate()}${MES[d2.getMonth()]}-${d2.getFullYear()}.pdf`);
       toast('PDF guardado');

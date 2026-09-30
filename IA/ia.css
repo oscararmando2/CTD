@@ -119,6 +119,9 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 
 /* Especiales vigentes */
 .vig{margin-top:30px}
+.vig-h{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.vig-h .lbl{margin:0}
+.vig-h .btn .ico,#imgBtn .ico{width:16px;height:16px}
 .vig-list{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin}
 .vig-c{flex:none;width:260px;display:flex;gap:12px;align-items:center;padding:10px;border-radius:18px;background:rgba(246,242,233,.05)}
 .vig-c.st-activo{box-shadow:inset 0 0 0 1.5px rgba(91,192,108,.45)}
