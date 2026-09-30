@@ -8,7 +8,7 @@
 //   tick       → aplica/regresa lo que toque hoy (respaldo de la tarea diaria)
 //   selftest   → solo sandbox: cambia y regresa el precio de un producto de prueba
 //   disconnect → revoca el permiso en Intuit y borra los tokens guardados
-const { cors, verifyUser, bearer, db, qb, qbQuery, qbItem, qbSetPrice, tick, log, todayCT, r2, same, QB_ENV, env, matchOne } = require('./_lib');
+const { RECIBO_ONLY, cors, verifyUser, bearer, db, qb, qbQuery, qbItem, qbSetPrice, tick, log, todayCT, r2, same, QB_ENV, env, matchOne } = require('./_lib');
 
 module.exports = async (req, res) => {
   cors(req, res);
@@ -17,6 +17,7 @@ module.exports = async (req, res) => {
   let who = null;
   try { who = await verifyUser(bearer(req)); } catch (e) { who = null; }
   if (!who) return res.status(401).json({ error: 'Sin acceso. Vuelve a entrar a la IA.' });
+  if (RECIBO_ONLY.includes(who)) return res.status(403).json({ error: 'Tu usuario solo tiene acceso a Recibo.' });
 
   let body = req.body;
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }
