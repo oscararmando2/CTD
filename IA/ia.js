@@ -2177,7 +2177,7 @@
   const RECIBO_ONLY = ['Jonathan'];
   const recOnly = () => RECIBO_ONLY.includes(S.who);
   const K_REC = 'ctdIA.recibo';
-  const R = { rec: store.get(K_REC, null), cur: 0, busy: false, lotes: null, cat: null, list: null, saveT: null };
+  const R = { rec: store.get(K_REC, null), cur: 0, busy: false, lotes: null, cat: null, list: null, saveT: null, sheet: null, lastDate: '' };
   const EST = { ok: 'Llegó', parcial: 'Llegó menos', no: 'No llegó', pendiente: 'Pendiente', '': 'Sin revisar' };
   const ymdOk = (s) => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
   const fmtLong = (s) => { if (!ymdOk(s)) return '—'; const d = parseYmd(s); return `${d.getDate()} ${MES[d.getMonth()]} ${d.getFullYear()}`; };
@@ -2378,16 +2378,12 @@
         <p class="rec-qty">Factura dice <b>${nfmt(l.cantidad)}</b> ${l.cantidad === 1 ? 'caja' : 'cajas'}${l.empaque ? ` <small>${esc(l.empaque)}</small>` : ''}</p>
 
         <div class="rec-date">
-          <label class="lbl" for="recDate">Caducidad <small>mes · día · año</small></label>
-          <div class="rec-dline">
-            <input id="recDate" class="rec-dinput" type="text" inputmode="numeric" autocomplete="off" enterkeyhint="done" placeholder="10 / 25 / 27" value="${esc(ymdToMask(l.caducidad))}">
-            <p id="recDatePrev" class="rec-dprev">${prev}</p>
-          </div>
-          ${opts.length || l.caducidad ? `<div class="chips">${opts.map(chip).join('')}${l.caducidad ? '<button type="button" class="chip" data-r="nodate">Quitar fecha</button>' : ''}</div>` : ''}
+          <p class="rec-dprev">${l.caducidad ? `Caducidad: ${prev.replace(/^Vence /, '')}${l.leida === l.caducidad ? ' <small>(de la factura)</small>' : ''}` : 'Caducidad: <span class="muted">se escoge al confirmar</span>'}</p>
+          <button type="button" class="btn-link" data-r="sheet">${l.caducidad ? 'cambiar' : 'poner ahora'}</button>
         </div>
 
         <div class="rec-acts">
-          <button type="button" class="rec-b ok${l.estado === 'ok' ? ' on' : ''}" data-r="ok">✓ Llegó completo<small>${l.caducidad ? 'vence ' + esc(fmtLong(l.caducidad)) : 'sin fecha'} · siguiente →</small></button>
+          <button type="button" class="rec-b ok${l.estado === 'ok' ? ' on' : ''}" data-r="ok">✓ Llegó completo<small>${l.caducidad ? 'vence ' + esc(fmtLong(l.caducidad)) + ' · siguiente →' : 'luego escoges mes y año'}</small></button>
           <button type="button" class="rec-b warn${l.estado === 'parcial' ? ' on' : ''}" data-r="parcial">Llegó menos</button>
           <button type="button" class="rec-b bad${l.estado === 'no' ? ' on' : ''}" data-r="no">✗ No llegó</button>
           <button type="button" class="rec-b${l.estado === 'pendiente' ? ' on' : ''}" data-r="pendiente">Pendiente</button>
@@ -2397,7 +2393,7 @@
           <span class="lbl">¿Cuántas llegaron?</span>
           <div class="qty"><button type="button" data-r="minus" aria-label="Menos">−</button><input id="recQty" type="number" inputmode="numeric" min="0" max="${l.cantidad}" value="${l.recibido ?? 0}"><button type="button" data-r="plus" aria-label="Más">+</button></div>
           <span class="status">de ${nfmt(l.cantidad)}</span>
-          <button type="button" class="btn btn-oro rec-listo" data-r="next">Listo, siguiente →</button>
+          <button type="button" class="btn btn-oro rec-listo" data-r="parcialok">Listo${l.caducidad ? ', siguiente →' : ' → fecha'}</button>
         </div>` : ''}
         ${l.nota || R.noteOpen ? `<label class="field"><span>Nota</span><input id="recNote" type="text" maxlength="300" placeholder="Dañado, regresó, llegó otro sabor…" value="${esc(l.nota)}"></label>`
           : '<button type="button" class="btn-link rec-addnote" data-r="note">+ Agregar nota</button>'}
@@ -2445,6 +2441,98 @@
     </div>`;
   }
 
+  /* ---- Caducidad en dos toques: hoja que sube desde abajo → mes + año.
+   * Si vence en 7 meses o menos (producto de vida corta) pide también el día; si no, se guarda el fin de mes. ---- */
+  const DIAS = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+  const SHORT_DAYS = 215; // ~7 meses
+  function openSheet(i, adv) {
+    R.sheet = { i, adv, m: null, y: null, day: false }; // siempre dos toques nuevos (la fecha anterior queda marcada como pista)
+    renderSheet();
+    requestAnimationFrame(() => $('#recSheet').classList.add('open'));
+  }
+  function closeSheet() {
+    const el = $('#recSheet');
+    el.classList.remove('open');
+    R.sheet = null;
+    setTimeout(() => { if (!R.sheet) el.hidden = true; }, 260);
+  }
+  function renderSheet() {
+    const el = $('#recSheet');
+    if (!R.sheet || !R.rec) { el.hidden = true; return; }
+    const sh = R.sheet, l = R.rec.lines[sh.i];
+    const now = new Date(), cy = now.getFullYear(), cm = now.getMonth() + 1;
+    const lots = (R.lotes && l.sku && R.lotes[skuKey(l.sku)]) ? Object.keys(R.lotes[skuKey(l.sku)].fechas) : [];
+    const hint = [l.caducidad, R.lastDate, l.leida, ...lots].filter(ymdOk);
+    const hintM = new Set(hint.map((d) => +d.slice(5, 7))), hintY = new Set(hint.map((d) => +d.slice(0, 4)));
+    const past = (y, m) => y < cy || (y === cy && m < cm);
+    const months = MES.map((n, k) => {
+      const m = k + 1, off = sh.y != null && past(sh.y, m);
+      return `<button type="button" class="mo${sh.m === m ? ' pick' : ''}${hintM.has(m) ? ' sug' : ''}" data-s="m" data-m="${m}"${off ? ' disabled' : ''}><b>${n.toUpperCase()}</b></button>`;
+    }).join('');
+    const years = [0, 1, 2, 3, 4].map((k) => {
+      const y = cy + k, off = sh.m != null && past(y, sh.m);
+      return `<button type="button" class="yr${sh.y === y ? ' pick' : ''}${hintY.has(y) ? ' sug' : ''}" data-s="y" data-y="${y}"${off ? ' disabled' : ''}><b>${y}</b></button>`;
+    }).join('');
+    let days = '';
+    if (sh.day) {
+      const last = new Date(sh.y, sh.m, 0).getDate();
+      const cur = l.caducidad && +l.caducidad.slice(0, 4) === sh.y && +l.caducidad.slice(5, 7) === sh.m ? +l.caducidad.slice(8) : 0;
+      days = `<p class="lbl sh-l">Vence pronto · ¿qué día de ${MES[sh.m - 1]} ${sh.y}?</p><div class="sh-strip" id="shDays">${Array.from({ length: last }, (_, k) => k + 1).map((d) => {
+        const wd = new Date(sh.y, sh.m - 1, d).getDay();
+        const off = sh.y === cy && sh.m === cm && d < now.getDate();
+        return `<button type="button" class="dy${d === cur ? ' pick' : ''}${wd === 0 || wd === 6 ? ' we' : ''}" data-s="d" data-d="${d}"${off ? ' disabled' : ''}><small>${DIAS[wd]}</small><b>${d}</b></button>`;
+      }).join('')}</div>`;
+    }
+    el.hidden = false;
+    el.innerHTML = `
+      <div class="sh-back" data-s="close"></div>
+      <div class="sh" role="dialog" aria-label="Fecha de caducidad">
+        <div class="sh-grab" aria-hidden="true"></div>
+        <div class="sh-h">
+          ${thumb(l, 'rec-th')}
+          <div><p class="hud">¿Cuándo vence?</p><p class="sh-prod">${esc(l.sku ? l.nombre : l.producto)}</p></div>
+        </div>
+        <div class="sh-months">${months}</div>
+        <div class="sh-years">${years}</div>
+        ${days}
+        <div class="sh-foot">
+          <button type="button" class="btn btn-ghost btn-sm" data-s="none">Sin fecha</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-s="close">Cancelar</button>
+        </div>
+      </div>`;
+    if (days) {
+      const ds = $('#shDays'), on = ds.querySelector('.pick') || ds.querySelector('button:not([disabled])');
+      if (on) ds.scrollLeft = Math.max(0, on.offsetLeft - 16);
+    }
+  }
+  function pickDate(ymdv) {
+    const s = R.sheet, l = R.rec.lines[s.i];
+    l.caducidad = ymdv;
+    if (ymdv) R.lastDate = ymdv;
+    touchRec();
+    closeSheet();
+    if (s.adv && s.i === R.cur) { R.noteOpen = false; nextCard(); }
+    renderRecibo(); toCard();
+  }
+  // Con mes y año: si vence en más de ~7 meses se guarda el fin de mes; si no, se pide el día
+  function monthYearReady() {
+    const sh = R.sheet;
+    if (sh.m == null || sh.y == null) { renderSheet(); return; }
+    const end = mkYmd(sh.y, sh.m, 0);
+    if (daysTo(end) > SHORT_DAYS) { pickDate(end); return; }
+    sh.day = true; renderSheet();
+  }
+  $('#recSheet').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-s]'); if (!b || !R.sheet || b.disabled) return;
+    const a = b.dataset.s, sh = R.sheet;
+    if (a === 'close') { closeSheet(); renderRecibo(); return; }
+    if (a === 'none') { pickDate(''); return; }
+    if (a === 'm') { sh.m = +b.dataset.m; sh.day = false; monthYearReady(); return; }
+    if (a === 'y') { sh.y = +b.dataset.y; sh.day = false; monthYearReady(); return; }
+    if (a === 'd') pickDate(mkYmd(sh.y, sh.m, +b.dataset.d));
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && R.sheet) { closeSheet(); renderRecibo(); } });
+
   // Lleva la vista al principio de la tarjeta (debajo de la barra de arriba)
   function toCard() {
     const c = $('#recWork .rec-n') || $('#recWork');
@@ -2454,7 +2542,7 @@
   $('#recWork').addEventListener('click', async (e) => {
     const b = e.target.closest('[data-r]'); if (!b || !R.rec) return;
     const a = b.dataset.r, L = R.rec.lines, l = L[R.cur];
-    if (a === 'close') { R.rec = null; store.del(K_REC); renderRecibo(); window.scrollTo({ top: 0 }); return; }
+    if (a === 'close') { if (R.sheet) closeSheet(); R.rec = null; store.del(K_REC); renderRecibo(); window.scrollTo({ top: 0 }); return; }
     if (a === 'go') { R.noteOpen = false; R.cur = Number(b.dataset.i); renderRecibo(); toCard(); return; }
     if (a === 'prev') { R.noteOpen = false; R.cur = Math.max(0, R.cur - 1); renderRecibo(); toCard(); return; }
     if (a === 'next') { R.noteOpen = false; nextCard(); renderRecibo(); toCard(); return; }
@@ -2472,7 +2560,9 @@
     }
     if (!l) return;
     const go = () => { R.noteOpen = false; nextCard(); renderRecibo(); toCard(); };
-    if (a === 'ok') { setEstado(R.cur, 'ok'); go(); return; }
+    if (a === 'ok') { setEstado(R.cur, 'ok'); if (l.caducidad) go(); else openSheet(R.cur, true); return; }
+    if (a === 'parcialok') { if (l.caducidad) go(); else openSheet(R.cur, true); return; }
+    if (a === 'sheet') { openSheet(R.cur, false); return; }
     if (a === 'parcial') { setEstado(R.cur, 'parcial'); renderRecibo(); return; }
     if (a === 'no' || a === 'pendiente') { setEstado(R.cur, a); l.caducidad = ''; go(); return; }
     if (a === 'minus' || a === 'plus') { l.recibido = Math.max(0, Math.min(l.cantidad, (l.recibido || 0) + (a === 'plus' ? 1 : -1))); touchRec(); renderRecibo(); return; }
