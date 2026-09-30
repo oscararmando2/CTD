@@ -108,7 +108,8 @@
     </section>
 
     <section id="vigentes" class="vig" hidden>
-      <p class="lbl">Vigentes ahora · <span id="vigCount"></span> en QuickBooks</p>
+      <div class="vig-h"><p class="lbl">Vigentes ahora · <span id="vigCount"></span> en QuickBooks</p>
+        <button id="vigPdf" class="btn btn-ghost btn-sm" type="button"><i data-icon="printer"></i>PDF / imagen</button></div>
       <div id="vigList" class="vig-list"></div>
     </section>
     <section id="summary" class="kpis" hidden></section>
@@ -288,6 +289,7 @@
       <h3>Vista para clientes <small>(sin costos ni márgenes)</small></h3>
       <div>
         <label class="theme-pick"><span class="sr-only">Temporada</span><select id="themeSel" aria-label="Temporada"></select></label>
+        <button id="imgBtn" class="btn btn-ghost btn-sm" type="button"><i data-icon="download"></i>Guardar imagen</button>
         <button id="pdfBtn" class="btn btn-oro btn-sm" type="button"><i data-icon="download"></i>Guardar PDF</button>
         <button class="icon-btn" data-close type="button" aria-label="Cerrar"><i data-icon="x"></i></button>
       </div>
