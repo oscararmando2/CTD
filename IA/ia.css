@@ -596,3 +596,29 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
   .rec-acts{grid-template-columns:2fr 1fr 1fr 1fr}
   .rec-b.ok{grid-column:auto}
 }
+/* Recibo · tarjeta visual (foto, fecha rápida) */
+.rec-prod{display:flex;gap:16px;align-items:center}
+.rec-ph{flex:none;width:112px;height:112px;border-radius:22px;background:#F4EFE5;display:grid;place-items:center;overflow:hidden}
+.rec-ph img{width:100%;height:100%;object-fit:contain;padding:8px;mix-blend-mode:multiply}
+.rec-pinfo{min-width:0;flex:1}
+.rec-pinfo .meta{margin-top:6px}
+.rec-qty small{font-family:var(--mono);font-size:12px;color:var(--muted-2);margin-left:6px}
+.rec-date .lbl small{letter-spacing:.08em;text-transform:none;font-family:var(--body);margin-left:6px;color:var(--muted-2)}
+.rec-dline{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.rec-dinput{width:210px;max-width:100%;background:rgba(246,242,233,.06);border:0;border-radius:16px;padding:14px 16px;font-family:var(--display);font-weight:800;font-size:28px;letter-spacing:.02em;color:var(--hueso);outline:none;color-scheme:dark}
+.rec-dinput::placeholder{color:rgba(246,242,233,.22)}
+.rec-dinput:focus{box-shadow:inset 0 0 0 2px var(--oro);background:rgba(246,242,233,.09)}
+.rec-dprev{margin:0;font-size:15px;color:var(--muted)}
+.rec-dprev b{color:var(--hueso)}
+.rec-dprev .bad,.rec-dprev .warn{font-weight:700}
+.rec-dprev .bad{color:#ff9a88}.rec-dprev .warn{color:var(--oro)}
+.rec-b.ok{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.rec-b.ok small{font-family:var(--body);font-weight:500;font-size:13px;opacity:.85;letter-spacing:0}
+.rec-listo{margin-left:auto}
+.rec-addnote{align-self:flex-start;font-size:14px}
+.rec-th{flex:none;width:30px;height:30px;border-radius:8px;background:#F4EFE5;overflow:hidden;display:grid;place-items:center}
+.rec-th img{width:100%;height:100%;object-fit:contain;padding:2px;mix-blend-mode:multiply}
+@media (max-width:420px){
+  .rec-ph{width:92px;height:92px;border-radius:18px}
+  .rec-listo{margin-left:0;width:100%}
+}

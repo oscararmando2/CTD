@@ -244,8 +244,17 @@ module.exports = async (req, res) => {
         await db('DELETE', 'costeoFotos/' + String(body.qbId || ''));
         return res.json({ ok: true });
       }
+      case 'catalogo_save': {
+        // Copia del catálogo de InSitu (con fotos) que sube quien sincroniza, para Recibo en el teléfono de bodega
+        const items = (Array.isArray(body.items) ? body.items : []).slice(0, 5000).map((p) => ({ id: str(p.id, 40), name: str(p.name, 160), upc: str(p.upc, 40), photo: /^https:\/\//.test(p.photo || '') ? str(p.photo, 500) : '' })).filter((p) => p.id && p.name);
+        if (!items.length) return res.status(400).json({ error: 'Catálogo vacío' });
+        await db('PUT', 'catalogo', { at: Date.now(), by: who, items });
+        return res.json({ ok: true, n: items.length });
+      }
       case 'catalogo': {
-        // Lista corta de productos de QuickBooks (el Id es el mismo código que en InSitu) para emparejar en Recibo
+        // Primero la copia de InSitu (trae fotos); si no hay, la lista de QuickBooks (el Id es el mismo código que en InSitu)
+        const snap = await db('GET', 'catalogo');
+        if (snap && Array.isArray(snap.items) && snap.items.length) return res.json({ items: snap.items, at: snap.at });
         const out = [];
         for (let start = 1; start < 6000; start += 1000) {
           const r = await qbQuery(`select Id, Name, Sku, Active from Item startposition ${start} maxresults 1000`);
@@ -273,6 +282,7 @@ module.exports = async (req, res) => {
             empaque: str(l.empaque, 40), unidades_por_caja: Number.isInteger(l.unidades_por_caja) ? l.unidades_por_caja : null,
             costo_caja: num(l.costo_caja), total_linea: num(l.total_linea),
             sku: str(l.sku, 40), nombre: str(l.nombre, 160), how: str(l.how, 40),
+            photo: /^https:\/\//.test(l.photo || '') ? str(l.photo, 500) : '', upcSis: str(l.upcSis, 40),
             estado: ESTADOS.includes(l.estado) ? l.estado : '', recibido: num(l.recibido),
             caducidad: ymdOk(l.caducidad), leida: ymdOk(l.leida), nota: str(l.nota, 300),
           })),
