@@ -1781,7 +1781,7 @@
    * proveedor aprendido, UPC o nombre) → ves costo antes/ahora, precio y margen, editables →
    * "Aplicar" cambia precio/costo y da de alta nuevos en QuickBooks (InSitu los recibe cada hora). */
   const COS_API = 'https://ctd-seven.vercel.app/api/costeo';
-  const C = { head: null, lines: [], saved: false, applied: false, results: [], dup: null, busy: false, recibo: null, reciboNota: '', reciboBy: '' };
+  const C = { head: null, lines: [], saved: false, applied: false, results: [], dup: null, busy: false, recibo: null, reciboNota: '', reciboBy: '', bodega: null };
   const CS = Object.assign({ target: 20, round: true }, store.get('ctdIA.costeoSettings', {}));
   delete CS.down; // si el costo baja, el precio se queda (decisión de Oscar)
 
@@ -1830,7 +1830,7 @@
       for (const f of files) images = images.concat(await fileToJpegs(f));
       renderCosteo(`Claude está leyendo la factura (${images.length} ${images.length === 1 ? 'hoja' : 'hojas'})… puede tardar 1 minuto`);
       const d = await cosCall('parse', { images: images.slice(0, 12) });
-      C.recibo = null; C.reciboNota = '';
+      C.recibo = null; C.reciboNota = ''; C.bodega = null;
       await loadInvoice(d);
     } catch (err) {
       toast('No se pudo leer: ' + err.message);
@@ -1931,6 +1931,9 @@
     }
     C.lines.forEach(decide);
     try { C.dup = (await cosCall('dup', { proveedor: d.proveedor, factura: d.factura })).dup; } catch (e) { /* ok */ }
+    if (!C.recibo && d.factura) {
+      try { const r = (await cosCall('recibo_find', { proveedor: d.proveedor, factura: d.factura })).recibo; if (r && r.status === 'revisado') attachRecibo(r); } catch (e) { /* ok */ }
+    }
     renderCosteo();
     window.scrollTo({ top: $('#cosHead').offsetTop - 80, behavior: 'smooth' });
   }
@@ -1954,6 +1957,7 @@
       <div class="cos-h1"><div><p class="hud">Factura</p><h2>${esc(h.proveedor || 'Proveedor')}</h2>
         <p class="status">#${esc(h.factura || '—')} · ${esc(h.fecha || 'sin fecha')} · ${C.lines.length} renglones · total ${h.total_factura != null ? money(h.total_factura) : '—'}${h.flete ? ` · flete ${money(h.flete)}` : ''}${h.creditos ? ` · créditos ${money(h.creditos)}` : ''}</p></div>${cuadra}</div>
       ${C.dup ? `<p class="qb-warn">⚠ Esta factura ya se guardó el ${fmtTs(C.dup.ts)} por ${esc(C.dup.by || '')}. Revisa antes de aplicar otra vez.</p>` : ''}
+      ${C.bodega && !C.recibo ? `<div class="cos-bod"><p class="status">Revisada en bodega por <b>${esc(C.bodega.by || '')}</b> · ${fmtTs(C.bodega.at)}${C.bodega.nota ? ' · Nota: <b>' + esc(C.bodega.nota) + '</b>' : ''}</p>${(C.bodega.dif || []).length ? `<ul class="rec-falt">${C.bodega.dif.map((x) => `<li><b>${esc(EST[x.estado] || x.estado)}</b> · ${esc(x.producto)}${x.estado === 'parcial' ? ` — llegaron ${nfmt(x.recibido || 0)} de ${nfmt(x.cantidad)}` : ''}${x.nota ? ` · <i>${esc(x.nota)}</i>` : ''}</li>`).join('')}</ul>` : '<p class="status">Todo llegó completo.</p>'}</div>` : ''}
       ${C.recibo ? `<p class="status">Revisada en bodega${C.reciboBy ? ' por ' + esc(C.reciboBy) : ''}.${C.reciboNota ? ' Nota: <b>' + esc(C.reciboNota) + '</b>' : ''}</p>` : ''}
       ${C.applied ? '<p class="qb-msg ok">● Cambios aplicados en QuickBooks. InSitu los recibe en su siguiente sincronización (máx. 1 hora).</p>' : ''}`;
     const up = C.lines.filter((l) => !l.nuevo && l.costo_caja > (l.costo_antes || 0) + 0.005).length;
@@ -2082,11 +2086,14 @@
   });
 
   async function saveCosteo(silent) {
-    const f = { ...C.head, lines: C.lines.map((l) => ({ producto: l.producto, upc: l.upc, codigo_proveedor: l.codigo_proveedor, cantidad: l.cantidad, empaque: l.empaque, costo_caja: l.costo_caja, sku: l.sku || '', qbId: (l.qb && l.qb.qbId) || l.qbId || '', nombre: l.nombre || (l.alta && l.alta.name) || '', costo_antes: l.costo_antes ?? null, precio_antes: l.precio_antes ?? null, precio_nuevo: l.precio_nuevo, aplicado: !!(l.result && l.result.ok), nuevo: !!l.nuevo })) };
+    const f = { ...C.head, lines: C.lines.map((l) => ({ producto: l.producto, upc: l.upc, codigo_proveedor: l.codigo_proveedor, cantidad: l.cantidad, empaque: l.empaque, costo_caja: l.costo_caja, sku: l.sku || '', qbId: (l.qb && l.qb.qbId) || l.qbId || '', nombre: l.nombre || (l.alta && l.alta.name) || '', costo_antes: l.costo_antes ?? null, precio_antes: l.precio_antes ?? null, precio_nuevo: l.precio_nuevo, aplicado: !!(l.result && l.result.ok), nuevo: !!l.nuevo, caducidad: l.caducidad || '' })) };
     try {
       const d = await cosCall('save', { factura: f, results: C.results }); C.saved = true;
       if (C.recibo) { try { await cosCall('recibo_costeado', { id: C.recibo, costeoId: d.id }); } catch (e) { /* queda en la lista */ } C.recibo = null; loadCosPend(true); }
-      if (!silent) toast('Factura guardada · ya la ven todos'); loadCosRecent();
+      const st = d.recibo && d.recibo.status;
+      const BOD = RECIBO_ONLY[0];
+      toast(st === 'enviado' ? `Factura guardada · le llegó a ${BOD} para revisar` : st === 'borrador' ? `Factura guardada · ${BOD} la está revisando` : 'Factura guardada ✓');
+      loadCosRecent();
     }
     catch (e) { toast('No se pudo guardar: ' + e.message); }
     renderCosteo();
@@ -2097,7 +2104,9 @@
     const box = $('#cosRecent');
     try {
       const d = await cosCall('list');
-      box.innerHTML = d.list.length ? d.list.map((f) => `<div class="hist-item" data-cid="${esc(f.id)}"><div class="hi-txt"><b>${esc(f.proveedor)} · #${esc(f.factura)}</b>${esc(f.fecha || '')} · ${f.lines} renglones · ${f.total_factura != null ? money(f.total_factura) : ''} · ${esc(f.by || '')} · ${fmtTs(f.ts)}</div><button class="btn btn-ghost btn-sm" data-c="open" type="button">Ver</button></div>`).join('')
+      const bod = (f) => f.bodega ? (f.bodega.dif ? `<span class="pill warn">bodega: ${f.bodega.dif} ${f.bodega.dif === 1 ? 'diferencia' : 'diferencias'}</span>` : '<span class="pill ok">bodega: todo llegó</span>')
+        : f.bodegaStatus === 'borrador' ? `<span class="pill">bodega: por revisar</span>` : '';
+      box.innerHTML = d.list.length ? d.list.map((f) => `<div class="hist-item" data-cid="${esc(f.id)}"><div class="hi-txt"><b>${esc(f.proveedor)} · #${esc(f.factura)}</b>${esc(f.fecha || '')} · ${f.lines} renglones · ${f.total_factura != null ? money(f.total_factura) : ''} · ${esc(f.by || '')} · ${fmtTs(f.ts)} ${bod(f)}</div><button class="btn btn-ghost btn-sm" data-c="open" type="button">Ver</button></div>`).join('')
         : '<p class="data-info">Todavía no hay facturas guardadas.</p>';
     } catch (e) { box.innerHTML = `<p class="data-info">${esc(e.message)}</p>`; }
   }
@@ -2108,10 +2117,31 @@
       C.head = { ...f, dudas: [] };
       C.lines = (f.lines || []).map((l, i) => ({ i, ...l, photo: (S.products.find((p) => String(p.id) === l.sku) || {}).photo, aplicar: false, result: l.aplicado ? { ok: true } : null, alta: l.nuevo ? { name: l.nombre, sku: l.upc, photo: '' } : null }));
       C.saved = true; C.applied = true; C.dup = null; C.recibo = null; C.reciboNota = '';
+      C.bodega = f.bodega || null;
       renderCosteo();
       window.scrollTo({ top: $('#cosHead').offsetTop - 80, behavior: 'smooth' });
     } catch (err) { toast(err.message); }
   });
+
+  // Pega lo que revisó bodega a los renglones de Costeo (por posición, o por código / nombre si se subieron por separado)
+  function attachRecibo(r) {
+    const L = r.lines || [];
+    C.recibo = r.id; C.reciboNota = r.nota || ''; C.reciboBy = r.updatedBy || r.by || '';
+    const used = new Set();
+    const find = (l) => {
+      const k = L.findIndex((x, j) => !used.has(j) && ((x.codigo_proveedor && x.codigo_proveedor === l.codigo_proveedor) || normTxt(x.producto) === normTxt(l.producto)));
+      return k >= 0 ? k : (L[l.i] && !used.has(l.i) && normTxt(L[l.i].producto) === normTxt(l.producto) ? l.i : -1);
+    };
+    C.lines.forEach((l) => {
+      const k = find(l); if (k < 0) return;
+      used.add(k);
+      const x = L[k];
+      l.rec = { estado: x.estado || '', recibido: x.recibido, caducidad: x.caducidad, nota: x.nota };
+      // Bodega ya lo ligó a un producto y aquí no se encontró: se usa el de bodega
+      const p = (l.nuevo || l.review) && x.sku && !/revisa/.test(x.how || '') ? S.products.find((q) => String(q.id) === String(x.sku)) : null;
+      if (p) { Object.assign(l, { nuevo: false, sku: String(p.id), nombre: p.name, photo: p.photo, pack: p.pack, costo_antes: r2(p.cost || 0), precio_antes: r2(p.price || 0), how: 'bodega', review: false }); delete l.alta; decide(l); }
+    });
+  }
 
   // ---- Facturas que ya revisó bodega (Recibo) → se costean aquí con lo que llegó y sus caducidades ----
   let cosPendAt = 0;
@@ -2135,14 +2165,7 @@
       const L = r.lines || [];
       await loadInvoice({ proveedor: r.proveedor, factura: r.factura, fecha: r.fecha, ...(r.head || {}), dudas: [],
         items: L.map((l) => ({ upc: l.upc, codigo_proveedor: l.codigo_proveedor, producto: l.producto, cantidad: l.cantidad, empaque: l.empaque, unidades_por_caja: l.unidades_por_caja, costo_caja: l.costo_caja, total_linea: l.total_linea })) });
-      C.recibo = r.id; C.reciboNota = r.nota || ''; C.reciboBy = r.by || '';
-      C.lines.forEach((l) => {
-        const x = L[l.i]; if (!x) return;
-        l.rec = { estado: x.estado || '', recibido: x.recibido, caducidad: x.caducidad, nota: x.nota };
-        // Bodega ya lo ligó a un producto y aquí no se encontró: se usa el de bodega
-        const p = (l.nuevo || l.review) && x.sku && !/revisa/.test(x.how || '') ? S.products.find((q) => String(q.id) === String(x.sku)) : null;
-        if (p) { Object.assign(l, { nuevo: false, sku: String(p.id), nombre: p.name, photo: p.photo, pack: p.pack, costo_antes: r2(p.cost || 0), precio_antes: r2(p.price || 0), how: 'bodega', review: false }); delete l.alta; decide(l); }
-      });
+      attachRecibo(r);
       renderCosteo();
     } catch (err) { toast(err.message); C.busy = false; renderCosteo(); }
   });
@@ -2241,6 +2264,26 @@
   });
 
   async function startRecibo(d) {
+    // ¿Ya existe esta factura (subida en Costeo o por otro)? Se abre esa en vez de duplicarla
+    try {
+      const ex = (await cosCall('recibo_find', { proveedor: d.proveedor, factura: d.factura })).recibo;
+      if (ex && ex.status !== 'borrador') { toast(`Esta factura ya se revisó (${fmtTs(ex.doneAt || ex.updated)} · ${ex.updatedBy || ex.by}).`); R.list = null; return; }
+      if (ex) {
+        await loadLotes(true);
+        const list = await recProducts();
+        R.rec = { ...ex, lines: ex.lines || [] };
+        (d.items || []).forEach((it) => { // fechas escritas a mano que leyó Claude en esta foto
+          if (!ymdOk(it.caducidad)) return;
+          const l = R.rec.lines.find((x) => (x.codigo_proveedor && x.codigo_proveedor === it.codigo_proveedor) || normTxt(x.producto) === normTxt(it.producto));
+          if (l) { l.leida = it.caducidad; if (!l.caducidad) l.caducidad = it.caducidad; }
+        });
+        R.rec.lines.forEach((l) => { if (l.sku && !l.photo) { const p = list.find((x) => String(x.id) === String(l.sku)); if (p) { l.photo = p.photo || ''; l.upcSis = l.upcSis || p.upc || ''; } } });
+        R.cur = 0; store.set(K_REC, R.rec);
+        toast('Esta factura ya estaba en el sistema · se abrió para revisar');
+        renderRecibo(); window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+    } catch (e) { /* sigue como nueva */ }
     let vmap = {};
     try { vmap = (await cosCall('map', { proveedor: d.proveedor })).map || {}; } catch (e) { /* sin memoria */ }
     const [list] = await Promise.all([recProducts(), loadLotes(true)]);
@@ -2275,6 +2318,7 @@
     R.rec.id = d.id; R.rec.status = d.status;
     store.set(K_REC, R.rec);
     R.list = null;
+    return d;
   }
 
   const lineDone = (l) => !!l.estado;
@@ -2551,8 +2595,8 @@
       if (pend && !confirm(`Hay ${pend} productos sin revisar. ¿Mandar a Costeo de todos modos? (quedan como "sin revisar")`)) return;
       b.disabled = true;
       try {
-        await saveRecibo(true);
-        toast('Recibo listo ✓ · ya lo ve Costeo');
+        const st = await saveRecibo(true);
+        toast(st && st.costeoId ? 'Recibo listo ✓ · ya estaba costeada: le avisamos a Costeo las diferencias' : 'Recibo listo ✓ · ya lo ve Costeo');
         R.rec = null; store.del(K_REC); await loadLotes(true);
       } catch (err) { toast('No se pudo guardar: ' + err.message); b.disabled = false; return; }
       renderRecibo(); window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2579,12 +2623,14 @@
       box.innerHTML = '<p class="data-info">Cargando…</p>';
       try { R.list = (await cosCall('recibo_list')).list || []; } catch (e) { box.innerHTML = `<p class="data-info">${esc(e.message)}</p>`; return; }
     }
-    const ST = { borrador: 'en revisión', revisado: 'en Costeo', costeado: 'costeado' };
+    const ST = { borrador: 'por revisar', revisado: 'en Costeo', costeado: 'costeado' };
+    const order = (f) => (f.status === 'borrador' ? 0 : 1);
+    R.list.sort((a, b) => order(a) - order(b) || (b.updated || b.ts) - (a.updated || a.ts));
     box.innerHTML = R.list.length ? R.list.map((f) => `
       <div class="hist-item" data-rid="${esc(f.id)}"><div class="hi-txt"><b>${esc(f.proveedor)} · #${esc(f.factura)}</b>
-        ${f.lines} productos${f.parcial ? ` · ${f.parcial} llegaron menos` : ''}${f.no ? ` · ${f.no} no llegaron` : ''}${f.pendiente ? ` · ${f.pendiente} pendientes` : ''} · ${f.fechas} con fecha · ${esc(f.by || '')} · ${fmtTs(f.updated || f.ts)}</div>
+        ${f.lines} productos${f.parcial ? ` · ${f.parcial} llegaron menos` : ''}${f.no ? ` · ${f.no} no llegaron` : ''}${f.pendiente ? ` · ${f.pendiente} pendientes` : ''} · ${f.fechas} con fecha · ${f.origen === 'costeo' ? 'subió ' + esc(f.by || '') + ' en Costeo' : esc(f.by || '')} · ${fmtTs(f.updated || f.ts)}</div>
         <span class="st${f.status === 'costeado' ? ' sent' : ''}">${ST[f.status] || f.status}</span>
-        ${f.status !== 'costeado' ? '<button class="btn btn-ghost btn-sm" data-c="open" type="button">Abrir</button>' : ''}</div>`).join('')
+        ${f.status !== 'costeado' ? `<button class="btn ${f.status === 'borrador' ? 'btn-oro' : 'btn-ghost'} btn-sm" data-c="open" type="button">${f.status === 'borrador' ? 'Revisar' : 'Abrir'}</button>` : ''}</div>`).join('')
       : '<p class="data-info">Todavía no hay recibos.</p>';
   }
   $('#recRecent').addEventListener('click', async (e) => {

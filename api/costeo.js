@@ -214,6 +214,7 @@ module.exports = async (req, res) => {
             producto: str(l.producto, 160), upc: str(l.upc, 40), codigo_proveedor: str(l.codigo_proveedor, 40), cantidad: num(l.cantidad),
             empaque: str(l.empaque, 40), costo_caja: num(l.costo_caja), sku: str(l.sku, 40), qbId: str(l.qbId, 40), nombre: str(l.nombre, 160),
             costo_antes: num(l.costo_antes), precio_antes: num(l.precio_antes), precio_nuevo: num(l.precio_nuevo), aplicado: !!l.aplicado, nuevo: !!l.nuevo,
+            caducidad: ymdOk(l.caducidad),
           })),
           applied: Array.isArray(body.results) ? body.results.slice(0, 300) : [],
           by: who, ts: Date.now(),
@@ -224,11 +225,34 @@ module.exports = async (req, res) => {
         const learn = {};
         rec.lines.forEach((l) => { if (l.codigo_proveedor && l.sku) learn[codeKey(l.codigo_proveedor)] = { sku: l.sku, nombre: l.nombre }; });
         if (Object.keys(learn).length) await db('PATCH', 'costeoMap/' + vk, learn);
-        return res.json({ id });
+        // Liga con Recibo (misma factura = proveedor + número): si bodega ya la revisó queda costeada;
+        // si no existe, se le crea a bodega para que la revise y confirme
+        let recibo = await findRecibo(key), recStatus = 'enviado';
+        if (recibo) {
+          recStatus = recibo.status;
+          if (recibo.status === 'revisado') { await db('PATCH', 'recibos/' + recibo.id, { status: 'costeado', costeoId: id, costeadoBy: who, costeadoAt: Date.now() }); recStatus = 'costeado'; }
+          else if (recibo.status === 'borrador') await db('PATCH', 'recibos/' + recibo.id, { costeoId: id });
+        } else {
+          const rid = Date.now().toString(36) + crypto.randomBytes(3).toString('hex');
+          recibo = {
+            id: rid, key, proveedor: rec.proveedor, factura: rec.factura, fecha: rec.fecha, origen: 'costeo', costeoId: id,
+            head: { total_factura: rec.total_factura, total_calculado: rec.total_calculado, cuadra: rec.cuadra, flete: rec.flete, creditos: rec.creditos, otros_cargos: rec.otros_cargos },
+            lines: rec.lines.map((l) => ({ producto: l.producto, upc: l.upc, codigo_proveedor: l.codigo_proveedor, cantidad: l.cantidad, empaque: l.empaque, costo_caja: l.costo_caja,
+              sku: l.sku || (l.nuevo && l.aplicado ? l.qbId : ''), nombre: l.nombre, how: 'costeo', estado: '', recibido: null, caducidad: l.caducidad || '', leida: l.caducidad || '', nota: '' })),
+            nota: '', status: 'borrador', by: who, ts: Date.now(), updated: Date.now(), updatedBy: who, doneAt: null,
+          };
+          await db('PUT', 'recibos/' + rid, recibo);
+        }
+        // recStatus: 'enviado' (se le mandó a bodega), 'borrador' (bodega la está revisando), 'costeado' (bodega ya la había revisado)
+        return res.json({ id, recibo: { id: recibo.id, status: recStatus } });
       }
       case 'list': {
         const all = (await db('GET', 'costeoFacturas')) || {};
-        const list = Object.entries(all).map(([id, f]) => ({ id, proveedor: f.proveedor, factura: f.factura, fecha: f.fecha, total_factura: f.total_factura, lines: (f.lines || []).length, by: f.by, ts: f.ts, cuadra: f.cuadra }))
+        const recs = (await db('GET', 'recibos')) || {};
+        const recBy = {};
+        Object.values(recs).forEach((r) => { if (r.costeoId) recBy[r.costeoId] = r.status; });
+        const list = Object.entries(all).map(([id, f]) => ({ id, proveedor: f.proveedor, factura: f.factura, fecha: f.fecha, total_factura: f.total_factura, lines: (f.lines || []).length, by: f.by, ts: f.ts, cuadra: f.cuadra,
+          bodega: f.bodega ? { dif: (f.bodega.dif || []).length, by: f.bodega.by } : null, bodegaStatus: recBy[id] || null }))
           .sort((a, b) => b.ts - a.ts).slice(0, 40);
         return res.json({ list });
       }
@@ -272,8 +296,16 @@ module.exports = async (req, res) => {
         const final = body.final === true || (prev && prev.status === 'revisado');
         const now = Date.now();
         const h = r.head || {};
+        const rkey = vendorKey(r.proveedor) + '|' + codeKey(r.factura);
+        // ¿Ya se costeó esta factura? (subida primero en Costeo)
+        let costeoId = (prev && prev.costeoId) || '';
+        if (!costeoId && r.factura) {
+          const all = (await db('GET', 'costeoFacturas')) || {};
+          const hit = Object.entries(all).find(([, f]) => f.key === rkey);
+          if (hit) costeoId = hit[0];
+        }
         const rec = {
-          id, key: vendorKey(r.proveedor) + '|' + codeKey(r.factura),
+          id, key: rkey, origen: (prev && prev.origen) || 'bodega', costeoId,
           proveedor: str(r.proveedor, 120), factura: str(r.factura, 60), fecha: str(r.fecha, 10),
           head: { total_factura: num(h.total_factura), total_calculado: num(h.total_calculado), mercancia: num(h.mercancia), cuadra: h.cuadra ?? null,
             flete: num(h.flete), creditos: num(h.creditos), otros_cargos: num(h.otros_cargos) },
@@ -287,13 +319,18 @@ module.exports = async (req, res) => {
             caducidad: ymdOk(l.caducidad), leida: ymdOk(l.leida), nota: str(l.nota, 300),
           })),
           nota: str(r.nota, 1500),
-          status: final ? 'revisado' : 'borrador',
+          status: final ? (costeoId ? 'costeado' : 'revisado') : 'borrador',
           by: (prev && prev.by) || who, ts: (prev && prev.ts) || now, updated: now, updatedBy: who,
           doneAt: final ? ((prev && prev.doneAt) || now) : null,
         };
         await db('PUT', 'recibos/' + id, rec);
         if (final) await syncLotes(id, prev, rec);
-        return res.json({ id, status: rec.status });
+        if (final && costeoId) {
+          // Aviso para Costeo: lo que bodega encontró distinto a la factura
+          const dif = rec.lines.filter((l) => l.estado !== 'ok' || l.nota).map((l) => ({ producto: l.nombre || l.producto, estado: l.estado || 'sin revisar', recibido: l.recibido, cantidad: l.cantidad, nota: l.nota }));
+          await db('PATCH', 'costeoFacturas/' + costeoId, { bodega: { reciboId: id, by: rec.updatedBy, at: now, nota: rec.nota, dif } });
+        }
+        return res.json({ id, status: rec.status, costeoId });
       }
       case 'recibo_list': {
         const all = (await db('GET', 'recibos')) || {};
@@ -302,9 +339,13 @@ module.exports = async (req, res) => {
           const c = (e) => L.filter((l) => l.estado === e).length;
           return { id: f.id, proveedor: f.proveedor, factura: f.factura, fecha: f.fecha, status: f.status, by: f.by, ts: f.ts, updated: f.updated, doneAt: f.doneAt || null,
             lines: L.length, ok: c('ok'), parcial: c('parcial'), no: c('no'), pendiente: c('pendiente'), sinRevisar: c(''),
-            fechas: L.filter((l) => l.caducidad).length, costeoId: f.costeoId || null };
+            fechas: L.filter((l) => l.caducidad).length, costeoId: f.costeoId || null, origen: f.origen || 'bodega', updatedBy: f.updatedBy || '' };
         }).sort((a, b) => (b.updated || b.ts) - (a.updated || a.ts)).slice(0, 60);
         return res.json({ list });
+      }
+      case 'recibo_find': {
+        const r = await findRecibo(vendorKey(body.proveedor) + '|' + codeKey(body.factura));
+        return res.json({ recibo: r || null });
       }
       case 'recibo_get': {
         const f = await db('GET', 'recibos/' + codeKey(body.id));
@@ -341,9 +382,15 @@ module.exports = async (req, res) => {
   }
 };
 
-const RECIBO_ACTIONS = ['parse', 'map', 'lookup', 'catalogo', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
+const RECIBO_ACTIONS = ['parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
 const ESTADOS = ['', 'ok', 'parcial', 'no', 'pendiente'];
 const ymdOk = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '');
+
+async function findRecibo(key) {
+  if (!key || /\|$/.test(key)) return null;
+  const all = (await db('GET', 'recibos')) || {};
+  return Object.values(all).filter((r) => r.key === key).sort((a, b) => (b.updated || b.ts) - (a.updated || a.ts))[0] || null;
+}
 
 // Lotes = producto + fecha de caducidad. Cada recibo deja su entrada (lotes/{sku}/f/{fecha}/e/{recibo_renglón}):
 // la misma fecha suma, otra fecha es otro lote. Al volver a guardar un recibo se reemplazan sus entradas.
