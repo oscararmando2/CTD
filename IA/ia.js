@@ -1971,8 +1971,11 @@
     $('#cosList').innerHTML = C.lines.map(lineCosHTML).join('');
   }
 
+  // Foto: la del producto; si es nuevo, la del link que se escribió para darlo de alta
+  const cosPhoto = (l) => (l.nuevo ? (l.alta && /^https?:\/\//.test(l.alta.photo || '') ? l.alta.photo.trim() : '') : l.photo);
+  const cosImg = (src) => (src ? `<img src="${esc(src)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '');
   function lineCosHTML(l) {
-    const img = l.photo ? `<img src="${esc(l.photo)}" alt="" loading="lazy" onerror="this.remove()">` : '';
+    const img = cosImg(cosPhoto(l));
     const delta = l.nuevo ? 0 : l.costo_caja - (l.costo_antes || 0);
     const pctD = l.costo_antes ? delta / l.costo_antes : 0;
     const m1 = marginOf(effPrice(l), l.costo_caja);
@@ -2030,7 +2033,7 @@
     if (f === 'cost') { const v = parseFloat(e.target.value); if (v >= 0) { l.costo_caja = r2(v); decide(l); el.querySelector('[data-f="aplicar"]').checked = l.aplicar; } }
     else if (f === 'price') { const v = parseFloat(e.target.value); l.precio_nuevo = v > 0 ? r2(v) : null; decide(l); el.querySelector('[data-f="aplicar"]').checked = l.aplicar; }
     else if (f === 'aplicar') { l.aplicar = e.target.checked; }
-    else if (a) { l.alta[a] = e.target.value; }
+    else if (a) { l.alta[a] = e.target.value; if (a === 'photo') el.querySelector('.ol-ph').innerHTML = cosImg(cosPhoto(l)); }
     const m1 = marginOf(effPrice(l), l.costo_caja), mv = el.querySelector('[data-v="m"]');
     mv.textContent = pct(m1); mv.className = m1 < CS.target / 100 - 1e-9 ? 'warn' : 'okc';
     el.classList.toggle('is-off', !l.aplicar);
