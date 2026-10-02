@@ -257,7 +257,7 @@
     if (S.products.length) return;
     const data = store.get(K_DATA, null);
     if (data && Array.isArray(data.items) && data.items.length) {
-      S.products = data.items;
+      S.products = applyVendors(data.items);
       S.sales = store.get(K_SALES, null);
       S.meta = data.meta;
       showWorkspace();
@@ -276,6 +276,32 @@
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden && S.who) autoSync(); });
   setInterval(() => { if (!syncing) renderAge(); }, 60000);
+
+  /* ---- Proveedores directos: lo que está en el catálogo de CORDIALSA se pide a CORDIALSA USA
+   * (antes se compraba por Cortes, Kalil, Castillo o El Mexiquense). Por UPC del catálogo o por marca. ---- */
+  const DIRECT = { name: 'CORDIALSA USA', ups: null, noChk: null };
+  const CORDIALSA_BRANDS = /(^|\s)(pz|pozuelo|chiky|festival|ducales|saltin|colcafe|sello rojo|copelia|nucita|granuts|cremino|chocolisto|doria|crem helado|chata|mexico lindo|club extra|canasta|yupi|zuko|amor salsa|bon frozen|yipy)\b|^(dux|ldm|tosh|jet|jumbo|rica)\b|^corona\b.*\b(choc|cocoa|chocolate)/;
+  const upcCoreD = (u) => String(u || '').replace(/\D/g, '').replace(/^0+/, '');
+  function isCordialsa(p) {
+    if (DIRECT.ups) {
+      const x = upcCoreD(p.upc);
+      if (x.length >= 10 && (DIRECT.ups.has(x) || DIRECT.ups.has(x.slice(0, -1)) || DIRECT.noChk.has(x) || DIRECT.noChk.has(x.slice(0, -1)))) return true;
+    }
+    return CORDIALSA_BRANDS.test(normTxt(p.name).replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim());
+  }
+  function applyVendors(items) {
+    (items || []).forEach((p) => {
+      if (!isCordialsa(p)) return;
+      if (p.buy && p.buy.vendor !== DIRECT.name) p.buy.antes = p.buy.antes || p.buy.vendor;
+      p.vendor = DIRECT.name;
+      if (p.buy) p.buy.vendor = DIRECT.name;
+    });
+    return items;
+  }
+  fetch('cordialsa.json').then((r) => r.json()).then((d) => {
+    DIRECT.ups = new Set(d.upcs); DIRECT.noChk = new Set(d.upcs.map((u) => u.slice(0, -1)));
+    if (S.products.length) { applyVendors(S.products); if (S.view === 'ord' && !$('#workspace').hidden) { if (!O.lines.length && !O.touched) suggestOrder(); else renderOrders(); } }
+  }).catch(() => {});
 
   /* ================= INSITU ================= */
   const Insitu = {
@@ -378,7 +404,7 @@
       S.sales = computeSales(invs, today, items);
       store.set(K_SALES, S.sales);
       if (!items.length) throw new Error('InSitu no regresó productos con precio y costo.');
-      S.products = items;
+      S.products = applyVendors(items);
       S.meta = {
         source: 'InSitu', at: Date.now(), sales: withDetail > 0, stock: !!stocks,
         invoices: invs.length, from: ymd(from), receipts: recs ? recs.length : 0,
@@ -584,7 +610,7 @@
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: null, raw: true });
       const items = parseRows(rows);
       if (!items.length) throw new Error('No encontré productos con precio y costo. ¿Es el export de InSitu?');
-      S.products = items;
+      S.products = applyVendors(items);
       S.meta = { source: file.name, at: Date.now(), sales: false };
       if (!store.set(K_DATA, { meta: S.meta, items })) toast('Aviso: no se pudo guardar en este dispositivo.');
       S.set.cats = null;
