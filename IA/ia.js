@@ -865,6 +865,7 @@
 
   const snap = (p) => ({
     id: p.id, name: p.name, key: p.key, brand: p.brand, cat: p.cat, upc: p.upc, photo: p.photo, pack: p.pack, vendor: p.vendor,
+    price: p.price, cost: p.cost,
     why: p.why || 'normal', st: p.st || null, stock: p.stock ?? null, cover: p.cover ?? null,
   });
 
@@ -903,6 +904,7 @@
   function tagFor(c) {
     const off = (c.P - c.S) / c.P, m0 = (c.P - c.C) / c.P;
     if (c.kind === 'combo') return ['combo', 'Combo'];
+    if (c.kind === 'group') return ['combo', 'Mismo precio'];
     if (c.nx) return ['nx', `${c.nx} + 1 gratis`];
     const why = c.items[0].why;
     if (hasSales() && why && why !== 'normal') {
@@ -1089,6 +1091,52 @@
     } catch (e) { sec.hidden = true; }
   }
 
+  /* ---- Grupo con el mismo precio: varios productos (ej. veladoras) con un solo precio especial c/u.
+   * En QuickBooks cada producto lleva ese precio durante la vigencia. ---- */
+  const avgOf = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
+  function groupTitle(items) {
+    const ws = items.map((i) => new Set(normTxt(i.name).replace(/[^a-z ]+/g, ' ').split(/\s+/).filter((w) => w.length > 2)));
+    const common = [...ws[0]].filter((w) => ws.every((s) => s.has(w)));
+    const t = common.slice(0, 3).join(' ');
+    return t ? t.replace(/\b\w/g, (m) => m.toUpperCase()) : (items[0].brand || 'Grupo') + ' y más';
+  }
+  function recalcGroup(c) {
+    c.P = r2(avgOf(c.items.map((i) => i.price)));
+    c.C = r2(avgOf(c.items.map((i) => i.cost)));
+    c.tag = tagFor(c);
+  }
+  // Margen más bajo del grupo (el que manda para el aviso del mínimo)
+  const groupMinMargin = (c) => Math.min(...c.items.map((i) => (c.S - i.cost) / c.S));
+  function addToCard(c, p) {
+    if (c.items.some((i) => String(i.id) === String(p.id))) { toast('Ya está en este especial'); return false; }
+    if (c.kind === 'single') {
+      if (c.nx) unsetNx(c);
+      const it0 = c.items[0], src = S.products.find((x) => String(x.id) === String(it0.id));
+      if (!(it0.price > 0)) it0.price = src ? src.price : c.P;
+      if (!(it0.cost > 0)) it0.cost = src ? src.cost : c.C;
+      c.kind = 'group';
+      c.titleAuto = true;
+    }
+    c.items.push(snap(p));
+    if (c.titleAuto) c.title = groupTitle(c.items);
+    recalcGroup(c);
+    c.pinned = true;
+    if (p.price <= c.S) toast(`Ojo: ${p.name} normalmente cuesta ${money(p.price)}, igual o menos que el especial (${money(c.S)})`);
+    return true;
+  }
+  function removeFromCard(c, id) {
+    c.items = c.items.filter((i) => String(i.id) !== String(id));
+    if (c.items.length === 1) {
+      const it = c.items[0];
+      c.kind = 'single'; c.P = r2(it.price); c.C = r2(it.cost); delete c.title; delete c.titleAuto;
+      if (c.S > c.P) c.S = c.P;
+      c.tag = tagFor(c);
+    } else {
+      if (c.titleAuto) c.title = groupTitle(c.items);
+      recalcGroup(c);
+    }
+  }
+
   /* ================= RENDER ================= */
   const stats = (c) => {
     const m0 = (c.P - c.C) / c.P, m1 = (c.S - c.C) / c.S;
@@ -1099,7 +1147,8 @@
     const img = (i) => i.photo
       ? `<img src="${esc(i.photo)}" alt="${esc(i.name)}" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'noimg',textContent:'sin foto'}))">`
       : '<span class="noimg">sin foto</span>';
-    return `<div class="ph${c.kind === 'combo' ? ' combo' : ''}">${c.items.map(img).join('')}<div class="ph-ov"></div></div>`;
+    const its = c.kind === 'group' ? c.items.slice(0, 4) : c.items;
+    return `<div class="ph${c.kind === 'combo' || c.kind === 'group' ? ' combo' : ''}${c.kind === 'group' ? ' grp' + (its.length > 2 ? ' g4' : '') : ''}">${its.map(img).join('')}<div class="ph-ov"></div></div>`;
   }
   function overlayHTML(c) {
     const st = stats(c);
@@ -1127,7 +1176,7 @@
   }
 
   function salesHTML(c, off) {
-    if (c.kind === 'combo' || !c.items[0].st) return '';
+    if (c.kind === 'combo' || c.kind === 'group' || !c.items[0].st) return '';
     const it = c.items[0], st = it.st, w = WHY[it.why] || WHY.normal;
     if (it.why === 'normal' && !st.u365) return '';
     const txt = reasonText(it, off);
@@ -1151,7 +1200,30 @@
     if (!e || e.dias > 180) return '';
     return `<div class="exp${e.dias <= 60 || e.riesgo ? ' hot' : ''}">Vence ${esc(fmtLong(e.d))}${e.quedan != null ? ` · ~${nfmt(e.quedan)} cajas` : ''}</div>`;
   }
+  function groupViewHTML(c) {
+    const fl = floorF();
+    const ps = c.items.map((i) => i.price);
+    const lo = Math.min(...ps), hi = Math.max(...ps);
+    return `
+      <div>
+        <div class="brand">Mismo precio · ${c.items.length} productos</div>
+        <h3 class="name">${esc(c.title || groupTitle(c.items))}</h3>
+        ${expHTML(c)}
+      </div>
+      <div class="prices">
+        <span class="p-new">${money(c.S)}<small class="cu"> c/u</small></span>
+        <span class="p-old">${lo === hi ? money(lo) : money(lo) + '–' + money(hi)}</span>
+      </div>
+      <ul class="grp-list">${c.items.map((i) => {
+        const m = (c.S - i.cost) / c.S, off = (i.price - c.S) / i.price;
+        const up = off <= 0;
+        return `<li${up ? ' class="g-up"' : ''}>${i.photo ? `<img src="${esc(i.photo)}" alt="" loading="lazy" onerror="this.remove()">` : '<span class="g-ph"></span>'}
+          <span class="g-n">${esc(i.name)}<small>antes ${money(i.price)} · ${up ? '<b class="warn">no baja: no se programa</b>' : '-' + Math.round(off * 100) + '%'} · margen <b class="${m < fl - 1e-9 ? 'warn' : ''}">${pct(m, 0)}</b>${i.stock != null ? ' · stock ' + nfmt(i.stock) : ''}</small></span>
+          <button type="button" class="g-x" data-act="rm" data-id="${esc(i.id)}" aria-label="Quitar ${esc(i.name)}" title="Quitar">×</button></li>`;
+      }).join('')}</ul>`;
+  }
   function viewHTML(c) {
+    if (c.kind === 'group') return groupViewHTML(c);
     const st = stats(c), fl = floorF();
     const name = c.items.map((i) => i.name).join(' + ');
     const brand = [...new Set(c.items.map((i) => i.brand).filter(Boolean))].join(' · ') || c.items[0].cat;
@@ -1197,6 +1269,19 @@
   }
 
   function adjHTML(c) {
+    if (c.kind === 'group') {
+      const low = groupMinMargin(c) < floorF() - 1e-9;
+      return `
+      <div class="adj"${c.open ? '' : ' hidden'}>
+        <div class="adj-row"><label>Nombre</label><input type="text" data-f="title" maxlength="60" value="${esc(c.title || '')}"></div>
+        <div class="adj-row"><label>Precio c/u $</label><input type="number" data-f="price" step="0.01" min="0" value="${c.S.toFixed(2)}"></div>
+        <div class="adj-row"><label>Desde</label><input type="date" data-f="from" value="${esc(c.from)}"></div>
+        <div class="adj-row"><label>Hasta</label><input type="date" data-f="to" value="${esc(c.to)}"></div>
+        <p class="adj-warn" data-v="warn"${low ? '' : ' hidden'}>Algún producto queda abajo del margen mínimo (${pct(floorF(), 0)}).</p>
+        ${c.items.some((i) => i.price <= c.S) ? '<p class="adj-warn">Algún producto normalmente cuesta igual o menos que este precio: en QuickBooks no se le cambia.</p>' : ''}
+        <span data-v="off" hidden></span>
+      </div>`;
+    }
     const st = stats(c);
     const maxOff = Math.max(0, Math.floor(((c.P - minPrice(c.C)) / c.P) * 200) / 2);
     return `
@@ -1225,7 +1310,12 @@
             <button data-act="swap" type="button">${icon('refresh')}Cambiar</button>
             <button data-act="adj" type="button">${icon(c.open ? 'check' : 'pencil')}${c.open ? 'Listo' : 'Ajustar'}</button>
             ${c.kind === 'single' ? `<button data-act="fmt" type="button">${icon('gift')}${c.nx ? 'Precio directo' : 'Compra N + 1'}</button>` : ''}
-            ${c.kind === 'single' ? `<button data-act="qb" type="button">${icon('qb')}QuickBooks</button>` : ''}
+            ${c.kind !== 'combo' ? `<button data-act="add" type="button">${icon('plus')}Agregar producto</button>` : ''}
+            ${c.kind !== 'combo' ? `<button data-act="qb" type="button">${icon('qb')}QuickBooks</button>` : ''}
+          </div>
+          <div class="grp-add" hidden>
+            <input type="search" data-f="gq" placeholder="Buscar producto para el mismo precio" autocomplete="off">
+            <div class="grp-res ord-results" role="listbox"></div>
           </div>
         </div>
       </article>`;
@@ -1271,7 +1361,7 @@
     const cats = {};
     S.cards.forEach((c) => {
       const w = c.items[0].why;
-      const k = c.kind === 'combo' ? 'Combo' : c.items[0].st && w !== 'normal' ? WHY[w].label : c.items[0].cat;
+      const k = c.kind === 'combo' ? 'Combo' : c.kind === 'group' ? 'Mismo precio' : c.items[0].st && w !== 'normal' ? WHY[w].label : c.items[0].cat;
       const col = { dormido: 'var(--morado)', lento: 'var(--oro)', bajando: '#ff7a66', gancho: 'var(--verde-2)' }[c.kind === 'combo' ? '' : w] || (c.kind === 'combo' ? 'var(--oro)' : '');
       cats[k] = cats[k] || { n: 0, col };
       cats[k].n++;
@@ -1306,6 +1396,19 @@
       else if (!setNx(c, nxFor(c))) { toast('Con el margen mínimo no alcanza para regalar una caja'); return; }
       c.tag = tagFor(c);
       render(false, c.uid);
+    } else if (act === 'add') {
+      const box = el.querySelector('.grp-add');
+      box.hidden = !box.hidden;
+      if (!box.hidden) box.querySelector('input').focus();
+      return;
+    } else if (act === 'pick') {
+      const p = S.products.find((x) => String(x.id) === b.dataset.id); if (!p) return;
+      if (addToCard(c, p)) { render(false, c.uid); toast('Agregado al mismo precio: ' + p.name); }
+      return;
+    } else if (act === 'rm') {
+      removeFromCard(c, b.dataset.id);
+      render(false, c.uid);
+      return;
     } else if (act === 'adj') {
       c.open = !c.open;
       el.querySelector('.adj').hidden = !c.open;
@@ -1318,6 +1421,26 @@
     const el = inp.closest('.card');
     const c = S.cards.find((x) => x.uid === el.dataset.uid); if (!c) return;
     const f = inp.dataset.f;
+    if (f === 'gq') {
+      const q = normTxt(inp.value.trim()), res = el.querySelector('.grp-res');
+      if (q.length < 2) { res.innerHTML = ''; return; }
+      const words = q.split(/\s+/), inCard = new Set(c.items.map((i) => String(i.id)));
+      const list = S.products.filter((p) => { const tx = normTxt(`${p.name} ${p.brand} ${p.id} ${p.upc}`); return words.every((w) => tx.includes(w)); }).slice(0, 10);
+      res.innerHTML = list.length ? list.map((p) => {
+        const ok = p.price > 0 && p.cost > 0 && !inCard.has(String(p.id));
+        return `<button type="button" data-act="pick" data-id="${esc(p.id)}"${ok ? '' : ' disabled'}>${p.photo ? `<img src="${esc(p.photo)}" alt="">` : ''}<span>${esc(p.name)}<small>${money(p.price)}${p.stock != null ? ' · stock ' + nfmt(p.stock) : ''}${inCard.has(String(p.id)) ? ' · ya está' : !(p.price > 0 && p.cost > 0) ? ' · sin precio o costo' : ''}</small></span></button>`;
+      }).join('') : '<p class="data-info" style="padding:10px">Sin resultados</p>';
+      return;
+    }
+    if (f === 'title') { c.title = inp.value.slice(0, 60); c.titleAuto = false; el.querySelector('.view .name').textContent = c.title; return; }
+    if (c.kind === 'group' && f === 'price') {
+      const v = parseFloat(inp.value); if (!(v > 0)) return;
+      c.S = r2(v);
+      c.tag = tagFor(c);
+      el.querySelector('[data-v="warn"]').hidden = !(groupMinMargin(c) < floorF() - 1e-9);
+      paintCard(el, c); renderSummary();
+      return;
+    }
     if (f === 'off') {
       c.S = r2(Math.max(psychUp(minPrice(c.C)), psychDown(c.P * (1 - parseFloat(inp.value) / 100))));
       if (c.S > c.P) c.S = c.P;
@@ -1536,16 +1659,18 @@
 
     const card = (c) => {
       const st = stats(c);
-      const name = c.items.map((i) => i.name).join(' + ');
+      const grp = c.kind === 'group';
+      const name = grp ? (c.title || groupTitle(c.items)) : c.items.map((i) => i.name).join(' + ');
       const brand = [...new Set(c.items.map((i) => i.brand).filter(Boolean))].join(' · ');
-      const imgs = c.items.map((i) => `<img src="${esc(proxied(i.photo))}" crossorigin="anonymous" alt="">`).join('');
-      const pack = c.kind === 'combo' ? 'Combo · ' + c.items.length + ' productos' : c.items[0].pack;
+      const imgs = (grp ? c.items.slice(0, 4) : c.items).map((i) => `<img src="${esc(proxied(i.photo))}" crossorigin="anonymous" alt="">`).join('');
+      const pack = c.kind === 'combo' ? 'Combo · ' + c.items.length + ' productos' : grp ? c.items.length + ' productos · mismo precio c/u' : c.items[0].pack;
       return `<div class="pc">
-        <div class="pc-ph${c.kind === 'combo' ? ' combo' : ''}">${imgs}<span class="pc-off">${c.nx ? `${c.nx}+1` : `-${Math.round(st.off * 100)}%`}</span></div>
+        <div class="pc-ph${c.kind === 'combo' || grp ? ' combo' : ''}${grp ? ' grp' + (c.items.length > 2 ? ' g4' : '') : ''}">${imgs}<span class="pc-off">${c.nx ? `${c.nx}+1` : `-${Math.round(st.off * 100)}%`}</span></div>
         <div class="pc-b">
           <div class="pc-brand">${esc(brand)}</div>
           <div class="pc-name">${esc(name.length > 42 ? name.slice(0, 40).trim() + '…' : name)}</div>
           ${c.nx ? `<div class="pc-nx">Compra ${c.nx}, llévate 1 gratis</div><div class="pc-old eq">Precio ${money(c.P)} · equivale a ${money(c.S)} c/u</div>`
+            : grp ? `<div class="pc-old">Antes desde ${money(Math.min(...c.items.map((i) => i.price)))}</div><div class="pc-new">${money(c.S)} <small>c/u</small></div>`
             : `<div class="pc-old">Antes ${money(c.P)}</div><div class="pc-new">${money(c.S)}</div>`}
           <div class="pc-pack">${esc(pack || '')}</div>
         </div></div>`;
@@ -1682,7 +1807,7 @@
   }
 
   async function openQb(cards) {
-    qbCards = cards.filter((c) => c.kind === 'single');
+    qbCards = cards.filter((c) => c.kind === 'single' || c.kind === 'group');
     openModal('#qbModal');
     $('#qbStatus').innerHTML = '<p class="data-info">Revisando la conexión con QuickBooks…</p>';
     $('#qbPlan').hidden = true;
@@ -1728,7 +1853,10 @@
   async function planQb() {
     const box = $('#qbPlan');
     box.hidden = false;
-    const ok = qbCards.filter((c) => !c.nx);
+    // Cada producto de un grupo se programa como su propio especial (mismo precio y fechas)
+    const ok = qbCards.filter((c) => !c.nx && c.kind !== 'combo').flatMap((c) => (c.kind === 'group'
+      ? c.items.filter((it) => it.price > c.S).map((it) => ({ ...c, kind: 'single', items: [it], P: it.price, C: it.cost }))
+      : [c]));
     const nx = qbCards.filter((c) => c.nx);
     box.innerHTML = '<p class="data-info">Buscando los productos en QuickBooks…</p>';
     try {
