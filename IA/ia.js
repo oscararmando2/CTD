@@ -1714,7 +1714,7 @@
           ${c.nx ? `<div class="pc-nx">Compra ${c.nx}, llévate 1 gratis</div><div class="pc-old eq">Precio ${money(c.P)} · equivale a ${money(c.S)} c/u</div>`
             : grp ? `<div class="pc-old">Antes desde ${money(Math.min(...c.items.map((i) => i.price)))}</div><div class="pc-new">${money(c.S)} <small>c/u</small></div>`
             : `<div class="pc-old">Antes ${money(c.P)}</div><div class="pc-new">${money(c.S)}</div>`}
-          <div class="pc-pack${grp ? ' pc-short' : ''}">${esc(pack || '')}</div>
+          <div class="pc-pack${grp ? ' pc-short' + ((pack || '').length > 170 ? ' xl' : (pack || '').length > 105 ? ' lg' : '') : ''}">${esc(pack || '')}</div>
         </div></div>`;
     };
     // Hojas de 9 lugares (3×3): los banners van primero, en la hoja 1
@@ -1736,9 +1736,19 @@
     }
     $('#clientSheet').innerHTML = pages.join('');
     $$('#clientSheet .pc-ph img').forEach(fitImg);
+    fitShorts();
     $('#themeSel').innerHTML = Object.entries(THEMES).map(([k, v]) => `<option value="${k}"${k === key ? ' selected' : ''}>${esc(v.label)}${k === MONTH_THEME[parseYmd(from).getMonth()] ? ` (${mes})` : ''}</option>`).join('');
     fitPages();
     return { from, to, key };
+  }
+  // Lista de nombres cortos de un grupo: se achica la letra hasta que quepan todos en la tarjeta
+  function fitShorts() {
+    $$('#clientSheet .pc-short').forEach((el) => {
+      const box = el.closest('.pc-b');
+      el.style.webkitLineClamp = 'unset'; el.style.display = 'block'; el.style.overflow = 'visible';
+      let fs = parseFloat(getComputedStyle(el).fontSize);
+      while (box.scrollHeight > box.clientHeight + 1 && fs > 7) { fs -= 0.5; el.style.fontSize = fs + 'px'; }
+    });
   }
   // html2canvas ignora object-fit y estira las fotos: se calcula el tamaño exacto que cabe
   // en el recuadro sin deformarse (también agranda las fotos chicas)
@@ -1761,6 +1771,7 @@
 
   // Las hojas miden 816×1056 (carta a 96 dpi); en pantalla se escalan al ancho disponible
   function fitPages() {
+    fitShorts(); // ya con la hoja visible se puede medir
     $$('#clientSheet .pgwrap').forEach((w) => {
       const k = Math.min(1, w.clientWidth / 816);
       const pg = w.firstElementChild;

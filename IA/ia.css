@@ -714,3 +714,10 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .pc-feat .pc-b{overflow:hidden}
 .pc-feat .pc-new{font-size:48px}
 .pc-feat .pc-short{font-size:13px;line-height:1.35;-webkit-line-clamp:3}
+/* Lista larga de nombres cortos: letra más chica para que quepan todos */
+.pc-short.lg{font-size:9.5px;-webkit-line-clamp:4}
+.pc-short.xl{font-size:8.5px;-webkit-line-clamp:6}
+.pc-feat .pc-short.lg{font-size:11.5px;-webkit-line-clamp:5}
+.pc-feat .pc-short.xl{font-size:10.5px;line-height:1.3;-webkit-line-clamp:7}
+.pc-wide .pc-short.lg{font-size:10.5px;-webkit-line-clamp:5}
+.pc-wide .pc-short.xl{font-size:9.5px;-webkit-line-clamp:7}
