@@ -1613,13 +1613,18 @@
     const hist = S.hist || [];
     $('#histList').innerHTML = hist.length ? hist.map((h) => {
       const thumbs = h.cards.slice(0, 5).map((c) => `<img src="${esc(c.items[0].photo)}" alt="">`).join('');
-      return `<div class="hist-item" data-id="${esc(h.id)}">
-        <div class="hi-thumbs">${thumbs}</div>
-        <div class="hi-txt"><b>${h.cards.length} especiales · ${fmtD(h.from)} – ${fmtD(h.to)}</b>
-          ${fmtTs(h.ts)} · ${esc(h.by || '')} · margen ${pct(h.m1 || 0)}</div>
-        ${propEnQb(h) ? '<span class="st sent">En QuickBooks ✓</span><button class="btn btn-ghost btn-sm" data-h="ver" type="button">Ver PDF</button><button class="btn-link sm" data-h="open" type="button">copiar</button>'
-          : '<button class="btn btn-oro btn-sm" data-h="open" type="button">Abrir</button>'}
-        <button class="icon-btn" data-h="del" type="button" title="Quitar" aria-label="Quitar">${icon('trash')}</button>
+      const done = propEnQb(h);
+      return `<div class="hist-item hist-prop${done ? ' done' : ''}" data-id="${esc(h.id)}">
+        <div class="hi-top">
+          <div class="hi-thumbs">${thumbs}</div>
+          <div class="hi-txt"><b>${h.cards.length} especiales · ${fmtD(h.from)} – ${fmtD(h.to)}</b>
+            ${fmtTs(h.ts)} · ${esc(h.by || '')} · margen ${pct(h.m1 || 0)}</div>
+        </div>
+        <div class="hi-acts">
+          ${done ? '<span class="st sent">En QuickBooks ✓</span><button class="btn btn-ghost btn-sm" data-h="ver" type="button">Ver PDF</button><button class="btn-link sm" data-h="open" type="button">Copiar</button>'
+            : '<button class="btn btn-oro btn-sm" data-h="open" type="button">Abrir</button>'}
+          <button class="icon-btn" data-h="del" type="button" title="Quitar" aria-label="Quitar">${icon('trash')}</button>
+        </div>
       </div>`;
     }).join('') : '<p class="data-info">Aún no hay propuestas guardadas.</p>';
   }
