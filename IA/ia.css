@@ -667,8 +667,9 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .ph.grp::after{display:none}
 .ph.g4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
 .ph.g4 img{padding:8px;min-height:0}
-.pc-ph.g4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
-.pc-ph.g4 img{max-height:56px}
+.pc-ph.g4{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));overflow:hidden;align-items:center;justify-items:center}
+.pc-ph.g4 img{max-height:55px;max-width:100%}
+.pc-more{position:absolute;right:8px;bottom:8px;font-family:var(--display);font-weight:800;font-size:13px;color:#fff;background:var(--t-acc,#D8331B);border-radius:99px;padding:3px 9px}
 .p-new .cu{font-family:var(--body);font-size:.4em;font-weight:500;letter-spacing:0;color:var(--muted)}
 .pc-new small{font-size:.45em;font-weight:500}
 .grp-list{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column}
