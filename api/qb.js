@@ -51,7 +51,9 @@ module.exports = async (req, res) => {
           if (clash) { errors.push({ name: p.name, error: `Ya tiene un especial del ${clash.from} al ${clash.to}` }); continue; }
           const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
           const rec = { qbId: String(p.qbId), qbName: String(p.qbName || ''), sku: String(p.sku || ''), name: String(p.name || ''), special, regular,
-            from: p.from, to: p.to, status: 'programado', by: who, ts: Date.now() };
+            from: p.from, to: p.to, status: 'programado', by: who, ts: Date.now(),
+            // Especial de grupo (mismo precio): para volver a mostrarlo junto en el PDF de vigentes
+            ...(p.grupo ? { grupo: String(p.grupo).slice(0, 40), grupoTitulo: String(p.grupoTitulo || '').slice(0, 80), grupoCorto: String(p.grupoCorto || '').slice(0, 240) } : {}) };
           await db('PUT', 'qbEspeciales/' + id, rec);
           await log({ id, action: 'programar', name: rec.name, special, from: p.from, to: p.to, by: who });
           all[id] = rec; saved.push(id);
