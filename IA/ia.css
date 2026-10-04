@@ -732,3 +732,4 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .hist-prop .hi-acts{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .hist-prop .hi-acts .icon-btn{margin-left:auto}
 .hist-prop.done .hi-thumbs{opacity:.85}
+.pc-wide .pc-pack{margin-top:6px}
