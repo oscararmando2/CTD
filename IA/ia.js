@@ -1650,6 +1650,17 @@
   let sheetTheme = null;
   let sheetCards = null; // null = las tarjetas de la propuesta; si no, las que se pasen (ej. vigentes)
   const sheetList = () => sheetCards || S.cards;
+  // Descuento que se anuncia en la hoja (para ordenar y escoger los destacados)
+  const sheetOff = (c) => (c.nx ? 1 / (c.nx + 1) : c.kind === 'group' ? groupOff(c) : stats(c).off);
+  // Ordena de mayor a menor descuento y escoge cuántos van como banner para que no sobre espacio:
+  // un banner ocupa una fila completa (3 lugares), uno "ancho" ocupa 2.
+  function sheetLayout(list) {
+    const sorted = [...list].sort((a, b) => sheetOff(b) - sheetOff(a));
+    const n = sorted.length, left = (PER_PAGE - (n % PER_PAGE)) % PER_PAGE;
+    let feat = Math.floor(left / 2), wide = left % 2;
+    feat = Math.min(feat, n); wide = Math.min(wide, n - feat);
+    return sorted.map((c, i) => ({ c, size: i < feat ? 'feat' : i < feat + wide ? 'wide' : '' }));
+  }
   function buildSheet() {
     const list = sheetList();
     const froms = list.map((c) => c.from).sort(), tos = list.map((c) => c.to).sort();
@@ -1660,7 +1671,10 @@
     const style = `--t-bg:${t.bg};--t-ink:${t.ink};--t-acc:${t.acc};--t-price:${t.price}`;
     const mes = MESES[parseYmd(from).getMonth()];
 
-    const card = (c) => {
+    let firstFeat = true;
+    const card = ({ c, size }) => {
+      const flag = size === 'feat' ? (firstFeat ? 'Mayor descuento' : 'Destacado') : '';
+      if (size === 'feat') firstFeat = false;
       const st = stats(c);
       const grp = c.kind === 'group';
       const name = grp ? (c.title || groupTitle(c.items)) : c.items.map((i) => i.name).join(' + ');
@@ -1668,25 +1682,32 @@
       const imgs = (grp ? c.items.slice(0, 4) : c.items).map((i) => `<img src="${esc(proxied(i.photo))}" crossorigin="anonymous" alt="">`).join('')
         + (grp && c.items.length > 4 ? `<span class="pc-more">+${c.items.length - 4}</span>` : '');
       const pack = c.kind === 'combo' ? 'Combo · ' + c.items.length + ' productos' : grp ? c.items.length + ' productos · mismo precio c/u' : c.items[0].pack;
-      return `<div class="pc">
+      return `<div class="pc${size ? ' pc-' + size : ''}">
         <div class="pc-ph${c.kind === 'combo' || grp ? ' combo' : ''}${grp ? ' grp' + (c.items.length > 2 ? ' g4' : '') : ''}">${imgs}<span class="pc-off">${c.nx ? `${c.nx}+1` : `-${Math.round((grp ? groupOff(c) : st.off) * 100)}%`}</span></div>
         <div class="pc-b">
+          ${flag ? `<div class="pc-flag">${flag}</div>` : ''}
           <div class="pc-brand">${esc(brand)}</div>
-          <div class="pc-name">${esc(name.length > 42 ? name.slice(0, 40).trim() + '…' : name)}</div>
+          <div class="pc-name">${esc(!size && name.length > 42 ? name.slice(0, 40).trim() + '…' : name.length > 90 ? name.slice(0, 88).trim() + '…' : name)}</div>
           ${c.nx ? `<div class="pc-nx">Compra ${c.nx}, llévate 1 gratis</div><div class="pc-old eq">Precio ${money(c.P)} · equivale a ${money(c.S)} c/u</div>`
             : grp ? `<div class="pc-old">Antes desde ${money(Math.min(...c.items.map((i) => i.price)))}</div><div class="pc-new">${money(c.S)} <small>c/u</small></div>`
             : `<div class="pc-old">Antes ${money(c.P)}</div><div class="pc-new">${money(c.S)}</div>`}
           <div class="pc-pack">${esc(pack || '')}</div>
         </div></div>`;
     };
+    // Hojas de 9 lugares (3×3): los banners van primero, en la hoja 1
+    const lay = sheetLayout(list), slots = (x) => (x.size === 'feat' ? 3 : x.size === 'wide' ? 2 : 1);
+    const chunks = [];
+    let cur = [], used = 0;
+    lay.forEach((x) => { if (used + slots(x) > PER_PAGE) { chunks.push(cur); cur = []; used = 0; } cur.push(x); used += slots(x); });
+    if (cur.length) chunks.push(cur);
     const pages = [];
-    for (let i = 0; i < list.length; i += PER_PAGE) {
+    for (let i = 0; i < chunks.length; i++) {
       pages.push(`<div class="pgwrap"><section class="pg pg-list" style="${style}">
         <header class="pl-head">${scatter(816, 170, t.pat, t.pc, 16, 3 + i, 1, 2)}
           <div><p class="cv-k">Central Trade Distribution</p><h2>${esc(t.title)}</h2><p class="pl-date">${esc(rangeText(from, to))}</p></div>
           <span class="pl-logo"><img src="ctd-logo.png" alt="CTD"></span>
         </header>
-        <div class="pl-grid">${list.slice(i, i + PER_PAGE).map(card).join('')}</div>
+        <div class="pl-grid">${chunks[i].map(card).join('')}</div>
         ${foot}
       </section></div>`);
     }
