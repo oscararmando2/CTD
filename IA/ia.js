@@ -1062,22 +1062,40 @@
       return { uid: uid(), kind: 'single', nx: null, P, C: 0, S: r2(e.special), from: e.from, to: e.to, e,
         items: [{ id: String(e.sku || ''), name: e.name || e.qbName, brand: p.brand || '', cat: p.cat || '', photo: p.photo || '', pack: p.pack || '', upc: p.upc || '', price: P, cost: p.cost || 0 }] };
     };
-    const first = (e) => normTxt(e.name || e.qbName).split(/\s+/)[0] || '';
-    const groups = new Map();
-    vigData.forEach((e) => {
-      // Programados como grupo desde la IA, o (los de antes) mismo precio + mismas fechas + misma primera palabra
-      const k = e.grupo ? 'g:' + e.grupo : `a:${r2(e.special)}|${e.from}|${e.to}|${first(e)}`;
-      (groups.get(k) || groups.set(k, []).get(k)).push(e);
-    });
-    const out = [];
-    groups.forEach((list) => {
-      if (list.length < 2) { out.push(one(list[0])); return; }
+    const asGroup = (list, title, shortTxt) => {
       const cs = list.map(one), e0 = list[0];
       const c = { uid: uid(), kind: 'group', nx: null, S: r2(e0.special), from: e0.from, to: e0.to, items: cs.map((x) => x.items[0]) };
       c.P = r2(avgOf(c.items.map((i) => i.price))); c.C = 0;
-      c.title = e0.grupoTitulo || groupTitle(c.items);
-      if (e0.grupoCorto) c.shortTxt = e0.grupoCorto;
-      out.push(c);
+      c.title = title || groupTitle(c.items);
+      if (shortTxt) c.shortTxt = shortTxt;
+      return c;
+    };
+    const out = [], used = new Set();
+    const k3 = (sku, f, to) => `${sku}|${f}|${to}`;
+    const byKey = new Map(vigData.map((e) => [k3(String(e.sku), e.from, e.to), e]));
+    // 1) Los grupos tal como se armaron en una propuesta guardada (mismo nombre y nombres cortos)
+    (S.hist || []).forEach((h) => (h.cards || []).forEach((c) => {
+      if (c.kind !== 'group') return;
+      const es = c.items.map((i) => byKey.get(k3(String(i.id), c.from, c.to)));
+      const ok = es.filter((x) => x && !used.has(x));
+      if (ok.length < 2 || ok.length < es.length * 0.6) return;
+      ok.forEach((x) => used.add(x));
+      out.push(asGroup(ok, c.title, c.shortEdited ? c.shortTxt : null));
+    }));
+    // 2) Programados como grupo desde la IA, o (los de antes) misma marca + mismo precio + mismas fechas
+    const brandKey = (e) => {
+      const p = S.products.find((x) => String(x.id) === String(e.sku));
+      const b = normTxt(p && p.brand).replace(/[^a-z]/g, '').replace(/s$/, '');
+      return b || normTxt(e.name || e.qbName).split(/\s+/)[0] || '';
+    };
+    const groups = new Map();
+    vigData.filter((e) => !used.has(e)).forEach((e) => {
+      const k = e.grupo ? 'g:' + e.grupo : `a:${r2(e.special)}|${e.from}|${e.to}|${brandKey(e)}`;
+      (groups.get(k) || groups.set(k, []).get(k)).push(e);
+    });
+    groups.forEach((list) => {
+      if (list.length < 2) { out.push(one(list[0])); return; }
+      out.push(asGroup(list, list[0].grupoTitulo, list[0].grupoCorto));
     });
     return out;
   }
