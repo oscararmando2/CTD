@@ -1100,6 +1100,25 @@
     const t = common.slice(0, 3).join(' ');
     return t ? t.replace(/\b\w/g, (m) => m.toUpperCase()) : (items[0].brand || 'Grupo') + ' y más';
   }
+  // Nombres cortos de cada producto del grupo: se quita lo que todos comparten (VELADORA, FESTIVAL…),
+  // tamaños y empaques. "VELADORA SAN JUDAS 12/1" → "San Judas"
+  const SHORT_STOP = new Set(['oz', 'fl', 'lb', 'lbs', 'ml', 'lt', 'lts', 'gr', 'grs', 'kg', 'ct', 'cs', 'pk', 'pz', 'pcs', 'pc', 'bag', 'pack', 'pck', 'caja', 'case', 'ow', 'bs', 'bolsa', 'und', 'unds', 'x', 'jar', 'tin', 'box', 'display', 'disp', 'shipper', 'cookie', 'cookies', 'galleta', 'galletas', 'gta', 'bs', 'mto', 'fda', 'flavor', 'sabor', 'pieces', 'piezas']);
+  // Sabores en inglés → español (como se dicen en la tienda)
+  const SABOR = { lemon: 'Limón', lime: 'Limón', strawberry: 'Fresa', vanilla: 'Vainilla', vanila: 'Vainilla', coconut: 'Coco', orange: 'Naranja', pineapple: 'Piña', grape: 'Uva', apple: 'Manzana', peach: 'Durazno', cherry: 'Cereza', guava: 'Guayaba', tamarind: 'Tamarindo', watermelon: 'Sandía', blackberry: 'Mora', cinnamon: 'Canela', honey: 'Miel', milk: 'Leche', caramel: 'Cajeta', passionfruit: 'Maracuyá', soursop: 'Guanábana', 'banana': 'Plátano', white: 'Blanca', red: 'Roja', green: 'Verde', hot: 'Picante', spicy: 'Picante' };
+  const CONECT = new Set(['de', 'la', 'el', 'los', 'las', 'y', 'con', 'del', 'en']);
+  function shortNames(items) {
+    const toks = items.map((i) => String(i.name).replace(/[\/,.()]+/g, ' ').split(/\s+/).filter(Boolean));
+    const key = (w) => normTxt(w);
+    const common = new Set(toks[0].map(key).filter((w) => !CONECT.has(w) && toks.every((ts) => ts.some((x) => key(x) === w))));
+    return toks.map((ts) => {
+      let k = ts.filter((w) => !common.has(key(w)) && !/\d/.test(w) && !SHORT_STOP.has(key(w)));
+      while (k.length && CONECT.has(key(k[0]))) k.shift();
+      while (k.length && CONECT.has(key(k[k.length - 1]))) k.pop();
+      if (!k.length) k = ts.filter((w) => !/\d/.test(w)).slice(0, 2);
+      return k.slice(0, 4).map((w) => SABOR[key(w)] || w).join(' ').toLowerCase().replace(/(^|\s)\S/g, (m) => m.toUpperCase()).replace(/\b(De|La|El|Los|Las|Y|Con|Del|En)\b/g, (m) => m.toLowerCase());
+    });
+  }
+  const groupShort = (c) => (c.shortTxt != null && c.shortTxt.trim() ? c.shortTxt.trim() : shortNames(c.items).join(' · '));
   function recalcGroup(c) {
     c.P = r2(avgOf(c.items.map((i) => i.price)));
     c.C = r2(avgOf(c.items.map((i) => i.cost)));
@@ -1120,6 +1139,7 @@
       c.titleAuto = true;
     }
     c.items.push(snap(p));
+    if (c.shortTxt && !c.shortEdited) c.shortTxt = null;
     if (c.titleAuto) c.title = groupTitle(c.items);
     recalcGroup(c);
     c.pinned = true;
@@ -1211,6 +1231,7 @@
       <div>
         <div class="brand">Mismo precio · ${c.items.length} productos</div>
         <h3 class="name">${esc(c.title || groupTitle(c.items))}</h3>
+        <div class="meta g-short">${esc(groupShort(c))}</div>
         ${expHTML(c)}
       </div>
       <div class="prices">
@@ -1277,6 +1298,7 @@
       return `
       <div class="adj"${c.open ? '' : ' hidden'}>
         <div class="adj-row"><label>Nombre</label><input type="text" data-f="title" maxlength="60" value="${esc(c.title || '')}"></div>
+        <div class="adj-row"><label>En el PDF</label><input type="text" data-f="short" maxlength="220" value="${esc(groupShort(c))}"></div>
         <div class="adj-row"><label>Precio c/u $</label><input type="number" data-f="price" step="0.01" min="0" value="${c.S.toFixed(2)}"></div>
         <div class="adj-row"><label>Desde</label><input type="date" data-f="from" value="${esc(c.from)}"></div>
         <div class="adj-row"><label>Hasta</label><input type="date" data-f="to" value="${esc(c.to)}"></div>
@@ -1435,6 +1457,7 @@
       }).join('') : '<p class="data-info" style="padding:10px">Sin resultados</p>';
       return;
     }
+    if (f === 'short') { c.shortTxt = inp.value.slice(0, 220); c.shortEdited = true; const m = el.querySelector('.view .g-short'); if (m) m.textContent = groupShort(c); return; }
     if (f === 'title') { c.title = inp.value.slice(0, 60); c.titleAuto = false; el.querySelector('.view .name').textContent = c.title; return; }
     if (c.kind === 'group' && f === 'price') {
       const v = parseFloat(inp.value); if (!(v > 0)) return;
@@ -1681,7 +1704,7 @@
       const brand = [...new Set(c.items.map((i) => i.brand).filter(Boolean))].join(' · ');
       const imgs = (grp ? c.items.slice(0, 4) : c.items).map((i) => `<img src="${esc(proxied(i.photo))}" crossorigin="anonymous" alt="">`).join('')
         + (grp && c.items.length > 4 ? `<span class="pc-more">+${c.items.length - 4}</span>` : '');
-      const pack = c.kind === 'combo' ? 'Combo · ' + c.items.length + ' productos' : grp ? c.items.length + ' productos · mismo precio c/u' : c.items[0].pack;
+      const pack = c.kind === 'combo' ? 'Combo · ' + c.items.length + ' productos' : grp ? groupShort(c) : c.items[0].pack;
       return `<div class="pc${size ? ' pc-' + size : ''}">
         <div class="pc-ph${c.kind === 'combo' || grp ? ' combo' : ''}${grp ? ' grp' + (c.items.length > 2 ? ' g4' : '') : ''}">${imgs}<span class="pc-off">${c.nx ? `${c.nx}+1` : `-${Math.round((grp ? groupOff(c) : st.off) * 100)}%`}</span></div>
         <div class="pc-b">
@@ -1691,7 +1714,7 @@
           ${c.nx ? `<div class="pc-nx">Compra ${c.nx}, llévate 1 gratis</div><div class="pc-old eq">Precio ${money(c.P)} · equivale a ${money(c.S)} c/u</div>`
             : grp ? `<div class="pc-old">Antes desde ${money(Math.min(...c.items.map((i) => i.price)))}</div><div class="pc-new">${money(c.S)} <small>c/u</small></div>`
             : `<div class="pc-old">Antes ${money(c.P)}</div><div class="pc-new">${money(c.S)}</div>`}
-          <div class="pc-pack">${esc(pack || '')}</div>
+          <div class="pc-pack${grp ? ' pc-short' : ''}">${esc(pack || '')}</div>
         </div></div>`;
     };
     // Hojas de 9 lugares (3×3): los banners van primero, en la hoja 1
