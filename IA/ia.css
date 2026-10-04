@@ -721,3 +721,6 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .pc-feat .pc-short.xl{font-size:10.5px;line-height:1.3;-webkit-line-clamp:7}
 .pc-wide .pc-short.lg{font-size:10.5px;-webkit-line-clamp:5}
 .pc-wide .pc-short.xl{font-size:9.5px;-webkit-line-clamp:7}
+
+.qb-all{margin:18px 0 6px}
+.hist-item .st{flex:none}

@@ -1056,21 +1056,47 @@
   let vigData = [];
   // Convierte los vigentes en tarjetas para la hoja de clientes (PDF / imagen)
   function vigToCards() {
-    return vigData.map((e) => {
+    const one = (e) => {
       const p = S.products.find((x) => String(x.id) === String(e.sku)) || {};
       const P = r2(e.original != null ? e.original : e.regular || p.price || e.special);
-      return { uid: uid(), kind: 'single', nx: null, P, C: 0, S: r2(e.special), from: e.from, to: e.to,
-        items: [{ id: String(e.sku || ''), name: e.name || e.qbName, brand: p.brand || '', cat: p.cat || '', photo: p.photo || '', pack: p.pack || '', upc: p.upc || '' }] };
+      return { uid: uid(), kind: 'single', nx: null, P, C: 0, S: r2(e.special), from: e.from, to: e.to, e,
+        items: [{ id: String(e.sku || ''), name: e.name || e.qbName, brand: p.brand || '', cat: p.cat || '', photo: p.photo || '', pack: p.pack || '', upc: p.upc || '', price: P, cost: p.cost || 0 }] };
+    };
+    const first = (e) => normTxt(e.name || e.qbName).split(/\s+/)[0] || '';
+    const groups = new Map();
+    vigData.forEach((e) => {
+      // Programados como grupo desde la IA, o (los de antes) mismo precio + mismas fechas + misma primera palabra
+      const k = e.grupo ? 'g:' + e.grupo : `a:${r2(e.special)}|${e.from}|${e.to}|${first(e)}`;
+      (groups.get(k) || groups.set(k, []).get(k)).push(e);
     });
+    const out = [];
+    groups.forEach((list) => {
+      if (list.length < 2) { out.push(one(list[0])); return; }
+      const cs = list.map(one), e0 = list[0];
+      const c = { uid: uid(), kind: 'group', nx: null, S: r2(e0.special), from: e0.from, to: e0.to, items: cs.map((x) => x.items[0]) };
+      c.P = r2(avgOf(c.items.map((i) => i.price))); c.C = 0;
+      c.title = e0.grupoTitulo || groupTitle(c.items);
+      if (e0.grupoCorto) c.shortTxt = e0.grupoCorto;
+      out.push(c);
+    });
+    return out;
   }
   $('#vigPdf').addEventListener('click', () => {
     if (!vigData.length) return;
     sheetCards = vigToCards(); sheetTheme = null; buildSheet(); openModal('#clientModal'); fitPages();
   });
+  let qbAll = [];
+  // Una propuesta guardada ya está "hecha" si todos sus productos quedaron en QuickBooks con sus fechas
+  function propEnQb(h) {
+    if (!qbAll.length) return false;
+    const skus = h.cards.flatMap((c) => c.items.map((i) => ({ id: String(i.id), from: c.from, to: c.to })));
+    return skus.length > 0 && skus.every((x) => qbAll.some((e) => String(e.sku) === x.id && e.from === x.from && e.to === x.to && e.status !== 'cancelado'));
+  }
   async function loadVigentes() {
     const sec = $('#vigentes');
     try {
       const d = await qbCall('list');
+      qbAll = d.list || [];
       const today = d.today || ymd(new Date());
       const vig = (d.list || []).filter((e) => ['activo', 'programado'].includes(e.status) && e.to >= today)
         .sort((a, b) => (a.status === b.status ? a.from.localeCompare(b.from) : a.status === 'activo' ? -1 : 1));
@@ -1392,6 +1418,7 @@
       cats[k].n++;
     });
     $('#summary').hidden = false;
+    $('#qbAllWrap').hidden = !n;
     $('#summary').innerHTML = `
       <div class="kpi"><span class="lbl">Especiales</span><div class="kpi-v">${n}</div></div>
       <div class="kpi"><span class="lbl">Margen prom.</span><div class="kpi-v">${pct(avg((s) => s.m0), 0)}<span class="arrow">→</span><span class="down">${pct(avg((s) => s.m1), 0)}</span></div></div>
@@ -1399,6 +1426,8 @@
       <div class="kpi"><span class="lbl">Ganancia / caja</span><div class="kpi-v">${money(avg((s) => s.g1))}</div></div>
       <div class="kpi kpi-mix"><span class="lbl">Mezcla</span><div class="mix">${Object.entries(cats).map(([k, v]) => `<span${v.col ? ` style="--c:${v.col}"` : ''}>${esc(k)} <b>${v.n}</b></span>`).join('')}</div></div>`;
   }
+
+  $('#qbAllBtn').addEventListener('click', () => { if (S.cards.length) openQb(S.cards); });
 
   // Acciones de tarjeta
   $('#grid').addEventListener('click', (e) => {
@@ -1588,16 +1617,24 @@
         <div class="hi-thumbs">${thumbs}</div>
         <div class="hi-txt"><b>${h.cards.length} especiales · ${fmtD(h.from)} – ${fmtD(h.to)}</b>
           ${fmtTs(h.ts)} · ${esc(h.by || '')} · margen ${pct(h.m1 || 0)}</div>
-        <button class="btn btn-oro btn-sm" data-h="open" type="button">Abrir</button>
+        ${propEnQb(h) ? '<span class="st sent">En QuickBooks ✓</span><button class="btn btn-ghost btn-sm" data-h="ver" type="button">Ver PDF</button><button class="btn-link sm" data-h="open" type="button">copiar</button>'
+          : '<button class="btn btn-oro btn-sm" data-h="open" type="button">Abrir</button>'}
         <button class="icon-btn" data-h="del" type="button" title="Quitar" aria-label="Quitar">${icon('trash')}</button>
       </div>`;
     }).join('') : '<p class="data-info">Aún no hay propuestas guardadas.</p>';
   }
-  $('#histBtn').addEventListener('click', () => { renderHist(); openModal('#histModal'); });
+  $('#histBtn').addEventListener('click', () => { renderHist(); openModal('#histModal'); if (!qbAll.length) loadVigentes().then(renderHist); });
   $('#histList').addEventListener('click', (e) => {
     const b = e.target.closest('[data-h]'); if (!b) return;
     const id = b.closest('.hist-item').dataset.id;
     const h = (S.hist || []).find((x) => x.id === id); if (!h) return;
+    if (b.dataset.h === 'ver') {
+      // Ya programada: solo vista previa del PDF (no se edita)
+      sheetCards = h.cards.map((c) => ({ ...c, uid: uid() })); sheetTheme = null;
+      $('#histModal').hidden = true;
+      buildSheet(); openModal('#clientModal'); fitPages();
+      return;
+    }
     if (b.dataset.h === 'open') {
       if ($('#workspace').hidden) { toast('Conecta InSitu o carga el Excel primero'); return; }
       S.cards = h.cards.map((c) => ({ ...c, uid: uid(), open: false }));
@@ -1915,7 +1952,7 @@
     box.hidden = false;
     // Cada producto de un grupo se programa como su propio especial (mismo precio y fechas)
     const ok = qbCards.filter((c) => !c.nx && c.kind !== 'combo').flatMap((c) => (c.kind === 'group'
-      ? c.items.filter((it) => it.price > c.S).map((it) => ({ ...c, kind: 'single', items: [it], P: it.price, C: it.cost }))
+      ? c.items.filter((it) => it.price > c.S).map((it) => ({ ...c, kind: 'single', items: [it], P: it.price, C: it.cost, grupo: c.uid, grupoTitulo: c.title || groupTitle(c.items), grupoCorto: groupShort(c) }))
       : [c]));
     const nx = qbCards.filter((c) => c.nx);
     box.innerHTML = '<p class="data-info">Buscando los productos en QuickBooks…</p>';
@@ -1947,7 +1984,7 @@
       if (!confirm(`¿Programar ${chosen.length} ${chosen.length === 1 ? 'especial' : 'especiales'} en QuickBooks? Cambia el precio para todos los clientes durante la vigencia.`)) return;
       go.disabled = true; go.textContent = 'Programando…';
       try {
-        const d = await qbCall('schedule', { items: chosen.map((c) => { const m = qbMatches[c.items[0].id]; return { qbId: m.qbId, qbName: m.qbName, sku: c.items[0].id, name: c.items[0].name, special: c.S, regular: m.price, from: c.from, to: c.to }; }) });
+        const d = await qbCall('schedule', { items: chosen.map((c) => { const m = qbMatches[c.items[0].id]; return { qbId: m.qbId, qbName: m.qbName, sku: c.items[0].id, name: c.items[0].name, special: c.S, regular: m.price, from: c.from, to: c.to, grupo: c.grupo || '', grupoTitulo: c.grupoTitulo || '', grupoCorto: c.grupoCorto || '' }; }) });
         loadVigentes();
         toast(`Programados: ${d.saved.length}${d.applied ? ` · ${d.applied} ya activos hoy` : ''}${d.errors.length ? ` · ${d.errors.length} con error` : ''}`);
         if (d.errors.length) box.insertAdjacentHTML('beforeend', d.errors.map((e) => `<p class="qb-warn">${esc(e.name)}: ${esc(e.error)}</p>`).join(''));
