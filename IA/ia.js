@@ -1106,6 +1106,8 @@
     c.tag = tagFor(c);
   }
   // Margen más bajo del grupo (el que manda para el aviso del mínimo)
+  // Descuento que se anuncia en un grupo: el mayor entre sus productos (nunca negativo)
+  const groupOff = (c) => Math.max(0, ...c.items.map((i) => (i.price - c.S) / i.price));
   const groupMinMargin = (c) => Math.min(...c.items.map((i) => (c.S - i.cost) / c.S));
   function addToCard(c, p) {
     if (c.items.some((i) => String(i.id) === String(p.id))) { toast('Ya está en este especial'); return false; }
@@ -1152,7 +1154,8 @@
   }
   function overlayHTML(c) {
     const st = stats(c);
-    return `<span class="tag t-${c.tag[0]}">${esc(c.tag[1])}</span><span class="off">-${Math.round(st.off * 100)}%</span>`;
+    const off = c.kind === 'group' ? groupOff(c) : st.off;
+    return `<span class="tag t-${c.tag[0]}">${esc(c.tag[1])}</span><span class="off">-${Math.round(off * 100)}%</span>`;
   }
 
   // Mini gráfica de 12 meses (cajas vendidas por mes)
@@ -1662,10 +1665,11 @@
       const grp = c.kind === 'group';
       const name = grp ? (c.title || groupTitle(c.items)) : c.items.map((i) => i.name).join(' + ');
       const brand = [...new Set(c.items.map((i) => i.brand).filter(Boolean))].join(' · ');
-      const imgs = (grp ? c.items.slice(0, 4) : c.items).map((i) => `<img src="${esc(proxied(i.photo))}" crossorigin="anonymous" alt="">`).join('');
+      const imgs = (grp ? c.items.slice(0, 4) : c.items).map((i) => `<img src="${esc(proxied(i.photo))}" crossorigin="anonymous" alt="">`).join('')
+        + (grp && c.items.length > 4 ? `<span class="pc-more">+${c.items.length - 4}</span>` : '');
       const pack = c.kind === 'combo' ? 'Combo · ' + c.items.length + ' productos' : grp ? c.items.length + ' productos · mismo precio c/u' : c.items[0].pack;
       return `<div class="pc">
-        <div class="pc-ph${c.kind === 'combo' || grp ? ' combo' : ''}${grp ? ' grp' + (c.items.length > 2 ? ' g4' : '') : ''}">${imgs}<span class="pc-off">${c.nx ? `${c.nx}+1` : `-${Math.round(st.off * 100)}%`}</span></div>
+        <div class="pc-ph${c.kind === 'combo' || grp ? ' combo' : ''}${grp ? ' grp' + (c.items.length > 2 ? ' g4' : '') : ''}">${imgs}<span class="pc-off">${c.nx ? `${c.nx}+1` : `-${Math.round((grp ? groupOff(c) : st.off) * 100)}%`}</span></div>
         <div class="pc-b">
           <div class="pc-brand">${esc(brand)}</div>
           <div class="pc-name">${esc(name.length > 42 ? name.slice(0, 40).trim() + '…' : name)}</div>
@@ -1699,8 +1703,9 @@
       const box = img.parentElement, cs = getComputedStyle(box);
       const combo = box.classList.contains('combo');
       let bw = box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-      const bh = box.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      let bh = box.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
       if (combo) bw = (bw - 6) / 2;
+      if (box.classList.contains('g4')) bh = (bh - 6) / 2; // grupo de 3+: dos filas de fotos
       if (!img.naturalWidth || !img.naturalHeight || bw <= 0 || bh <= 0) return;
       const k = Math.min(bw / img.naturalWidth, bh / img.naturalHeight);
       img.style.maxWidth = img.style.maxHeight = 'none';
