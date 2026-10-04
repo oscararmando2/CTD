@@ -724,3 +724,11 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 
 .qb-all{margin:18px 0 6px}
 .hist-item .st{flex:none}
+
+/* Historial de propuestas: datos arriba, acciones abajo */
+.hist-prop{flex-direction:column;align-items:stretch;gap:10px}
+.hist-prop .hi-top{display:flex;align-items:center;gap:14px;min-width:0}
+.hist-prop .hi-txt{flex:1;min-width:0}
+.hist-prop .hi-acts{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hist-prop .hi-acts .icon-btn{margin-left:auto}
+.hist-prop.done .hi-thumbs{opacity:.85}
