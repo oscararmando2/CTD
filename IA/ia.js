@@ -2112,7 +2112,7 @@
     try {
       let images = [];
       for (const f of files) images = images.concat(await fileToJpegs(f));
-      renderCosteo(`Claude está leyendo la factura (${images.length} ${images.length === 1 ? 'hoja' : 'hojas'})… puede tardar 1 minuto`);
+      renderCosteo('Cargando la factura…');
       const d = await cosCall('parse', { images: images.slice(0, 12) });
       C.recibo = null; C.reciboNota = ''; C.bodega = null;
       await loadInvoice(d);
@@ -2555,7 +2555,7 @@
     try {
       let images = [];
       for (const f of files) images = images.concat(await fileToJpegs(f));
-      renderRecibo(`Claude está leyendo la factura (${images.length} ${images.length === 1 ? 'hoja' : 'hojas'})… puede tardar 1 minuto`);
+      renderRecibo('Cargando la factura…');
       const d = await cosCall('parse', { images: images.slice(0, 12) });
       await startRecibo(d);
     } catch (err) {
