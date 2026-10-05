@@ -733,3 +733,14 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .hist-prop .hi-acts .icon-btn{margin-left:auto}
 .hist-prop.done .hi-thumbs{opacity:.85}
 .pc-wide .pc-pack{margin-top:6px}
+
+/* Pestaña Fechas */
+.fech-ctl{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:22px}
+.fech-search{flex:1 1 240px}
+.fech-ctl .btn{flex:none}
+#fechF{margin-top:14px;flex-wrap:wrap;width:auto}
+.fech-add{margin-top:14px;max-width:640px}
+.fech-list{margin-top:18px}
+.lot-row.fr{grid-template-columns:64px 44px 1fr auto}
+.fr-ph{width:44px;height:44px;border-radius:12px;background:#F4EFE5;overflow:hidden;display:grid;place-items:center}
+.fr-ph img{width:100%;height:100%;object-fit:contain;padding:3px;mix-blend-mode:multiply}

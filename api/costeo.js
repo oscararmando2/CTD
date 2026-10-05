@@ -375,6 +375,25 @@ module.exports = async (req, res) => {
         await db('PATCH', 'recibos/' + id, { status: 'costeado', costeoId: str(body.costeoId, 40), costeadoBy: who, costeadoAt: Date.now() });
         return res.json({ ok: true });
       }
+      case 'lote_add': {
+        // Fecha puesta a mano (ej. mercancía que ya estaba en la bodega sin fecha)
+        const sku = codeKey(body.sku), fecha = ymdOk(body.fecha), q = num(Number(body.q));
+        if (!sku || !fecha || !(q > 0)) return res.status(400).json({ error: 'Faltan producto, fecha o cajas' });
+        await db('PATCH', '', {
+          [`lotes/${sku}/n`]: str(body.nombre, 160),
+          [`lotes/${sku}/f/${fecha}/e/m_${Date.now().toString(36)}`]: { q, f: 'a mano', p: '', ts: Date.now(), by: who },
+        });
+        return res.json({ ok: true });
+      }
+      case 'lote_del': {
+        // Quita las fechas puestas a mano de un producto en esa fecha (las de recibos no se tocan)
+        const sku = codeKey(body.sku), fecha = ymdOk(body.fecha);
+        const e = (await db('GET', `lotes/${sku}/f/${fecha}/e`)) || {};
+        const up = {};
+        Object.keys(e).filter((k) => k.startsWith('m_')).forEach((k) => { up[`lotes/${sku}/f/${fecha}/e/${k}`] = null; });
+        if (Object.keys(up).length) await db('PATCH', '', up);
+        return res.json({ ok: true, n: Object.keys(up).length });
+      }
       case 'lotes': {
         // { sku: { nombre, fechas: { 'YYYY-MM-DD': cajas recibidas con esa caducidad } } }
         const all = (await db('GET', 'lotes')) || {};
@@ -382,9 +401,11 @@ module.exports = async (req, res) => {
         Object.entries(all).forEach(([sku, v]) => {
           const fechas = {};
           Object.entries(v.f || {}).forEach(([d, x]) => {
-            const q = Object.values(x.e || {}).reduce((a, e) => a + (Number(e.q) || 0), 0);
-            const last = Object.values(x.e || {}).reduce((a, e) => Math.max(a, e.ts || 0), 0);
-            if (q > 0) fechas[d] = { q: r2(q), ts: last };
+            const es = Object.entries(x.e || {});
+            const q = es.reduce((a, [, e]) => a + (Number(e.q) || 0), 0);
+            const last = es.reduce((a, [, e]) => Math.max(a, e.ts || 0), 0);
+            const man = es.filter(([k]) => k.startsWith('m_')).length;
+            if (q > 0) fechas[d] = { q: r2(q), ts: last, man, all: man === es.length };
           });
           if (Object.keys(fechas).length) out[sku] = { nombre: v.n || '', fechas };
         });
@@ -398,7 +419,7 @@ module.exports = async (req, res) => {
   }
 };
 
-const RECIBO_ACTIONS = ['parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
+const RECIBO_ACTIONS = ['parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'lote_add', 'lote_del', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
 const ESTADOS = ['', 'ok', 'parcial', 'no', 'pendiente'];
 const ymdOk = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '');
 

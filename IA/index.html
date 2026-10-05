@@ -63,6 +63,7 @@
       <button type="button" role="tab" data-v="esp" class="on">Especiales</button>
       <button type="button" role="tab" data-v="ord">Órdenes</button>
       <button type="button" role="tab" data-v="rec">Recibo</button>
+      <button type="button" role="tab" data-v="fech">Fechas</button>
       <button type="button" role="tab" data-v="cos">Costeo</button>
       <button type="button" role="tab" data-v="ven">Vendors</button>
     </div>
@@ -171,15 +172,31 @@
       </label>
     </section>
     <section id="recWork" class="rec-work" hidden aria-live="polite"></section>
-    <div id="recSheet" class="rec-sheet" hidden></div>
     <section class="ord-recent">
       <p class="lbl">Recibos <small>(todos ven lo mismo)</small></p>
       <div id="recRecent" class="hist-list"></div>
     </section>
-    <section id="recLotsWrap" class="ord-recent" hidden>
-      <p class="lbl">Caducidades · lo que vence primero</p>
-      <div id="recLotList" class="lot-list"></div>
+   </div>
+   <!-- Fechas de caducidad por producto -->
+   <div id="fechView" hidden>
+    <section class="hero">
+      <h1 class="display">Fechas de<br>caducidad</h1>
+      <p id="fechInfo" class="status"></p>
+      <div class="fech-ctl">
+        <label class="field fech-search"><span>Buscar</span><input id="fechQ" type="search" placeholder="Nombre del producto" autocomplete="off"></label>
+        <button id="fechAdd" class="btn btn-oro" type="button">+ Agregar fecha</button>
+      </div>
+      <div class="pills" id="fechF" role="radiogroup" aria-label="Filtro">
+        <button type="button" data-f="all" class="on">Todas</button>
+        <button type="button" data-f="60">Vencen en 60 días</button>
+        <button type="button" data-f="old">Vencidas</button>
+      </div>
+      <div id="fechAddBox" class="fech-add" hidden>
+        <label class="field"><span>¿De qué producto?</span><input id="fechAddQ" type="search" placeholder="Busca por nombre, SKU o UPC" autocomplete="off"></label>
+        <div id="fechAddRes" class="grp-res ord-results"></div>
+      </div>
     </section>
+    <section id="fechList" class="lot-list fech-list" aria-live="polite"></section>
    </div>
    <!-- Costeo de facturas de proveedor -->
    <div id="cosView" hidden>
@@ -218,6 +235,8 @@
     <section id="venDetail" hidden></section>
    </div>
   </main>
+  <!-- Hoja de fecha de caducidad (mes + año), la usan Recibo y Fechas -->
+  <div id="recSheet" class="rec-sheet" hidden></div>
 
   <nav id="cosDock" class="dock" hidden aria-label="Acciones de costeo">
     <button id="cosNew" class="dock-btn" type="button"><i data-icon="upload"></i><span>Otra factura</span></button>
