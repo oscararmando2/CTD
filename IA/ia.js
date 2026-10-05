@@ -2393,11 +2393,23 @@
       const d = await cosCall('list');
       const bod = (f) => f.bodega ? (f.bodega.dif ? `<span class="pill warn">bodega: ${f.bodega.dif} ${f.bodega.dif === 1 ? 'diferencia' : 'diferencias'}</span>` : '<span class="pill ok">bodega: todo llegó</span>')
         : f.bodegaStatus === 'borrador' ? `<span class="pill">bodega: por revisar</span>` : '';
-      box.innerHTML = d.list.length ? d.list.map((f) => `<div class="hist-item" data-cid="${esc(f.id)}"><div class="hi-txt"><b>${esc(f.proveedor)} · #${esc(f.factura)}</b>${esc(f.fecha || '')} · ${f.lines} renglones · ${f.total_factura != null ? money(f.total_factura) : ''} · ${esc(f.by || '')} · ${fmtTs(f.ts)} ${bod(f)}</div><button class="btn btn-ghost btn-sm" data-c="open" type="button">Ver</button></div>`).join('')
+      box.innerHTML = d.list.length ? d.list.map((f) => `<div class="hist-item" data-cid="${esc(f.id)}"><div class="hi-txt"><b>${esc(f.proveedor)} · #${esc(f.factura)}</b>${esc(f.fecha || '')} · ${f.lines} renglones · ${f.total_factura != null ? money(f.total_factura) : ''} · ${esc(f.by || '')} · ${fmtTs(f.ts)} ${bod(f)}</div><button class="icon-btn" data-c="del" type="button" title="Borrar factura" aria-label="Borrar factura">${icon('trash')}</button><button class="btn btn-ghost btn-sm" data-c="open" type="button">Ver</button></div>`).join('')
         : '<p class="data-info">Todavía no hay facturas guardadas.</p>';
     } catch (e) { box.innerHTML = `<p class="data-info">${esc(e.message)}</p>`; }
   }
   $('#cosRecent').addEventListener('click', async (e) => {
+    const del = e.target.closest('[data-c="del"]');
+    if (del) {
+      const row = del.closest('.hist-item'), name = row.querySelector('b').textContent;
+      if (!confirm(`¿Borrar la factura ${name}?\n\nSe quita de Costeo y de Recibo (con sus fechas de caducidad). Lo que ya se aplicó en QuickBooks NO se deshace.`)) return;
+      try {
+        const d = await cosCall('borrar', { id: row.dataset.cid });
+        toast(`Factura borrada${d.recibos ? ' · también su recibo' : ''}${d.aplicados ? ` · ojo: ${d.aplicados} cambios ya estaban en QuickBooks` : ''}`);
+        if (C.head && C.lines.length && C.saved) { C.head = null; C.lines = []; }
+        cosPendAt = 0; loadCosRecent(); renderCosteo();
+      } catch (err) { toast('No se pudo borrar: ' + err.message); }
+      return;
+    }
     const b = e.target.closest('[data-c="open"]'); if (!b) return;
     try {
       const { factura: f } = await cosCall('get', { id: b.closest('.hist-item').dataset.cid });
