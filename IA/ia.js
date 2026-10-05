@@ -20,7 +20,11 @@
     appId: '1:914488691883:web:57d809a1e899c6b0be3bee',
   };
   const INSITU = 'https://app.b2bmobilesales.com/api/v1';
-  const PEOPLE = ['Oscar', 'Luis', 'Diego', 'Jonathan'];
+  const PEOPLE = ['Oscar', 'Luis', 'Diego', 'Jonathan', 'Rocio'];
+  // Usuarios con una sola sección: Jonathan (bodega) → Recibo; Rocío → Costeo
+  const ONLY = { Jonathan: 'rec', Rocio: 'cos' };
+  const LABEL = { Rocio: 'Rocío' }; // cómo se ve el nombre (el correo interno va sin acento)
+  const label = (n) => LABEL[n] || n;
   // Firebase Auth pide un correo: cada nombre usa uno interno (no recibe mensajes)
   const emailOf = (name) => name.toLowerCase() + '@ctd-ia.firebaseapp.com';
   const nameOf = (email) => PEOPLE.find((p) => emailOf(p) === String(email || '').toLowerCase()) || null;
@@ -171,13 +175,13 @@
   const errText = (e) => AUTH_ERR[e && e.code] || 'No se pudo. ' + ((e && e.message) || '');
 
   function renderGate() {
-    $('#whoPick').innerHTML = PEOPLE.map((p) => `<button type="button" data-v="${p}" class="${G.name === p ? 'on' : ''}">${p}<small>${G.name === p ? (G.create ? 'crear contraseña' : 'entrar') : '&nbsp;'}</small></button>`).join('');
+    $('#whoPick').innerHTML = PEOPLE.map((p) => `<button type="button" data-v="${p}" class="${G.name === p ? 'on' : ''}">${label(p)}<small>${G.name === p ? (G.create ? 'crear contraseña' : 'entrar') : '&nbsp;'}</small></button>`).join('');
     $('#passForm').hidden = !G.name;
     $('#pass2Input').hidden = !G.create;
     $('#pass2Input').required = G.create;
     $('#passInput').autocomplete = G.create ? 'new-password' : 'current-password';
     $('#passInput').placeholder = G.create ? 'Crea tu contraseña (mín. 6)' : 'Tu contraseña';
-    $('#passLbl').textContent = G.create ? `Crear contraseña de ${G.name}` : `Contraseña de ${G.name}`;
+    $('#passLbl').textContent = G.create ? `Crear contraseña de ${label(G.name)}` : `Contraseña de ${label(G.name)}`;
     $('#passBtn').textContent = G.create ? 'Crear y entrar' : 'Entrar';
     $('#modeBtn').textContent = G.create ? 'Ya tengo contraseña' : '¿Primera vez? Crear contraseña';
   }
@@ -238,17 +242,23 @@
   }
   function enterApp(name) {
     S.who = name;
-    $('#whoami').innerHTML = 'Hola, <b>' + esc(name) + '</b>';
+    $('#whoami').innerHTML = 'Hola, <b>' + esc(label(name)) + '</b>';
     $('#gate').hidden = true;
     $('#app').hidden = false;
-    // Jonathan (bodega): solo Recibo, sin InSitu ni QuickBooks
-    const only = recOnly();
-    $$('#viewTabs button').forEach((b) => { b.hidden = only && b.dataset.v !== 'rec'; });
-    $('#histBtn').hidden = only;
+    // Usuarios de una sola sección (Jonathan → Recibo, Rocío → Costeo): sin conectar InSitu
+    const only = onlyView();
+    $$('#viewTabs button').forEach((b) => { b.hidden = !!only && b.dataset.v !== only; });
+    $('#histBtn').hidden = !!only;
     if (only) {
-      S.view = 'rec';
+      S.view = only;
       $('#dropzone').hidden = true;
       $('#workspace').hidden = false;
+      if (only === 'cos' && !S.products.length) {
+        // Productos para emparejar la factura: copia del catálogo de InSitu (precio y costo vienen de QuickBooks)
+        cosCall('catalogo').then((d) => {
+          S.products = (d.items || []).map((x) => ({ id: String(x.id), name: x.name, upc: x.upc || '', photo: x.photo || '', price: 0, cost: 0, pack: '' }));
+        }).catch(() => {});
+      }
       applyView();
       return;
     }
@@ -2450,6 +2460,7 @@
   // ---- Fotos de productos dados de alta: se ponen en InSitu cuando el producto ya llegó de QuickBooks ----
   let cosPhotos = null;
   async function renderCosPhotos() {
+    if (!Insitu.token()) return; // poner fotos en InSitu necesita la sesión de InSitu
     if (cosPhotos === null) { cosPhotos = {}; try { cosPhotos = (await cosCall('photos')).photos || {}; } catch (e) { cosPhotos = {}; } }
     const ready = Object.entries(cosPhotos).map(([qbId, f]) => ({ qbId, ...f, p: S.products.find((x) => String(x.id) === qbId || normTxt(x.name) === normTxt(f.name)) })).filter((x) => x.p);
     if (!ready.length || C.lines.length) return;
@@ -2475,7 +2486,7 @@
    * Caducidades = lotes en la IA (producto + fecha: la misma fecha suma, otra fecha es otro lote).
    * NO mueven inventario en InSitu ni en QuickBooks. */
   const RECIBO_ONLY = ['Jonathan'];
-  const recOnly = () => RECIBO_ONLY.includes(S.who);
+  const onlyView = () => ONLY[S.who] || null;
   const K_REC = 'ctdIA.recibo';
   const R = { rec: store.get(K_REC, null), cur: 0, busy: false, lotes: null, cat: null, list: null, saveT: null, sheet: null, lastDate: '' };
   const EST = { ok: 'Llegó', parcial: 'Llegó menos', no: 'No llegó', pendiente: 'Pendiente', '': 'Sin revisar' };
@@ -2486,7 +2497,7 @@
   const codeCore = (s) => normTxt(s).replace(/[^a-z0-9]/g, '');
 
   async function pushCatalog() {
-    if (recOnly() || !S.products.length || !S.meta || S.meta.source !== 'InSitu') return;
+    if (onlyView() || !S.products.length || !S.meta || S.meta.source !== 'InSitu') return;
     const k = 'ctdIA.catPushed';
     if (store.get(k, 0) === S.meta.at) return;
     try {
@@ -3088,7 +3099,7 @@
   S.view = store.get(K_VIEW, 'esp');
   function applyView() {
     if ($('#workspace').hidden) return;
-    if (recOnly()) S.view = 'rec';
+    if (onlyView()) S.view = onlyView();
     const ord = S.view === 'ord', cos = S.view === 'cos', ven = S.view === 'ven', rec = S.view === 'rec';
     $$('#viewTabs button').forEach((b) => { const on = b.dataset.v === S.view; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
     // En el celular las pestañas se deslizan: la activa siempre a la vista (y el botón de salir fijo a la derecha)
