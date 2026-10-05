@@ -343,6 +343,22 @@ module.exports = async (req, res) => {
         }).sort((a, b) => (b.updated || b.ts) - (a.updated || a.ts)).slice(0, 60);
         return res.json({ list });
       }
+      case 'borrar': {
+        // Borra una factura de Costeo (ej. de prueba) y su recibo ligado, con sus fechas de caducidad.
+        // Los cambios que ya se hayan aplicado en QuickBooks NO se deshacen.
+        const id = codeKey(body.id);
+        const f = await db('GET', 'costeoFacturas/' + id);
+        if (!f) return res.status(404).json({ error: 'No existe' });
+        const recs = (await db('GET', 'recibos')) || {};
+        const ligados = Object.values(recs).filter((r) => r.costeoId === id || (f.key && r.key === f.key));
+        for (const r of ligados) {
+          await syncLotes(r.id, r, { lines: [] }); // quita sus entradas de lotes
+          await db('DELETE', 'recibos/' + r.id);
+        }
+        await db('DELETE', 'costeoFacturas/' + id);
+        try { await log({ action: 'costeo-borrar', factura: f.factura, proveedor: f.proveedor, recibos: ligados.length, by: who }); } catch (e) { /* el registro no detiene el borrado */ }
+        return res.json({ ok: true, recibos: ligados.length, aplicados: (f.lines || []).filter((l) => l.aplicado).length });
+      }
       case 'recibo_find': {
         const r = await findRecibo(vendorKey(body.proveedor) + '|' + codeKey(body.factura));
         return res.json({ recibo: r || null });
