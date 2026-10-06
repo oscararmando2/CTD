@@ -56,6 +56,8 @@
   };
 
   /* ================= HELPERS ================= */
+  // Productos de crédito: el nombre empieza con "CR-". No salen en especiales, sugerencias ni catálogo.
+  const isCredito = (p) => /^\s*CR\s*-/i.test((p && p.name) || '');
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   // Iconos de línea (estilo Lucide), sin emojis
@@ -746,7 +748,8 @@
   }
   function eligibleBase() {
     const noStockOut = trustStock();
-    return S.products.filter((p) => p.price > 0 && p.cost > 0 && p.cost < p.price && p.photo && !EXCLUDE_CATS.includes(p.cat) &&
+    // Sin productos de crédito (CR-): no se ponen en especial
+    return S.products.filter((p) => p.price > 0 && p.cost > 0 && p.cost < p.price && p.photo && !EXCLUDE_CATS.includes(p.cat) && !isCredito(p) &&
       !(noStockOut && p.stock != null && p.stock <= 0));
   }
 
@@ -1042,7 +1045,7 @@
     if (q.length < 2) { box.hidden = true; return; }
     const words = q.split(/\s+/);
     const inCards = new Set(S.cards.flatMap((c) => c.items.map((i) => String(i.id))));
-    const res = S.products.filter((p) => { const t = normTxt(`${p.name} ${p.brand} ${p.id} ${p.upc}`); return words.every((w) => t.includes(w)); }).slice(0, 12);
+    const res = S.products.filter((p) => { const t = normTxt(`${p.name} ${p.brand} ${p.id} ${p.upc}`); return !isCredito(p) && words.every((w) => t.includes(w)); }).slice(0, 12);
     box.innerHTML = res.length ? res.map((p) => {
       const ok = p.price > 0 && p.cost > 0 && p.cost < p.price;
       const why = p.why && p.why !== 'normal' && WHY[p.why] ? ' · ' + WHY[p.why].label : '';
@@ -1509,7 +1512,7 @@
       const q = normTxt(inp.value.trim()), res = el.querySelector('.grp-res');
       if (q.length < 2) { res.innerHTML = ''; return; }
       const words = q.split(/\s+/), inCard = new Set(c.items.map((i) => String(i.id)));
-      const list = S.products.filter((p) => { const tx = normTxt(`${p.name} ${p.brand} ${p.id} ${p.upc}`); return words.every((w) => tx.includes(w)); }).slice(0, 10);
+      const list = S.products.filter((p) => { const tx = normTxt(`${p.name} ${p.brand} ${p.id} ${p.upc}`); return !isCredito(p) && words.every((w) => tx.includes(w)); }).slice(0, 10);
       res.innerHTML = list.length ? list.map((p) => {
         const ok = p.price > 0 && p.cost > 0 && !inCard.has(String(p.id));
         return `<button type="button" data-act="pick" data-id="${esc(p.id)}"${ok ? '' : ' disabled'}>${p.photo ? `<img src="${esc(p.photo)}" alt="">` : ''}<span>${esc(p.name)}<small>${money(p.price)}${p.stock != null ? ' · stock ' + nfmt(p.stock) : ''}${inCard.has(String(p.id)) ? ' · ya está' : !(p.price > 0 && p.cost > 0) ? ' · sin precio o costo' : ''}</small></span></button>`;
@@ -1821,7 +1824,6 @@
    * todo el catálogo por departamento con foto, empaque y precio. Sin costos y sin productos CR- (crédito). */
   const CT = { deps: new Set(), stock: true, promos: true, vig: null }; // deps vacío = todos los departamentos
   const depOn = (d) => !CT.deps.size || CT.deps.has(d);
-  const isCredito = (p) => /^\s*CR\s*-/i.test(p.name || '');
   function catalogItems() {
     return S.products.filter((p) => p.price > 0 && !isCredito(p) && !EXCLUDE_CATS.includes(p.cat) && (!CT.stock || p.stock == null || p.stock > 0));
   }
@@ -3390,7 +3392,7 @@
   function allSuggestions() {
     const special = inSpecial();
     return S.products
-      .filter((p) => p.st && p.st.u90 > 0 && !EXCLUDE_CATS.includes(p.cat))
+      .filter((p) => p.st && p.st.u90 > 0 && !EXCLUDE_CATS.includes(p.cat) && !isCredito(p)) // CR- (crédito) no se sugiere
       .map((p) => lineFor(p, special))
       .filter((l) => l && l.qty > 0);
   }
@@ -3579,7 +3581,7 @@
     if (q.length < 2) { box.hidden = true; return; }
     const words = q.split(/\s+/);
     const res = S.products.filter((p) => { const t = norm(`${p.name} ${p.id} ${p.upc} ${p.brand}`); return words.every((w) => t.includes(w)); }).slice(0, 12);
-    box.innerHTML = res.length ? res.map((p) => `<button type="button" role="option" data-add="${esc(p.id)}">${p.photo ? `<img src="${esc(p.photo)}" alt="">` : ''}<span>${esc(p.name)}<small>SKU ${esc(p.id)}${p.stock != null ? ' · stock ' + nfmt(p.stock) : ''}</small></span></button>`).join('')
+    box.innerHTML = res.length ? res.map((p) => `<button type="button" role="option" data-add="${esc(p.id)}">${p.photo ? `<img src="${esc(p.photo)}" alt="">` : ''}<span>${esc(p.name)}<small>SKU ${esc(p.id)}${p.stock != null ? ' · stock ' + nfmt(p.stock) : ''}${isCredito(p) ? ' · crédito (CR-)' : ''}</small></span></button>`).join('')
       : '<p class="data-info" style="padding:10px">Sin resultados</p>';
     box.hidden = false;
   });
