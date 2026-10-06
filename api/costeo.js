@@ -272,7 +272,7 @@ module.exports = async (req, res) => {
       }
       case 'catalogo_save': {
         // Copia del catálogo de InSitu (con fotos) que sube quien sincroniza, para Recibo en el teléfono de bodega
-        const items = (Array.isArray(body.items) ? body.items : []).slice(0, 5000).map((p) => ({ id: str(p.id, 40), name: str(p.name, 160), upc: str(p.upc, 40), photo: /^https:\/\//.test(p.photo || '') ? str(p.photo, 500) : '',
+        const items = (Array.isArray(body.items) ? body.items : []).slice(0, 5000).map((p) => ({ id: str(p.id, 40), name: str(p.name, 160), upc: str(p.upc, 40), ean: str(p.ean, 40), photo: /^https:\/\//.test(p.photo || '') ? str(p.photo, 500) : '',
           price: num(p.price), cat: str(p.cat, 60), pack: str(p.pack, 40), brand: str(p.brand, 60), stock: num(p.stock) })).filter((p) => p.id && p.name);
         if (!items.length) return res.status(400).json({ error: 'Catálogo vacío' });
         await db('PUT', 'catalogo', { at: Date.now(), by: who, items });
