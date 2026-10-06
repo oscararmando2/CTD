@@ -1819,7 +1819,8 @@
   /* ================= CATÁLOGO DESCARGABLE =================
    * PDF para vendedores/clientes: primero las promociones activas (mismo diseño de especiales) y luego
    * todo el catálogo por departamento con foto, empaque y precio. Sin costos y sin productos CR- (crédito). */
-  const CT = { deps: null, stock: true, promos: true, vig: null };
+  const CT = { deps: new Set(), stock: true, promos: true, vig: null }; // deps vacío = todos los departamentos
+  const depOn = (d) => !CT.deps.size || CT.deps.has(d);
   const isCredito = (p) => /^\s*CR\s*-/i.test(p.name || '');
   function catalogItems() {
     return S.products.filter((p) => p.price > 0 && !isCredito(p) && !EXCLUDE_CATS.includes(p.cat) && (!CT.stock || p.stock == null || p.stock > 0));
@@ -1834,27 +1835,27 @@
   }
   function renderCatalogo() {
     const deps = catalogDeps();
-    if (!CT.deps) CT.deps = new Set(deps.map(([d]) => d));
-    const n = catalogItems().filter((p) => CT.deps.has(p.cat || 'Otros')).length;
+    const n = catalogItems().filter((p) => depOn(p.cat || 'Otros')).length;
     const when = S.fromCatAt || S.catAt || (S.meta && S.meta.at);
     $('#catInfo').innerHTML = S.products.length
-      ? `${n} productos en ${[...CT.deps].filter((d) => deps.some(([x]) => x === d)).length} departamentos${when ? ` · precios al ${esc(fmtTs(when))}` : ''}. Sin costos y sin productos de crédito (CR-).${CT.vig ? ` · ${CT.vig.length} promociones vigentes` : ''}`
+      ? `${n} productos en ${CT.deps.size ? CT.deps.size : deps.length} ${(CT.deps.size || deps.length) === 1 ? 'departamento' : 'departamentos'}${when ? ` · precios al ${esc(fmtTs(when))}` : ''}. Sin costos y sin productos de crédito (CR-).${CT.vig ? ` · ${CT.vig.length} promociones vigentes` : ''}`
       : 'Cargando productos…';
-    $('#catDeps').innerHTML = deps.map(([d, c]) => `<button type="button" class="${CT.deps.has(d) ? 'on' : ''}" data-d="${esc(d)}">${esc(d)}<small>${c}</small></button>`).join('');
+    $('#catDeps').innerHTML = `<button type="button" class="${CT.deps.size ? '' : 'on'}" data-d="">Todos<small>${catalogItems().length}</small></button>`
+      + deps.map(([d, c]) => `<button type="button" class="${CT.deps.has(d) ? 'on' : ''}" data-d="${esc(d)}">${esc(d)}<small>${c}</small></button>`).join('');
     $('#catStock').checked = CT.stock; $('#catPromos').checked = CT.promos;
     if (!CT.vig) loadCatVig().then(renderCatalogo);
   }
   $('#catDeps').addEventListener('click', (e) => {
     const b = e.target.closest('[data-d]'); if (!b) return;
-    const d = b.dataset.d; if (CT.deps.has(d)) CT.deps.delete(d); else CT.deps.add(d);
+    const d = b.dataset.d;
+    if (!d) CT.deps.clear(); else if (CT.deps.has(d)) CT.deps.delete(d); else CT.deps.add(d);
     renderCatalogo();
   });
-  $('#catAll').addEventListener('click', () => { const all = catalogDeps().map(([d]) => d); CT.deps = CT.deps.size === all.length ? new Set() : new Set(all); renderCatalogo(); });
   $('#catStock').addEventListener('change', (e) => { CT.stock = e.target.checked; renderCatalogo(); });
   $('#catPromos').addEventListener('change', (e) => { CT.promos = e.target.checked; });
   $('#catGo').addEventListener('click', async () => {
-    const items = catalogItems().filter((p) => CT.deps.has(p.cat || 'Otros'));
-    if (!items.length) { toast('Escoge al menos un departamento'); return; }
+    const items = catalogItems().filter((p) => depOn(p.cat || 'Otros'));
+    if (!items.length) { toast(S.products.length ? 'No hay productos con esos filtros' : 'Todavía se están cargando los productos'); return; }
     if (CT.promos && !CT.vig) await loadCatVig();
     vigData = CT.promos ? (CT.vig || []) : [];
     sheetCards = vigToCards(); sheetCat = items; sheetTheme = null;
