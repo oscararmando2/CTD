@@ -22,7 +22,7 @@
   const INSITU = 'https://app.b2bmobilesales.com/api/v1';
   const PEOPLE = ['Oscar', 'Luis', 'Diego', 'Jonathan', 'Rocio'];
   // Usuarios con una sola sección: Jonathan (bodega) → Recibo; Rocío → Costeo
-  const ONLY = { Jonathan: ['rec', 'fech'], Rocio: ['cos'] };
+  const ONLY = { Jonathan: ['rec', 'fech'], Rocio: ['cos', 'cat'] };
   const LABEL = { Rocio: 'Rocío' }; // cómo se ve el nombre (el correo interno va sin acento)
   const label = (n) => LABEL[n] || n;
   // Firebase Auth pide un correo: cada nombre usa uno interno (no recibe mensajes)
@@ -254,9 +254,11 @@
       $('#dropzone').hidden = true;
       $('#workspace').hidden = false;
       if (only.includes('cos') && !S.products.length) {
-        // Productos para emparejar la factura: copia del catálogo de InSitu (precio y costo vienen de QuickBooks)
+        // Productos (sin InSitu): copia del catálogo que se guarda al sincronizar; el costo viene de QuickBooks
         cosCall('catalogo').then((d) => {
-          S.products = (d.items || []).map((x) => ({ id: String(x.id), name: x.name, upc: x.upc || '', photo: x.photo || '', price: 0, cost: 0, pack: '' }));
+          S.catAt = d.at || null;
+          S.products = (d.items || []).map((x) => ({ id: String(x.id), name: x.name, upc: x.upc || '', photo: x.photo || '', price: x.price || 0, cost: 0, pack: x.pack || '', cat: x.cat || '', brand: x.brand || '', stock: x.stock ?? null, fromCat: true }));
+          if (S.view === 'cat') renderCatalogo();
         }).catch(() => {});
       }
       applyView();
@@ -1111,7 +1113,7 @@
   }
   $('#vigPdf').addEventListener('click', () => {
     if (!vigData.length) return;
-    sheetCards = vigToCards(); sheetTheme = null; buildSheet(); openModal('#clientModal'); fitPages();
+    sheetCards = vigToCards(); sheetCat = null; sheetTheme = null; buildSheet(); openModal('#clientModal'); fitPages();
   });
   let qbAll = [];
   // Una propuesta guardada ya está "hecha" si todos sus productos quedaron en QuickBooks con sus fechas
@@ -1663,7 +1665,7 @@
     const h = (S.hist || []).find((x) => x.id === id); if (!h) return;
     if (b.dataset.h === 'ver') {
       // Ya programada: solo vista previa del PDF (no se edita)
-      sheetCards = h.cards.map((c) => ({ ...c, uid: uid() })); sheetTheme = null;
+      sheetCards = h.cards.map((c) => ({ ...c, uid: uid() })); sheetCat = null; sheetTheme = null;
       $('#histModal').hidden = true;
       buildSheet(); openModal('#clientModal'); fitPages();
       return;
@@ -1742,6 +1744,7 @@
 
   let sheetTheme = null;
   let sheetCards = null; // null = las tarjetas de la propuesta; si no, las que se pasen (ej. vigentes)
+  let sheetCat = null; // catálogo completo después de las promos (solo al descargar el catálogo)
   const sheetList = () => sheetCards || S.cards;
   // Descuento que se anuncia en la hoja (para ordenar y escoger los destacados)
   const sheetOff = (c) => (c.nx ? 1 / (c.nx + 1) : c.kind === 'group' ? groupOff(c) : stats(c).off);
@@ -1757,7 +1760,8 @@
   function buildSheet() {
     const list = sheetList();
     const froms = list.map((c) => c.from).sort(), tos = list.map((c) => c.to).sort();
-    const from = froms[0], to = tos[tos.length - 1];
+    const today = ymd(new Date());
+    const from = froms[0] || today, to = tos[tos.length - 1] || today;
     const key = sheetTheme || MONTH_THEME[parseYmd(from).getMonth()];
     const t = THEMES[key] || THEMES.ctd;
     const foot = `<div class="pg-foot">Sujetos a disponibilidad ${esc(rangeText(from, to))}</div>`;
@@ -1804,13 +1808,93 @@
         ${foot}
       </section></div>`);
     }
+    if (sheetCat) pages.push(...catalogPages(sheetCat, style, t, pages.length));
     $('#clientSheet').innerHTML = pages.join('');
-    $$('#clientSheet .pc-ph img').forEach(fitImg);
+    $$('#clientSheet .pc-ph img, #clientSheet .ct-ph img').forEach(fitImg);
     fitShorts();
     $('#themeSel').innerHTML = Object.entries(THEMES).map(([k, v]) => `<option value="${k}"${k === key ? ' selected' : ''}>${esc(v.label)}${k === MONTH_THEME[parseYmd(from).getMonth()] ? ` (${mes})` : ''}</option>`).join('');
     fitPages();
     return { from, to, key };
   }
+  /* ================= CATÁLOGO DESCARGABLE =================
+   * PDF para vendedores/clientes: primero las promociones activas (mismo diseño de especiales) y luego
+   * todo el catálogo por departamento con foto, empaque y precio. Sin costos y sin productos CR- (crédito). */
+  const CT = { deps: null, stock: true, promos: true, vig: null };
+  const isCredito = (p) => /^\s*CR\s*-/i.test(p.name || '');
+  function catalogItems() {
+    return S.products.filter((p) => p.price > 0 && !isCredito(p) && !EXCLUDE_CATS.includes(p.cat) && (!CT.stock || p.stock == null || p.stock > 0));
+  }
+  function catalogDeps() {
+    const m = new Map();
+    catalogItems().forEach((p) => { const d = p.cat || 'Otros'; m.set(d, (m.get(d) || 0) + 1); });
+    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }
+  async function loadCatVig() {
+    try { CT.vig = (await cosCall('vigentes')).list || []; } catch (e) { CT.vig = []; }
+  }
+  function renderCatalogo() {
+    const deps = catalogDeps();
+    if (!CT.deps) CT.deps = new Set(deps.map(([d]) => d));
+    const n = catalogItems().filter((p) => CT.deps.has(p.cat || 'Otros')).length;
+    const when = S.fromCatAt || S.catAt || (S.meta && S.meta.at);
+    $('#catInfo').innerHTML = S.products.length
+      ? `${n} productos en ${[...CT.deps].filter((d) => deps.some(([x]) => x === d)).length} departamentos${when ? ` · precios al ${esc(fmtTs(when))}` : ''}. Sin costos y sin productos de crédito (CR-).${CT.vig ? ` · ${CT.vig.length} promociones vigentes` : ''}`
+      : 'Cargando productos…';
+    $('#catDeps').innerHTML = deps.map(([d, c]) => `<button type="button" class="${CT.deps.has(d) ? 'on' : ''}" data-d="${esc(d)}">${esc(d)}<small>${c}</small></button>`).join('');
+    $('#catStock').checked = CT.stock; $('#catPromos').checked = CT.promos;
+    if (!CT.vig) loadCatVig().then(renderCatalogo);
+  }
+  $('#catDeps').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-d]'); if (!b) return;
+    const d = b.dataset.d; if (CT.deps.has(d)) CT.deps.delete(d); else CT.deps.add(d);
+    renderCatalogo();
+  });
+  $('#catAll').addEventListener('click', () => { const all = catalogDeps().map(([d]) => d); CT.deps = CT.deps.size === all.length ? new Set() : new Set(all); renderCatalogo(); });
+  $('#catStock').addEventListener('change', (e) => { CT.stock = e.target.checked; renderCatalogo(); });
+  $('#catPromos').addEventListener('change', (e) => { CT.promos = e.target.checked; });
+  $('#catGo').addEventListener('click', async () => {
+    const items = catalogItems().filter((p) => CT.deps.has(p.cat || 'Otros'));
+    if (!items.length) { toast('Escoge al menos un departamento'); return; }
+    if (CT.promos && !CT.vig) await loadCatVig();
+    vigData = CT.promos ? (CT.vig || []) : [];
+    sheetCards = vigToCards(); sheetCat = items; sheetTheme = null;
+    buildSheet(); openModal('#clientModal'); fitPages();
+  });
+  // Páginas del catálogo: departamentos en orden, 4 columnas; el título del departamento se repite si continúa
+  function catalogPages(items, style, t, startIdx) {
+    const byDep = new Map();
+    [...items].sort((a, b) => (a.cat || 'Otros').localeCompare(b.cat || 'Otros') || a.name.localeCompare(b.name))
+      .forEach((p) => { const d = p.cat || 'Otros'; (byDep.get(d) || byDep.set(d, []).get(d)).push(p); });
+    const COLS = 4, ROW = 206, HEAD = 46, AVAIL = 1056 - 116 - 70; // alto útil de la hoja
+    const pages = [];
+    let cur = [], used = 0;
+    const flush = () => { if (cur.length) pages.push(cur); cur = []; used = 0; };
+    byDep.forEach((list, d) => {
+      for (let i = 0; i < list.length; i += COLS) {
+        const row = list.slice(i, i + COLS), first = i === 0;
+        const need = ROW + (first || !used ? HEAD : 0);
+        if (used + need > AVAIL) flush();
+        if (first || !used) { cur.push({ head: d, cont: !first }); used += HEAD; }
+        cur.push({ row }); used += ROW;
+      }
+    });
+    flush();
+    const date = new Date(), dtxt = `${date.getDate()} de ${MESES[date.getMonth()]} de ${date.getFullYear()}`;
+    const item = (p) => `<div class="ct-i">
+        <div class="ct-ph">${p.photo ? `<img src="${esc(proxied(p.photo))}" crossorigin="anonymous" alt="">` : ''}</div>
+        <div class="ct-n">${esc(p.name.length > 54 ? p.name.slice(0, 52).trim() + '…' : p.name)}</div>
+        <div class="ct-f"><span class="ct-pk">${esc(p.pack || '')}</span><b class="ct-pr">${money(p.price)}</b></div>
+      </div>`;
+    return pages.map((blocks, k) => `<div class="pgwrap"><section class="pg pg-cat" style="${style}">
+        <header class="pl-head ct-head">${scatter(816, 116, t.pat, t.pc, 10, 40 + startIdx + k, 0.8, 1.6)}
+          <div><p class="cv-k">Central Trade Distribution</p><h2>Catálogo</h2><p class="pl-date">Precios al ${esc(dtxt)}</p></div>
+          <span class="pl-logo"><img src="ctd-logo.png" alt="CTD"></span>
+        </header>
+        <div class="ct-body">${blocks.map((b) => (b.head ? `<h3 class="ct-dep">${esc(b.head)}${b.cont ? ' <small>(continúa)</small>' : ''}</h3>` : `<div class="ct-row">${b.row.map(item).join('')}</div>`)).join('')}</div>
+        <div class="pg-foot">Precios por caja · sujetos a cambio y disponibilidad · Hoja ${startIdx + k + 1}</div>
+      </section></div>`);
+  }
+
   // Lista de nombres cortos de un grupo: se achica la letra hasta que quepan todos en la tarjeta
   function fitShorts() {
     $$('#clientSheet .pc-short').forEach((el) => {
@@ -1851,7 +1935,7 @@
   }
   window.addEventListener('resize', () => { if (!$('#clientModal').hidden) fitPages(); });
 
-  $('#clientBtn').addEventListener('click', () => { sheetCards = null; sheetTheme = null; buildSheet(); openModal('#clientModal'); fitPages(); });
+  $('#clientBtn').addEventListener('click', () => { sheetCards = null; sheetCat = null; sheetTheme = null; buildSheet(); openModal('#clientModal'); fitPages(); });
 
   // Guardar como imagen (JPG por hoja): para WhatsApp o estados. En celular abre compartir.
   async function renderPages() {
@@ -1870,8 +1954,8 @@
     try {
       const canvases = await renderPages();
       const blobs = await Promise.all(canvases.map((cv) => new Promise((r) => cv.toBlob(r, 'image/jpeg', 0.9))));
-      const list = sheetList(), d1 = parseYmd(list.map((c) => c.from).sort()[0]);
-      const base = `Especiales-CTD-${d1.getDate()}${MES[d1.getMonth()]}`;
+      const list = sheetList(), d1 = list.length ? parseYmd(list.map((c) => c.from).sort()[0]) : new Date();
+      const base = `${sheetCat ? 'Catalogo' : 'Especiales'}-CTD-${d1.getDate()}${MES[d1.getMonth()]}`;
       const files = blobs.map((b, i) => new File([b], `${base}${blobs.length > 1 ? '-' + (i + 1) : ''}.jpg`, { type: 'image/jpeg' }));
       if (window.matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files })) {
         await navigator.share({ files, title: 'Especiales CTD' });
@@ -1904,9 +1988,14 @@
         if (i) doc.addPage();
         doc.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 612, 792);
       }
-      const froms = sheetList().map((c) => c.from).sort(), tos = sheetList().map((c) => c.to).sort();
-      const d1 = parseYmd(froms[0]), d2 = parseYmd(tos[tos.length - 1]);
-      download(doc.output('blob'), `Especiales-CTD-${d1.getDate()}${MES[d1.getMonth()]}-${d2.getDate()}${MES[d2.getMonth()]}-${d2.getFullYear()}.pdf`);
+      if (sheetCat) {
+        const d = new Date();
+        download(doc.output('blob'), `Catalogo-CTD-${d.getDate()}${MES[d.getMonth()]}-${d.getFullYear()}.pdf`);
+      } else {
+        const froms = sheetList().map((c) => c.from).sort(), tos = sheetList().map((c) => c.to).sort();
+        const d1 = parseYmd(froms[0]), d2 = parseYmd(tos[tos.length - 1]);
+        download(doc.output('blob'), `Especiales-CTD-${d1.getDate()}${MES[d1.getMonth()]}-${d2.getDate()}${MES[d2.getMonth()]}-${d2.getFullYear()}.pdf`);
+      }
       toast('PDF guardado');
     } catch (e) {
       toast('No se pudo generar el PDF (' + (e.message || e) + ')');
@@ -2510,10 +2599,10 @@
 
   async function pushCatalog() {
     if (onlyView() || !S.products.length || !S.meta || S.meta.source !== 'InSitu') return;
-    const k = 'ctdIA.catPushed';
+    const k = 'ctdIA.catPushed2'; // v2: con precio, departamento y stock (para el catálogo de Rocío)
     if (store.get(k, 0) === S.meta.at) return;
     try {
-      await cosCall('catalogo_save', { items: S.products.map((p) => ({ id: p.id, name: p.name, upc: p.upc, photo: p.photo })) });
+      await cosCall('catalogo_save', { items: S.products.map((p) => ({ id: p.id, name: p.name, upc: p.upc, photo: p.photo, price: p.price, cat: p.cat, pack: p.pack, brand: p.brand, stock: p.stock })) });
       store.set(k, S.meta.at);
     } catch (e) { /* se intenta en la siguiente */ }
   }
@@ -3168,12 +3257,14 @@
     if ($('#workspace').hidden) return;
     const ov = onlyView();
     if (ov && !ov.includes(S.view)) S.view = ov[0];
-    const ord = S.view === 'ord', cos = S.view === 'cos', ven = S.view === 'ven', rec = S.view === 'rec', fech = S.view === 'fech';
+    const ord = S.view === 'ord', cos = S.view === 'cos', ven = S.view === 'ven', rec = S.view === 'rec', fech = S.view === 'fech', cat = S.view === 'cat';
     $$('#viewTabs button').forEach((b) => { const on = b.dataset.v === S.view; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
     // En el celular las pestañas se deslizan: la activa siempre a la vista (y el botón de salir fijo a la derecha)
     const act = $('#viewTabs button.on'), bar = $('#viewTabs');
     if (act) bar.scrollLeft = Math.max(0, act.offsetLeft - (bar.clientWidth - act.offsetWidth) / 2);
-    $('#espView').hidden = ord || cos || ven || rec || fech;
+    $('#espView').hidden = ord || cos || ven || rec || fech || cat;
+    $('#catView').hidden = !cat;
+    if (cat) renderCatalogo();
     $('#venView').hidden = !ven;
     $('#recView').hidden = !rec;
     $('#fechView').hidden = !fech;
@@ -3181,11 +3272,11 @@
     if (rec) { R.list = null; renderRecibo(); }
     $('#ordView').hidden = !ord;
     $('#cosView').hidden = !cos;
-    $('#dock').hidden = ord || cos || ven || rec || fech;
+    $('#dock').hidden = ord || cos || ven || rec || fech || cat;
     $('#ordDock').hidden = !ord || O.vendor === null;
     $('#cosDock').hidden = !cos;
     if (cos) renderCosteo();
-    if (!ord && !cos && !ven && !rec && !fech) loadVigentes();
+    if (!ord && !cos && !ven && !rec && !fech && !cat) loadVigentes();
     if (ven) renderVendors();
     if (ord) {
       if (!O.lines.length && !O.touched) suggestOrder(); else renderOrders();

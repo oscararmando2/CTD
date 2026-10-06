@@ -270,10 +270,20 @@ module.exports = async (req, res) => {
       }
       case 'catalogo_save': {
         // Copia del catálogo de InSitu (con fotos) que sube quien sincroniza, para Recibo en el teléfono de bodega
-        const items = (Array.isArray(body.items) ? body.items : []).slice(0, 5000).map((p) => ({ id: str(p.id, 40), name: str(p.name, 160), upc: str(p.upc, 40), photo: /^https:\/\//.test(p.photo || '') ? str(p.photo, 500) : '' })).filter((p) => p.id && p.name);
+        const items = (Array.isArray(body.items) ? body.items : []).slice(0, 5000).map((p) => ({ id: str(p.id, 40), name: str(p.name, 160), upc: str(p.upc, 40), photo: /^https:\/\//.test(p.photo || '') ? str(p.photo, 500) : '',
+          price: num(p.price), cat: str(p.cat, 60), pack: str(p.pack, 40), brand: str(p.brand, 60), stock: num(p.stock) })).filter((p) => p.id && p.name);
         if (!items.length) return res.status(400).json({ error: 'Catálogo vacío' });
         await db('PUT', 'catalogo', { at: Date.now(), by: who, items });
         return res.json({ ok: true, n: items.length });
+      }
+      case 'vigentes': {
+        // Especiales activos o programados (solo lectura, sin costos) para el catálogo
+        const all = (await db('GET', 'qbEspeciales')) || {};
+        const today = todayCT();
+        const list = Object.values(all).filter((e) => ['activo', 'programado'].includes(e.status) && e.to >= today)
+          .map((e) => ({ sku: e.sku, name: e.name, qbName: e.qbName, special: e.special, original: e.original ?? null, regular: e.regular ?? null, from: e.from, to: e.to, status: e.status,
+            grupo: e.grupo || '', grupoTitulo: e.grupoTitulo || '', grupoCorto: e.grupoCorto || '' }));
+        return res.json({ list, today });
       }
       case 'catalogo': {
         // Primero la copia de InSitu (trae fotos); si no hay, la lista de QuickBooks (el Id es el mismo código que en InSitu)

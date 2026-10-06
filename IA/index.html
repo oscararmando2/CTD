@@ -66,6 +66,7 @@
       <button type="button" role="tab" data-v="fech">Fechas</button>
       <button type="button" role="tab" data-v="cos">Costeo</button>
       <button type="button" role="tab" data-v="ven">Vendors</button>
+      <button type="button" role="tab" data-v="cat">Catálogo</button>
     </div>
     <div class="topbar-r">
       <span id="whoami" class="whoami"></span>
@@ -223,6 +224,20 @@
     <section class="ord-recent">
       <p class="lbl">Facturas guardadas <small>(todos ven lo mismo)</small></p>
       <div id="cosRecent" class="hist-list"></div>
+    </section>
+   </div>
+   <!-- Catálogo descargable (promociones + catálogo completo) -->
+   <div id="catView" hidden>
+    <section class="hero">
+      <h1 class="display">Catálogo</h1>
+      <p id="catInfo" class="status"></p>
+      <div class="cat-opts">
+        <label class="switch"><input id="catPromos" type="checkbox" checked><span class="switch-ui" aria-hidden="true"></span><span>Promociones vigentes al inicio</span></label>
+        <label class="switch"><input id="catStock" type="checkbox" checked><span class="switch-ui" aria-hidden="true"></span><span>Solo con existencia</span></label>
+      </div>
+      <div class="cat-dh"><p class="lbl">Departamentos</p><button id="catAll" class="btn-link sm" type="button">todos / ninguno</button></div>
+      <div id="catDeps" class="pills cat-deps"></div>
+      <button id="catGo" class="btn btn-oro btn-lg" type="button"><i data-icon="download"></i>Ver y descargar catálogo</button>
     </section>
    </div>
    <!-- Vendedores -->
