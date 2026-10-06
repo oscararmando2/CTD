@@ -2656,6 +2656,26 @@
   const skuKey = (s) => String(s || '').trim().replace(/[.#$/[\]\s]+/g, '_');
   const codeCore = (s) => normTxt(s).replace(/[^a-z0-9]/g, '');
 
+  // Las fechas siguen a la existencia real: lo vendido sale primero de la fecha más vieja; si una fecha llega a 0
+  // se cierra y ya no revive aunque llegue mercancía nueva (esa entra con su fecha por Recibo o en "Ponle fecha").
+  async function ajustarLotes() {
+    if (onlyView() || !S.products.length || !S.meta || S.meta.source !== 'InSitu' || !R.lotes) return;
+    if (Date.now() - (S.meta.at || 0) > 12 * 36e5) return; // existencia muy vieja: mejor no ajustar
+    const items = [];
+    Object.entries(R.lotes).forEach(([sku, v]) => {
+      const p = S.products.find((x) => skuKey(x.id) === sku);
+      if (!p || p.stock == null) return;
+      let left = Math.max(0, p.stock);
+      Object.keys(v.fechas).sort().reverse().forEach((d) => { // nueva → vieja
+        const f = v.fechas[d], queda = Math.min(f.q, left);
+        left -= queda;
+        if (queda < f.q - 0.01) { items.push({ sku, fecha: d, r: queda }); if (queda > 0) f.q = r2(queda); else delete v.fechas[d]; }
+      });
+    });
+    if (!items.length) return;
+    R.lotesV = (R.lotesV || 0) + 1;
+    try { await cosCall('lote_ajuste', { items }); } catch (e) { /* se reintenta la próxima vez */ }
+  }
   async function pushCatalog() {
     if (onlyView() || !S.products.length || !S.meta || S.meta.source !== 'InSitu') return;
     const k = 'ctdIA.catPushed3'; // v3: con precio, departamento, stock y EAN
@@ -2669,6 +2689,7 @@
     if (R.lotes && !force) return R.lotes;
     try { R.lotes = (await cosCall('lotes')).lotes || {}; } catch (e) { R.lotes = R.lotes || {}; }
     R.lotesV = (R.lotesV || 0) + 1;
+    await ajustarLotes();
     return R.lotes;
   }
   // Productos para emparejar: los de InSitu si este dispositivo ya los tiene; si no, el catálogo de QuickBooks (mismo código)
@@ -2984,6 +3005,10 @@
           ${thumb(l, 'rec-th')}
           <div><p class="hud">¿Cuándo vence?</p><p class="sh-prod">${esc(l.sku ? l.nombre : l.producto)}</p></div>
         </div>
+        ${(() => {
+          const pv = (R.lotes && l.sku && R.lotes[skuKey(l.sku)] && R.lotes[skuKey(l.sku)].prev || []).filter((d) => ymdOk(d) && daysTo(d) >= 0)[0];
+          return pv ? `<button type="button" class="sh-same" data-s="same" data-d="${pv}">¿La misma de la vez pasada? <b>${esc(fmtLong(pv))}</b></button>` : '';
+        })()}
         <div class="sh-months">${months}</div>
         <div class="sh-years">${years}</div>
         ${days}
@@ -3026,6 +3051,7 @@
     const a = b.dataset.s, sh = R.sheet;
     if (a === 'close') { const cb = R.sheet.cb; closeSheet(); if (!cb) renderRecibo(); return; }
     if (a === 'none') { pickDate(''); return; }
+    if (a === 'same') { pickDate(b.dataset.d); return; }
     if (a === 'm') { sh.m = +b.dataset.m; sh.day = false; monthYearReady(); return; }
     if (a === 'y') { sh.y = +b.dataset.y; sh.day = false; monthYearReady(); return; }
     if (a === 'd') pickDate(mkYmd(sh.y, sh.m, +b.dataset.d));
@@ -3204,9 +3230,15 @@
     const conStock = list.some((p) => p.stock != null);
     return conStock ? list.filter((p) => p.stock > 0) : [];
   }
+  // Cajas con fecha por producto; un producto está "listo" si lo que tiene fecha cubre su existencia
+  function conFecha() {
+    const m = {};
+    Object.entries(R.lotes || {}).forEach(([sku, v]) => { m[sku] = Object.values(v.fechas).reduce((a, f) => a + f.q, 0); });
+    return m;
+  }
   function fechadas() {
-    const s = new Set();
-    lotRows().forEach((r) => { if (r.quedan == null || r.quedan > 0) s.add(r.sku); });
+    const cf = conFecha(), s = new Set();
+    fechProds().forEach((p) => { const k = skuKey(p.id); if (cf[k] > 0 && (p.stock == null || cf[k] >= p.stock - 0.5)) s.add(k); });
     return s;
   }
   function renderBodega() {
@@ -3234,6 +3266,7 @@
       return;
     }
     const all = (byDep[F.bdep] || []).sort((a, b) => a.name.localeCompare(b.name));
+    const cfMap = conFecha();
     const n = all.filter((p) => done.has(skuKey(p.id))).length;
     const show = F.bAll ? all : all.filter((p) => !done.has(skuKey(p.id)));
     box.innerHTML = `
@@ -3248,7 +3281,7 @@
         return `<button type="button" class="bd-p${has ? ' done' : ''}" data-bp="${esc(p.id)}">
           <span class="bd-ph">${p.photo ? `<img src="${esc(p.photo)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>
           <span class="bd-n">${esc(p.name)}</span>
-          <span class="bd-s">${has && nx ? '✓ vence ' + esc(fmtD(nx.d)) + ' ' + String(parseYmd(nx.d).getFullYear()).slice(2) : nfmt(p.stock) + ' en existencia'}</span>
+          <span class="bd-s">${has && nx ? '✓ vence ' + esc(fmtD(nx.d)) + ' ' + String(parseYmd(nx.d).getFullYear()).slice(2) : (cfMap[skuKey(p.id)] > 0 ? `${nfmt(Math.max(0, p.stock - cfMap[skuKey(p.id)]))} sin fecha (llegó nuevo)` : nfmt(p.stock) + ' en existencia')}</span>
         </button>`;
       }).join('') || '<p class="bd-ok">✓ Este departamento ya tiene todas sus fechas.</p>'}</div>`;
   }
@@ -3259,7 +3292,8 @@
     if (e.target.closest('[data-ball]')) { F.bAll = !F.bAll; renderBodega(); return; }
     const b = e.target.closest('[data-bp]'); if (!b) return;
     const p = fechProds().find((x) => String(x.id) === b.dataset.bp); if (!p) return;
-    const q = Math.max(1, Math.round(p.stock || 1));
+    const ya = conFecha()[skuKey(p.id)] || 0;
+    const q = Math.max(1, Math.round((p.stock || 1) - ya)); // solo las cajas que todavía no tienen fecha
     openSheetFor({ sku: String(p.id), nombre: p.name, photo: p.photo || '', caducidad: '', leida: '' }, async (fecha) => {
       if (!fecha) return;
       // Se marca al instante y se guarda en el servidor
