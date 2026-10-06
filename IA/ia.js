@@ -262,7 +262,7 @@
         // Productos (sin InSitu): copia del catálogo que se guarda al sincronizar; el costo viene de QuickBooks
         cosCall('catalogo').then((d) => {
           S.catAt = d.at || null;
-          S.products = (d.items || []).map((x) => ({ id: String(x.id), name: x.name, upc: x.upc || '', photo: x.photo || '', price: x.price || 0, cost: 0, pack: x.pack || '', cat: x.cat || '', brand: x.brand || '', stock: x.stock ?? null, fromCat: true }));
+          S.products = (d.items || []).map((x) => ({ id: String(x.id), name: x.name, upc: x.upc || '', ean: x.ean || '', photo: x.photo || '', price: x.price || 0, cost: 0, pack: x.pack || '', cat: x.cat || '', brand: x.brand || '', stock: x.stock ?? null, fromCat: true }));
           if (S.view === 'cat') renderCatalogo();
         }).catch(() => {});
       }
@@ -514,6 +514,7 @@
         cat: String(p.line_name || p.group_name || 'Otros').trim(),
         brand: String(p.brand_name || '').trim(),
         upc: String(p.barcode || '').trim(),
+        ean: String(p.ean || '').trim(), // muchos traen aquí el UPC real (ej. Refreshing: código 1168, EAN 810118991103)
         price: Number(p.default_price) || 0,
         cost: Number(p.default_cost) || 0,
         photo: String(p.photourl || '').trim(),
@@ -2646,10 +2647,10 @@
 
   async function pushCatalog() {
     if (onlyView() || !S.products.length || !S.meta || S.meta.source !== 'InSitu') return;
-    const k = 'ctdIA.catPushed2'; // v2: con precio, departamento y stock (para el catálogo de Rocío)
+    const k = 'ctdIA.catPushed3'; // v3: con precio, departamento, stock y EAN
     if (store.get(k, 0) === S.meta.at) return;
     try {
-      await cosCall('catalogo_save', { items: S.products.map((p) => ({ id: p.id, name: p.name, upc: p.upc, photo: p.photo, price: p.price, cat: p.cat, pack: p.pack, brand: p.brand, stock: p.stock })) });
+      await cosCall('catalogo_save', { items: S.products.map((p) => ({ id: p.id, name: p.name, upc: p.upc, ean: p.ean, photo: p.photo, price: p.price, cat: p.cat, pack: p.pack, brand: p.brand, stock: p.stock })) });
       store.set(k, S.meta.at);
     } catch (e) { /* se intenta en la siguiente */ }
   }
@@ -3180,7 +3181,10 @@
   F.bdep = null; F.bAll = false;
   function bodegaProds() {
     // Solo producto empacado: con UPC (11+ dígitos) o código propio CTD-####. Lo que va por libra no caduca.
-    const empacado = (p) => String(p.upc || '').replace(/\D/g, '').length >= 11 || /^\s*CTD-\d+/i.test(p.upc || '');
+    // Lleva fecha todo lo que hay en existencia, menos el produce a granel sin código (frutas, verduras, raíces por libra)
+    const conCodigo = (p) => [p.upc, p.ean].some((c) => String(c || '').replace(/\D/g, '').length >= 11) || /^\s*CTD-\d+/i.test(p.upc || '');
+    const granel = (p) => /\b(po vida|produce|fruta|frutas|fruit|fruits|verdura|verduras|vegetal|vegetales|vegetable|vegetables)\b/.test(normTxt(p.cat || ''));
+    const empacado = (p) => conCodigo(p) || !granel(p);
     // Tampoco llevan fecha las veladoras / velas
     const noCaduca = (p) => /\bvel(a|as|adora|adoras)\b/.test(normTxt(`${p.name} ${p.cat || ''}`));
     const list = fechProds().filter((p) => !isCredito(p) && !EXCLUDE_CATS.includes(p.cat) && p.price > 0 && empacado(p) && !noCaduca(p));
