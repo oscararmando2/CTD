@@ -121,7 +121,7 @@ module.exports = async (req, res) => {
   body = body || {};
   if (RECIBO_ONLY.includes(who) && !RECIBO_ACTIONS.includes(body.action)) return res.status(403).json({ error: 'Tu usuario solo tiene acceso a Recibo.' });
   // Rocío consulta fechas pero no las cambia
-  if (COSTEO_ONLY.includes(who) && ['lote_add', 'lote_del'].includes(body.action)) return res.status(403).json({ error: 'Tu usuario solo puede consultar las fechas.' });
+  if (COSTEO_ONLY.includes(who) && ['lote_add', 'lote_del', 'lote_ajuste'].includes(body.action)) return res.status(403).json({ error: 'Tu usuario solo puede consultar las fechas.' });
 
   try {
     switch (body.action) {
@@ -406,20 +406,37 @@ module.exports = async (req, res) => {
         if (Object.keys(up).length) await db('PATCH', '', up);
         return res.json({ ok: true, n: Object.keys(up).length });
       }
+      case 'lote_ajuste': {
+        // La IA (con la existencia de InSitu) guarda cuánto queda de cada fecha; solo baja, nunca sube
+        const items = (Array.isArray(body.items) ? body.items : []).slice(0, 500);
+        const up = {}, now = Date.now();
+        items.forEach((x) => {
+          const sku = codeKey(x.sku), fecha = ymdOk(x.fecha), r = Number(x.r);
+          if (!sku || !fecha || !(r >= 0)) return;
+          up[`lotes/${sku}/f/${fecha}/aj`] = { r: r2(r), ts: now, by: who };
+        });
+        if (Object.keys(up).length) await db('PATCH', '', up);
+        return res.json({ ok: true, n: Object.keys(up).length });
+      }
       case 'lotes': {
         // { sku: { nombre, fechas: { 'YYYY-MM-DD': cajas recibidas con esa caducidad } } }
+        // Lo que queda de cada fecha: si ya se ajustó con la existencia real (aj = {r, ts}), cuenta ese resto
+        // más lo que entró después; si llega a 0 la fecha queda cerrada. 'prev' = fechas que ha tenido (para "¿la misma?")
         const all = (await db('GET', 'lotes')) || {};
         const out = {};
         Object.entries(all).forEach(([sku, v]) => {
           const fechas = {};
+          const prev = Object.keys(v.f || {}).sort().reverse().slice(0, 3);
           Object.entries(v.f || {}).forEach(([d, x]) => {
             const es = Object.entries(x.e || {});
-            const q = es.reduce((a, [, e]) => a + (Number(e.q) || 0), 0);
+            const aj = x.aj && typeof x.aj.r === 'number' ? x.aj : null;
+            const q = aj ? aj.r + es.filter(([, e]) => (e.ts || 0) > aj.ts).reduce((a, [, e]) => a + (Number(e.q) || 0), 0)
+              : es.reduce((a, [, e]) => a + (Number(e.q) || 0), 0);
             const last = es.reduce((a, [, e]) => Math.max(a, e.ts || 0), 0);
             const man = es.filter(([k]) => k.startsWith('m_')).length;
             if (q > 0) fechas[d] = { q: r2(q), ts: last, man, all: man === es.length };
           });
-          if (Object.keys(fechas).length) out[sku] = { nombre: v.n || '', fechas };
+          if (Object.keys(fechas).length || prev.length) out[sku] = { nombre: v.n || '', fechas, prev };
         });
         return res.json({ lotes: out });
       }
