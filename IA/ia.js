@@ -3091,7 +3091,7 @@
   function lotRows() {
     const out = [];
     Object.entries(R.lotes || {}).forEach(([sku, v]) => {
-      const p = S.products.find((x) => skuKey(x.id) === sku);
+      const p = (S.products.length ? S.products : (R.cat || [])).find((x) => skuKey(x.id) === sku);
       const dates = Object.entries(v.fechas).map(([d, x]) => ({ d, q: x.q })).sort((a, b) => (a.d < b.d ? 1 : -1)); // nuevo → viejo
       let left = p && p.stock != null ? Math.max(0, p.stock) : null;
       dates.forEach((x) => {
@@ -3127,6 +3127,7 @@
   async function renderFechas(reload) {
     const box = $('#fechList'); if (!box) return;
     if (reload || !R.lotes) { box.innerHTML = '<p class="data-info">Cargando…</p>'; await Promise.all([loadLotes(true), recProducts()]); }
+    renderBodega();
     const total = Object.keys(R.lotes || {}).length;
     $('#fechInfo').textContent = total ? `${total} productos con fecha. Las fechas salen de los recibos; también puedes ponerlas a mano.` : 'Todavía no hay fechas. Se llenan al revisar facturas en Recibo, o agrégalas a mano.';
     // Departamentos (con cuántos productos hay en cada uno con los otros filtros)
@@ -3168,6 +3169,82 @@
   $('#fechDeps').addEventListener('click', (e) => {
     const b = e.target.closest('[data-dep]'); if (!b) return;
     F.dep = F.dep === b.dataset.dep ? '' : b.dataset.dep; renderFechas(false);
+  });
+  /* ---- "Ponle fecha a la bodega": por departamento, solo lo que hay en existencia; tocar producto → mes + año ---- */
+  F.bdep = null; F.bAll = false;
+  function bodegaProds() {
+    const list = fechProds().filter((p) => !isCredito(p) && !EXCLUDE_CATS.includes(p.cat) && p.price > 0);
+    const conStock = list.some((p) => p.stock != null);
+    return conStock ? list.filter((p) => p.stock > 0) : [];
+  }
+  function fechadas() {
+    const s = new Set();
+    lotRows().forEach((r) => { if (r.quedan == null || r.quedan > 0) s.add(r.sku); });
+    return s;
+  }
+  function renderBodega() {
+    const box = $('#bodega'); if (!box) return;
+    const prods = bodegaProds();
+    if (!prods.length) { box.hidden = true; return; }
+    const done = fechadas(), byDep = {};
+    prods.forEach((p) => { const d = p.cat || 'Otros'; (byDep[d] = byDep[d] || []).push(p); });
+    const nDone = prods.filter((p) => done.has(skuKey(p.id))).length, pct0 = Math.round((nDone / prods.length) * 100);
+    if (nDone === prods.length && !F.bdep) { box.hidden = false; box.innerHTML = '<p class="bd-ok">✓ Todo lo que hay en existencia ya tiene fecha. Lo nuevo entra con Recibo.</p>'; return; }
+    box.hidden = false;
+    const bar = (n, of) => `<div class="bd-bar"><span style="width:${of ? (n / of) * 100 : 0}%"></span></div>`;
+    if (!F.bdep) {
+      const deps = Object.keys(byDep).sort((a, b) => {
+        const fa = byDep[a].filter((p) => !done.has(skuKey(p.id))).length, fb = byDep[b].filter((p) => !done.has(skuKey(p.id))).length;
+        return (fb > 0) - (fa > 0) || a.localeCompare(b);
+      });
+      box.innerHTML = `
+        <div class="bd-h"><div><p class="hud">Ponle fecha a la bodega</p><p class="bd-t">Llevas <b>${pct0}%</b> · ${nDone} de ${prods.length} productos en existencia</p></div></div>
+        ${bar(nDone, prods.length)}
+        <div class="bd-deps">${deps.map((d) => {
+          const all = byDep[d], n = all.filter((p) => done.has(skuKey(p.id))).length, pc = Math.round((n / all.length) * 100);
+          return `<button type="button" class="bd-dep${n === all.length ? ' full' : ''}" data-bdep="${esc(d)}"><b>${esc(d)}</b><span>${n === all.length ? '✓ completo' : `${pc}% · faltan ${all.length - n}`}</span>${bar(n, all.length)}</button>`;
+        }).join('')}</div>`;
+      return;
+    }
+    const all = (byDep[F.bdep] || []).sort((a, b) => a.name.localeCompare(b.name));
+    const n = all.filter((p) => done.has(skuKey(p.id))).length;
+    const show = F.bAll ? all : all.filter((p) => !done.has(skuKey(p.id)));
+    box.innerHTML = `
+      <div class="bd-h"><button type="button" class="btn-back" data-bback><span aria-hidden="true">←</span> Departamentos</button></div>
+      <div class="bd-h"><div><p class="hud">${esc(F.bdep)}</p><p class="bd-t">Llevas <b>${Math.round((n / (all.length || 1)) * 100)}%</b> · ${n} de ${all.length} con fecha</p></div>
+        <button type="button" class="btn-link sm" data-ball>${F.bAll ? 'ver solo los que faltan' : 'ver todos'}</button></div>
+      ${bar(n, all.length)}
+      <p class="status bd-help">Toca un producto y escoge mes y año. Se guarda con las cajas que hay en existencia.</p>
+      <div class="bd-grid">${show.map((p) => {
+        const has = done.has(skuKey(p.id));
+        const nx = has ? lotRows().find((r) => r.sku === skuKey(p.id)) : null;
+        return `<button type="button" class="bd-p${has ? ' done' : ''}" data-bp="${esc(p.id)}">
+          <span class="bd-ph">${p.photo ? `<img src="${esc(p.photo)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>
+          <span class="bd-n">${esc(p.name)}</span>
+          <span class="bd-s">${has && nx ? '✓ vence ' + esc(fmtD(nx.d)) + ' ' + String(parseYmd(nx.d).getFullYear()).slice(2) : nfmt(p.stock) + ' en existencia'}</span>
+        </button>`;
+      }).join('') || '<p class="bd-ok">✓ Este departamento ya tiene todas sus fechas.</p>'}</div>`;
+  }
+  $('#bodega').addEventListener('click', (e) => {
+    const dep = e.target.closest('[data-bdep]');
+    if (dep) { F.bdep = dep.dataset.bdep; F.bAll = false; renderBodega(); $('#bodega').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (e.target.closest('[data-bback]')) { F.bdep = null; renderBodega(); return; }
+    if (e.target.closest('[data-ball]')) { F.bAll = !F.bAll; renderBodega(); return; }
+    const b = e.target.closest('[data-bp]'); if (!b) return;
+    const p = fechProds().find((x) => String(x.id) === b.dataset.bp); if (!p) return;
+    const q = Math.max(1, Math.round(p.stock || 1));
+    openSheetFor({ sku: String(p.id), nombre: p.name, photo: p.photo || '', caducidad: '', leida: '' }, async (fecha) => {
+      if (!fecha) return;
+      // Se marca al instante y se guarda en el servidor
+      const k = skuKey(p.id);
+      R.lotes = R.lotes || {};
+      R.lotes[k] = R.lotes[k] || { nombre: p.name, fechas: {} };
+      const prev = R.lotes[k].fechas[fecha] || { q: 0, man: 0 };
+      R.lotes[k].fechas[fecha] = { q: prev.q + q, ts: Date.now(), man: (prev.man || 0) + 1 };
+      renderFechas(false);
+      try { await cosCall('lote_add', { sku: String(p.id), nombre: p.name, fecha, q }); toast(`✓ ${p.name} · vence ${fmtLong(fecha)}`); }
+      catch (err) { toast('No se guardó: ' + err.message); renderFechas(true); }
+    });
   });
   const fechFilterTxt = () => [F.dep || 'Todos los departamentos', F.f === '60' ? 'vencen en 60 días' : F.f === 'old' ? 'vencidas' : '', F.q ? `"${F.q}"` : ''].filter(Boolean).join(' · ');
   // Informe PDF (con fotos, por departamento; sin dinero) — misma vista de hojas que los especiales
