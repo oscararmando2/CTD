@@ -49,10 +49,11 @@
     bajando: { icon: 'down', label: 'Ventas a la baja', w: 2.2, dBoost: [1.0, 1.3] },
     gancho: { icon: 'flame', label: 'Más vendido', w: 1.6, dBoost: [0.45, 0.8] },
     normal: { icon: 'shuffle', label: 'Al azar', w: 0.5, dBoost: [1, 1] },
+    caduca: { icon: 'alert', label: 'Por caducar', w: 4, dBoost: [1.4, 1.9] }, // fechas de Recibo/Fechas: no alcanza a venderse
   };
   const STRATS = {
-    mixto: ['dormido', 'lento', 'bajando', 'gancho', 'normal'],
-    mover: ['dormido', 'lento'],
+    mixto: ['caduca', 'dormido', 'lento', 'bajando', 'gancho', 'normal'],
+    mover: ['caduca', 'dormido', 'lento'],
     bajando: ['bajando'],
     gancho: ['gancho'],
     azar: null,
@@ -599,6 +600,11 @@
     const d = Math.round(off * 100);
     const stk = it.stock != null ? ` y quedan ${cajas(it.stock)} en bodega` : '';
     switch (it.why) {
+      case 'caduca': {
+        const e = it.exp;
+        return e ? `Vencen ~${cajas(e.quedan)} el ${fmtLong(e.d)} (en ${e.dias} días) y se venden ~${nfmt(e.rate)} por semana: sobran ~${cajas(e.sobran)}. Especial de -${d}% para sacarlo a tiempo.`
+          : `Está por caducar. Especial de -${d}% para sacarlo a tiempo.`;
+      }
       case 'dormido':
         return st.days == null
           ? `No se ha vendido en 12 meses${stk}. Especial de -${d}% para sacarlo antes de que se haga viejo.`
@@ -866,13 +872,13 @@
     const whys = hasSales() ? STRATS[S.set.strat] : null;
     return eligibleBase().filter((p) =>
       cats.includes(p.cat) && (!S.set.vendor || p.vendor === S.set.vendor) && (!S.set.brand || p.brand === S.set.brand) &&
-      (!whys || whys.includes(p.why || 'normal')));
+      (!whys || whys.includes(whyEff(p) || 'normal')));
   }
 
   // Barajado ponderado: pesa el motivo (si hay ventas) y el margen (más espacio para descontar)
   function weight(p) {
     const m = (p.price - p.cost) / p.price;
-    const w = hasSales() && S.set.strat !== 'azar' ? (WHY[p.why] || WHY.normal).w : 1;
+    const w = hasSales() && S.set.strat !== 'azar' ? (WHY[whyEff(p)] || WHY.normal).w : 1;
     return w * (0.4 + m);
   }
   function weightedShuffle(arr) {
@@ -926,6 +932,7 @@
     if (c.kind === 'group') return ['combo', 'Mismo precio'];
     if (c.nx) return ['nx', `${c.nx} + 1 gratis`];
     const why = c.items[0].why;
+    if (why === 'caduca') return ['relampago', 'Por caducar'];
     if (hasSales() && why && why !== 'normal') {
       if (why === 'dormido') return ['liquidacion', 'Liquidación'];
       if (why === 'gancho') return ['gancho', 'Gancho'];
@@ -960,10 +967,13 @@
         while (q.length) {
           const p = q.shift();
           if (used.has(p.key)) continue;
-          const s = specialPrice(p.price, p.cost, p.why);
+          const why = whyEff(p);
+          const s = specialPrice(p.price, p.cost, why);
           if (s == null) continue;
           used.add(p.key);
-          out.push(makeCard([p], p.price, p.cost, s));
+          const c = makeCard([p], p.price, p.cost, s);
+          if (why === 'caduca') { c.items[0].why = 'caduca'; c.items[0].exp = S.risk[skuKey(p.id)]; if (c.nx) unsetNx(c); c.tag = tagFor(c); }
+          out.push(c);
           taken[cat] = (taken[cat] || 0) + 1;
           progress = true;
           break;
@@ -992,6 +1002,7 @@
 
   function generate() {
     if (!S.set.cats || !S.set.cats.length) { toast('Elige al menos una categoría'); return; }
+    S.risk = R.lotes ? riskMap() : {}; // lo que no alcanza a venderse antes de su fecha sube de prioridad
     const n = S.set.count;
     const list = pool();
     const keep = S.cards.filter((c) => c.pinned);
@@ -2657,6 +2668,7 @@
   async function loadLotes(force) {
     if (R.lotes && !force) return R.lotes;
     try { R.lotes = (await cosCall('lotes')).lotes || {}; } catch (e) { R.lotes = R.lotes || {}; }
+    R.lotesV = (R.lotesV || 0) + 1;
     return R.lotes;
   }
   // Productos para emparejar: los de InSitu si este dispositivo ya los tiene; si no, el catálogo de QuickBooks (mismo código)
@@ -3134,6 +3146,7 @@
     $('#fechAdd').hidden = ro; if (ro) $('#fechAddBox').hidden = true;
     if (reload || !R.lotes) { box.innerHTML = '<p class="data-info">Cargando…</p>'; await Promise.all([loadLotes(true), recProducts()]); }
     if (ro) $('#bodega').hidden = true; else renderBodega();
+    renderTips();
     const total = Object.keys(R.lotes || {}).length;
     $('#fechInfo').textContent = ro ? (total ? `${total} productos con fecha (solo consulta).` : 'Todavía no hay fechas.')
       : total ? `${total} productos con fecha. Las fechas salen de los recibos; también puedes ponerlas a mano.` : 'Todavía no hay fechas. Se llenan al revisar facturas en Recibo, o agrégalas a mano.';
@@ -3255,10 +3268,74 @@
       R.lotes[k] = R.lotes[k] || { nombre: p.name, fechas: {} };
       const prev = R.lotes[k].fechas[fecha] || { q: 0, man: 0 };
       R.lotes[k].fechas[fecha] = { q: prev.q + q, ts: Date.now(), man: (prev.man || 0) + 1 };
+      R.lotesV = (R.lotesV || 0) + 1;
       renderFechas(false);
       try { await cosCall('lote_add', { sku: String(p.id), nombre: p.name, fecha, q }); toast(`✓ ${p.name} · vence ${fmtLong(fecha)}`); }
       catch (err) { toast('No se guardó: ' + err.message); renderFechas(true); }
     });
+  });
+  /* ---- Consejos: cruzan las fechas con lo que se vende por semana y a quién ---- */
+  F.tipsAll = false;
+  function renderTips() {
+    const box = $('#fechTips'); if (!box) return;
+    const full = !onlyView(); // ventas y dinero solo para Oscar, Luis y Diego
+    const rows = lotRows().map((r) => ({ ...r, dep: depOf(r.sku) })).filter((r) => !F.dep || r.dep === F.dep);
+    const tips = [];
+    // 1) Ya venció
+    const dead = rows.filter((r) => r.dias < 0);
+    if (dead.length) tips.push({ lvl: 'dead', t: `Ya vencieron ${dead.length} ${dead.length === 1 ? 'producto' : 'productos'} (${nfmt(dead.reduce((a, r) => a + cajasDe(r), 0))} cajas)`,
+      d: `Sácalos del piso y separa para reclamar crédito al proveedor: ${dead.slice(0, 4).map((r) => esc(r.nombre)).join(', ')}${dead.length > 4 ? '…' : ''}.` });
+    // 2) No alcanza a venderse antes de su fecha
+    if (full) {
+      const rk = riskMap(), buyers = (S.sales && S.sales.buyers) || {}, sellers = (S.sales && S.sales.sellers) || [];
+      Object.entries(rk).filter(([sku]) => !F.dep || depOf(sku) === F.dep).sort((a, b) => b[1].sobran - a[1].sobran).forEach(([sku, k]) => {
+        const p = S.products.find((x) => skuKey(x.id) === sku); if (!p) return;
+        const bs = (buyers[String(p.id)] || []).slice(0, 3);
+        const who = bs.map((b) => { const s = sellers.find((x) => x.id === b.seller); return `${esc(b.name)}${s ? ` <small>(${esc(s.name)})</small>` : ''}`; }).join(', ');
+        tips.push({ lvl: 'hot', sku, t: `${esc(p.name)}: no alcanza a venderse`,
+          d: `Vencen ~${nfmt(k.quedan)} cajas el ${esc(fmtLong(k.d))} (en ${k.dias} días) y se venden ~${nfmt(k.rate)} por semana: sobran ~${nfmt(k.sobran)}${p.cost ? ` (${money(k.sobran * p.cost)})` : ''}. Ponlo en especial${who ? ` y ofréceselo a quien más lo compra: ${who}` : ''}. No pidas más hasta que baje.`,
+          act: `<button type="button" class="btn btn-oro btn-sm" data-tesp="${esc(sku)}">${icon('sparkles')}Mandar a especial</button>` });
+      });
+      // 3) Parado: con fecha y sin venderse en 60+ días
+      rows.filter((r) => r.dias >= 0).forEach((r) => {
+        const p = S.products.find((x) => skuKey(x.id) === r.sku);
+        if (!p || !p.st || rk[r.sku] || tips.some((x) => x.sku === r.sku)) return;
+        const sin = p.st.days == null ? 365 : p.st.days;
+        if (sin >= 60) tips.push({ lvl: 'warm', sku: r.sku, t: `${esc(p.name)}: parado`, d: `Lleva ${p.st.days == null ? 'más de un año' : sin + ' días'} sin venderse y vence en ${r.dias} días. Especial fuerte o pregunta al proveedor si lo cambia.`,
+          act: `<button type="button" class="btn btn-ghost btn-sm" data-tesp="${esc(r.sku)}">${icon('sparkles')}Mandar a especial</button>` });
+      });
+    }
+    // 4) Dos fechas del mismo producto: sacar primero la más próxima
+    const bySku = {};
+    rows.filter((r) => r.dias >= 0).forEach((r) => { (bySku[r.sku] = bySku[r.sku] || []).push(r); });
+    Object.values(bySku).filter((l) => l.length > 1).forEach((l) => {
+      l.sort((a, b) => (a.d < b.d ? -1 : 1));
+      tips.push({ lvl: '', t: `${esc(l[0].nombre)}: vende primero el más próximo`, d: `Hay ${l.length} fechas. Saca primero el que vence el ${esc(fmtLong(l[0].d))}${l[0].quedan != null ? ` (~${nfmt(l[0].quedan)} cajas)` : ''} antes que el del ${esc(fmtLong(l[1].d))}.` });
+    });
+    box.hidden = !tips.length;
+    if (!tips.length) return;
+    const show = F.tipsAll ? tips : tips.slice(0, 5);
+    box.innerHTML = `<p class="lbl">Consejos <small>(${tips.length})</small></p>` + show.map((x) => `
+      <div class="tip ${x.lvl}"><i aria-hidden="true">${icon(x.lvl === 'dead' || x.lvl === 'hot' ? 'alert' : x.lvl === 'warm' ? 'moon' : 'check')}</i>
+        <div><b>${x.t}</b><p>${x.d}</p>${x.act ? `<div class="tip-a">${x.act}</div>` : ''}</div></div>`).join('')
+      + (tips.length > 5 ? `<button type="button" class="btn-link sm" data-tmore>${F.tipsAll ? 'ver menos' : `ver los ${tips.length}`}</button>` : '');
+  }
+  $('#fechTips').addEventListener('click', (e) => {
+    if (e.target.closest('[data-tmore]')) { F.tipsAll = !F.tipsAll; renderTips(); return; }
+    const b = e.target.closest('[data-tesp]'); if (!b) return;
+    const p = S.products.find((x) => skuKey(x.id) === b.dataset.tesp); if (!p) return;
+    if (S.cards.some((c) => c.items.some((i) => String(i.id) === String(p.id)))) { toast('Ya está en especiales'); return; }
+    if (!(p.price > 0 && p.cost > 0 && p.cost < p.price)) { toast('Sin precio o costo para hacerle especial'); return; }
+    const k = (S.risk = riskMap())[skuKey(p.id)];
+    const s = specialPrice(p.price, p.cost, 'caduca') || r2(Math.max(psychUp(minPrice(p.cost)), p.price * 0.95));
+    const c = makeCard([p], p.price, p.cost, Math.min(s, p.price));
+    c.pinned = true; c.manual = true;
+    if (k) { c.items[0].why = 'caduca'; c.items[0].exp = k; }
+    if (c.nx) unsetNx(c); c.tag = tagFor(c);
+    S.cards.unshift(c);
+    S.view = 'esp'; store.set(K_VIEW, S.view); applyView(); render(true);
+    toast('Mandado a especiales (queda fijado)');
+    window.scrollTo({ top: $('#grid').offsetTop - 80, behavior: 'smooth' });
   });
   const fechFilterTxt = () => [F.dep || 'Todos los departamentos', F.f === '60' ? 'vencen en 60 días' : F.f === 'old' ? 'vencidas' : '', F.q ? `"${F.q}"` : ''].filter(Boolean).join(' · ');
   // Informe PDF (con fotos, por departamento; sin dinero) — misma vista de hojas que los especiales
@@ -3293,9 +3370,12 @@
     rows.forEach((r) => {
       const p = S.products.find((x) => skuKey(x.id) === r.sku);
       if (!p || inCards.has(String(p.id)) || !(p.price > 0 && p.cost > 0 && p.cost < p.price) || isCredito(p)) { skip++; return; }
-      const s = specialPrice(p.price, p.cost, 'lento') || r2(Math.max(psychUp(minPrice(p.cost)), p.price * 0.95));
+      const s = specialPrice(p.price, p.cost, 'caduca') || r2(Math.max(psychUp(minPrice(p.cost)), p.price * 0.95));
       const c = makeCard([p], p.price, p.cost, Math.min(s, p.price));
       c.pinned = true; c.manual = true;
+      const rk = (S.risk = riskMap())[r.sku];
+      c.items[0].why = 'caduca'; c.items[0].exp = rk || { d: r.d, dias: r.dias, quedan: cajasDe(r), sobran: cajasDe(r), rate: 0 };
+      if (c.nx) unsetNx(c); c.tag = tagFor(c);
       S.cards.unshift(c); inCards.add(String(p.id)); n++;
     });
     if (!n) { toast(skip ? 'Ya están en especiales o no tienen precio/costo' : 'Nada que mandar'); return; }
@@ -3334,6 +3414,26 @@
       } catch (err) { toast('No se pudo guardar: ' + err.message); }
     });
   });
+
+  // Riesgo por producto: el lote más próximo que no alcanza a venderse antes de su fecha (vendiendo primero lo más viejo).
+  // { d, dias, quedan, sobran, rate (cajas/semana) } — solo si hay ventas y stock para estimarlo
+  let riskMemo = null;
+  function riskMap() {
+    const key = `${R.lotesV || 0}|${S.products.length}|${S.meta ? S.meta.at : ''}`;
+    if (riskMemo && riskMemo.key === key) return riskMemo.val;
+    const out = {}, rows = lotRows();
+    rows.forEach((r) => {
+      if (r.dias < 0 || out[r.sku]) return;
+      const p = S.products.find((x) => skuKey(x.id) === r.sku);
+      if (!p || !p.st || r.quedan == null) return;
+      const rate = (p.st.u90 || 0) / 13, sold = (rate / 7) * r.dias;
+      const sobran = Math.round(r.quedan - sold);
+      if (sobran > 0) out[r.sku] = { d: r.d, dias: r.dias, quedan: r.quedan, sobran, rate: r2(rate) };
+    });
+    riskMemo = { key, val: out };
+    return out;
+  }
+  const whyEff = (p) => (S.risk && S.risk[skuKey(p.id)] ? 'caduca' : p.why);
 
   // Caducidad más próxima de un producto (para Especiales / Costeo)
   function nextExpiry(sku) {
@@ -3398,7 +3498,14 @@
       id: s.id, name: s.name, phone: s.phone, s30: r2(s.s30), p30: r2(s.p30), s90: r2(s.s90), inv30: s.inv30,
       active90: Object.keys(s.clients90).length, due: clientList.filter((c) => c.seller === s.id && c.due).length,
     })).sort((a, b) => b.s30 - a.s30);
-    return { at: Date.now(), sellers: sellerList, clients: clientList };
+    // Los 5 clientes que más compran cada producto (últimos 6 meses)
+    const buyers = {};
+    Object.values(clients).forEach((c) => Object.entries(c.prods).forEach(([code, x]) => {
+      const q = x.recent + x.before; if (!(q > 0)) return;
+      (buyers[code] = buyers[code] || []).push({ id: c.id, name: c.name, seller: c.seller, q: r2(q) });
+    }));
+    Object.keys(buyers).forEach((k) => { buyers[k] = buyers[k].sort((a, b) => b.q - a.q).slice(0, 5); });
+    return { at: Date.now(), sellers: sellerList, clients: clientList, buyers };
   }
 
   let venSel = null;
@@ -3550,6 +3657,11 @@
   const isShort = (l) => { const c = coverDays(l, l.qty); return c != null && c < targetDays(l); };
 
   function whyLine(l) {
+    const rk = R.lotes ? riskMap()[skuKey(l.id)] : null;
+    if (rk) return `⚠ No pidas todavía: tienes ~${cajas(rk.quedan)} que vencen el ${fmtLong(rk.d)} y se venden ~${nfmt(rk.rate)} por semana; sobran ~${cajas(rk.sobran)}. ` + whyLine0(l);
+    return whyLine0(l);
+  }
+  function whyLine0(l) {
     const st = Number(l.stock) || 0;
     const left = l.rate > 0 && st > 0 ? Math.round(st / (l.rate / 7)) : 0;
     const stockTxt = st < 0 ? `no hay (InSitu marca ${nfmt(st)})` : st === 0 ? 'ya no hay' : `quedan ${cajas(st)} (${span(left)})`;
@@ -3598,7 +3710,10 @@
 
   function allSuggestions() {
     const special = inSpecial();
+    const risk = R.lotes ? riskMap() : {};
+    O.expSkip = [];
     return S.products
+      .filter((p) => { const k = risk[skuKey(p.id)]; if (k) O.expSkip.push({ p, k }); return !k; }) // tiene producto por caducar: no pedir
       .filter((p) => p.st && p.st.u90 > 0 && !EXCLUDE_CATS.includes(p.cat) && !isCredito(p)) // CR- (crédito) no se sugiere
       .map((p) => lineFor(p, special))
       .filter((l) => l && l.qty > 0);
@@ -3689,6 +3804,8 @@
     $('#ordLead').value = OS.lead;
     $('#ordSafety').value = OS.safety;
 
+    const skip = (O.expSkip || []).filter((x) => !O.vendor || ((x.p.buy && x.p.buy.vendor) || x.p.vendor || 'Sin proveedor') === O.vendor);
+    if (skip.length) $('#ordInfo').insertAdjacentHTML('beforeend', `<span class="ord-exp"> · <b>No pidas todavía:</b> ${skip.slice(0, 4).map((x) => `${esc(x.p.name)} (sobran ~${nfmt(x.k.sobran)} que vencen el ${esc(fmtLong(x.k.d))})`).join(', ')}${skip.length > 4 ? ` y ${skip.length - 4} más` : ''}.</span>`);
     const list = $('#ordList');
     if (!O.lines.length) {
       list.innerHTML = `<div class="empty"><p class="hud">Nada que pedir</p>Con el stock actual no hace falta pedir${O.vendor ? ' a ' + esc(O.vendor) : ''}. Puedes agregar productos con el buscador.</div>`;
