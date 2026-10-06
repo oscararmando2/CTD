@@ -22,7 +22,10 @@
   const INSITU = 'https://app.b2bmobilesales.com/api/v1';
   const PEOPLE = ['Oscar', 'Luis', 'Diego', 'Jonathan', 'Rocio'];
   // Usuarios con una sola sección: Jonathan (bodega) → Recibo; Rocío → Costeo
-  const ONLY = { Jonathan: ['rec', 'fech'], Rocio: ['cos', 'cat'] };
+  const ONLY = { Jonathan: ['rec', 'fech'], Rocio: ['cos', 'cat', 'fech'] };
+  // Secciones que un usuario solo puede ver, sin cambiar nada (Rocío ve las fechas pero no las mueve)
+  const READ_ONLY = { Rocio: ['fech'] };
+  const soloVer = (v) => (READ_ONLY[S.who] || []).includes(v);
   const LABEL = { Rocio: 'Rocío' }; // cómo se ve el nombre (el correo interno va sin acento)
   const label = (n) => LABEL[n] || n;
   // Firebase Auth pide un correo: cada nombre usa uno interno (no recibe mensajes)
@@ -3126,10 +3129,13 @@
   const valorDe = (r) => { const p = fechProd(r.sku); return p && p.cost > 0 ? cajasDe(r) * p.cost : 0; };
   async function renderFechas(reload) {
     const box = $('#fechList'); if (!box) return;
+    const ro = soloVer('fech');
+    $('#fechAdd').hidden = ro; if (ro) $('#fechAddBox').hidden = true;
     if (reload || !R.lotes) { box.innerHTML = '<p class="data-info">Cargando…</p>'; await Promise.all([loadLotes(true), recProducts()]); }
-    renderBodega();
+    if (ro) $('#bodega').hidden = true; else renderBodega();
     const total = Object.keys(R.lotes || {}).length;
-    $('#fechInfo').textContent = total ? `${total} productos con fecha. Las fechas salen de los recibos; también puedes ponerlas a mano.` : 'Todavía no hay fechas. Se llenan al revisar facturas en Recibo, o agrégalas a mano.';
+    $('#fechInfo').textContent = ro ? (total ? `${total} productos con fecha (solo consulta).` : 'Todavía no hay fechas.')
+      : total ? `${total} productos con fecha. Las fechas salen de los recibos; también puedes ponerlas a mano.` : 'Todavía no hay fechas. Se llenan al revisar facturas en Recibo, o agrégalas a mano.';
     // Departamentos (con cuántos productos hay en cada uno con los otros filtros)
     const all = fechRows(true), cnt = {};
     all.forEach((r) => { cnt[r.dep] = (cnt[r.dep] || 0) + 1; });
@@ -3146,7 +3152,7 @@
     $('#fechSum').innerHTML = rows.length ? tiles.map(([l, rs, cls]) => `<div class="fs ${cls}"><span class="lbl">${l}</span><b>${rs.length}</b><small>${nfmt(rs.reduce((a, r) => a + cajasDe(r), 0))} cajas${money_ ? ' · ' + money(rs.reduce((a, r) => a + valorDe(r), 0)) : ''}</small></div>`).join('') : '';
     const soon = rows.filter((r) => r.dias >= 0 && (r.dias <= 60 || r.riesgo));
     $('#fechActs').hidden = !rows.length;
-    $('#fechEsp').hidden = !!onlyView() || !soon.length;
+    $('#fechEsp').hidden = !!onlyView() || !soon.length; // (los usuarios de una sección no mandan a especiales)
     $('#fechEsp').innerHTML = `${icon('sparkles')}Mandar a especiales (${soon.length})`;
     $('#fechXls').hidden = !rows.length;
     box.innerHTML = rows.length ? rows.map((r) => {
@@ -3157,7 +3163,7 @@
         <div class="fr-ph">${ph ? `<img src="${esc(ph)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div>
         <div class="lot-m"><div class="ol-name">${esc(r.nombre)}</div>
           <div class="meta">${esc(r.dep)} · ${r.dias < 0 ? `venció hace ${-r.dias} días` : `vence en ${r.dias} días`} · ${r.quedan != null ? `quedan ~${nfmt(r.quedan)} de ${nfmt(r.recibido)}` : `${nfmt(r.recibido)} ${r.recibido === 1 ? 'caja' : 'cajas'}`}${info.man ? ' · puesta a mano' : ''}${r.venta != null ? ` · se venden en ~${r.venta} días` : ''}${r.riesgo ? ' · <b>no alcanza a venderse: ponlo en especial</b>' : ''}</div></div>
-        ${info.man ? `<button type="button" class="g-x" data-fdel="${esc(r.sku)}" data-d="${r.d}" title="Quitar la fecha puesta a mano" aria-label="Quitar">×</button>` : ''}
+        ${info.man && !ro ? `<button type="button" class="g-x" data-fdel="${esc(r.sku)}" data-d="${r.d}" title="Quitar la fecha puesta a mano" aria-label="Quitar">×</button>` : ''}
       </div>`;
     }).join('') : `<p class="data-info">${total ? 'Nada con esos filtros.' : ''}</p>`;
   }

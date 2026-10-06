@@ -10,7 +10,7 @@
 //   recibo_costeado → la factura ya pasó por Costeo;  lotes → caducidades por producto (lote = fecha)
 // QuickBooks es el dueño de productos y precios: InSitu recibe los cambios en su sincronización (cada hora).
 const crypto = require('crypto');
-const { RECIBO_ONLY, cors, verifyUser, bearer, db, qb, qbQuery, qbItem, log, todayCT, r2, same, env, matchOne, norm } = require('./_lib');
+const { RECIBO_ONLY, COSTEO_ONLY, cors, verifyUser, bearer, db, qb, qbQuery, qbItem, log, todayCT, r2, same, env, matchOne, norm } = require('./_lib');
 
 const MODEL = 'claude-opus-5';
 const MAX_IMAGES = 12;
@@ -120,6 +120,8 @@ module.exports = async (req, res) => {
   if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }
   body = body || {};
   if (RECIBO_ONLY.includes(who) && !RECIBO_ACTIONS.includes(body.action)) return res.status(403).json({ error: 'Tu usuario solo tiene acceso a Recibo.' });
+  // Rocío consulta fechas pero no las cambia
+  if (COSTEO_ONLY.includes(who) && ['lote_add', 'lote_del'].includes(body.action)) return res.status(403).json({ error: 'Tu usuario solo puede consultar las fechas.' });
 
   try {
     switch (body.action) {
