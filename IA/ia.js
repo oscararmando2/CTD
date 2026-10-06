@@ -1116,7 +1116,7 @@
   }
   $('#vigPdf').addEventListener('click', () => {
     if (!vigData.length) return;
-    sheetCards = vigToCards(); sheetCat = null; sheetTheme = null; buildSheet(); openModal('#clientModal'); fitPages();
+    sheetCards = vigToCards(); sheetCat = null; sheetReport = null; sheetTheme = null; buildSheet(); openModal('#clientModal'); fitPages();
   });
   let qbAll = [];
   // Una propuesta guardada ya está "hecha" si todos sus productos quedaron en QuickBooks con sus fechas
@@ -1668,7 +1668,7 @@
     const h = (S.hist || []).find((x) => x.id === id); if (!h) return;
     if (b.dataset.h === 'ver') {
       // Ya programada: solo vista previa del PDF (no se edita)
-      sheetCards = h.cards.map((c) => ({ ...c, uid: uid() })); sheetCat = null; sheetTheme = null;
+      sheetCards = h.cards.map((c) => ({ ...c, uid: uid() })); sheetCat = null; sheetReport = null; sheetTheme = null;
       $('#histModal').hidden = true;
       buildSheet(); openModal('#clientModal'); fitPages();
       return;
@@ -1748,6 +1748,7 @@
   let sheetTheme = null;
   let sheetCards = null; // null = las tarjetas de la propuesta; si no, las que se pasen (ej. vigentes)
   let sheetCat = null; // catálogo completo después de las promos (solo al descargar el catálogo)
+  let sheetReport = null; // informe de caducidades (pestaña Fechas)
   const sheetList = () => sheetCards || S.cards;
   // Descuento que se anuncia en la hoja (para ordenar y escoger los destacados)
   const sheetOff = (c) => (c.nx ? 1 / (c.nx + 1) : c.kind === 'group' ? groupOff(c) : stats(c).off);
@@ -1761,6 +1762,9 @@
     return sorted.map((c, i) => ({ c, size: i < feat ? 'feat' : i < feat + wide ? 'wide' : '' }));
   }
   function buildSheet() {
+    const head = $('#clientModal .modal-head h3');
+    if (head) head.innerHTML = sheetReport ? 'Informe de caducidades <small>(sin costos)</small>' : 'Vista para clientes <small>(sin costos ni márgenes)</small>';
+    if (sheetReport) { buildReport(); return; }
     const list = sheetList();
     const froms = list.map((c) => c.from).sort(), tos = list.map((c) => c.to).sort();
     const today = ymd(new Date());
@@ -1860,7 +1864,7 @@
     if (!items.length) { toast(S.products.length ? 'No hay productos con esos filtros' : 'Todavía se están cargando los productos'); return; }
     if (CT.promos && !CT.vig) await loadCatVig();
     vigData = CT.promos ? (CT.vig || []) : [];
-    sheetCards = vigToCards(); sheetCat = items; sheetTheme = null;
+    sheetCards = vigToCards(); sheetCat = items; sheetReport = null; sheetTheme = null;
     buildSheet(); openModal('#clientModal'); fitPages();
   });
   // Páginas del catálogo: departamentos en orden, 4 columnas; el título del departamento se repite si continúa
@@ -1896,6 +1900,40 @@
         <div class="ct-body">${blocks.map((b) => (b.head ? `<h3 class="ct-dep">${esc(b.head)}${b.cont ? ' <small>(continúa)</small>' : ''}</h3>` : `<div class="ct-row">${b.row.map(item).join('')}</div>`)).join('')}</div>
         <div class="pg-foot">Precios por caja · sujetos a cambio y disponibilidad · Hoja ${startIdx + k + 1}</div>
       </section></div>`);
+  }
+
+  // Informe de caducidades: hojas carta por departamento, 12 renglones por hoja, con foto
+  function buildReport() {
+    const t = THEMES.ctd, style = `--t-bg:${t.bg};--t-ink:${t.ink};--t-acc:${t.acc};--t-price:${t.price}`;
+    const rows = [...sheetReport.rows].sort((a, b) => a.dep.localeCompare(b.dep) || (a.d < b.d ? -1 : 1));
+    const ROW = 62, HEAD = 40, AVAIL = 1056 - 116 - 80;
+    const pages = []; let cur = [], used = 0, lastDep = '';
+    rows.forEach((r) => {
+      const needHead = r.dep !== lastDep || !used;
+      if (used + ROW + (needHead ? HEAD : 0) > AVAIL) { pages.push(cur); cur = []; used = 0; }
+      if (r.dep !== lastDep || !used) { cur.push({ head: r.dep, cont: r.dep === lastDep }); used += HEAD; }
+      cur.push({ r }); used += ROW; lastDep = r.dep;
+    });
+    if (cur.length) pages.push(cur);
+    const d = new Date(), dtxt = `${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
+    const line = (r) => {
+      const p = fechProd(r.sku), ph = p && p.photo ? `<img src="${esc(proxied(p.photo))}" crossorigin="anonymous" alt="">` : '';
+      const st = r.dias < 0 ? 'dead' : r.dias <= 30 ? 'hot' : r.dias <= 60 ? 'warm' : '';
+      return `<div class="rp-r ${st}"><div class="rp-ph">${ph}</div>
+        <div class="rp-n">${esc(r.nombre)}<small>${r.dias < 0 ? `venció hace ${-r.dias} días` : `vence en ${r.dias} días`}${r.riesgo ? ' · no alcanza a venderse' : ''}</small></div>
+        <div class="rp-d">${esc(fmtLong(r.d))}</div><div class="rp-q">${nfmt(cajasDe(r))}<small>cajas</small></div></div>`;
+    };
+    $('#clientSheet').innerHTML = pages.map((blocks, k) => `<div class="pgwrap"><section class="pg pg-cat" style="${style}">
+        <header class="pl-head ct-head">${scatter(816, 116, t.pat, t.pc, 8, 70 + k, 0.8, 1.6)}
+          <div><p class="cv-k">Central Trade Distribution</p><h2>Caducidades</h2><p class="pl-date">${esc(sheetReport.filtro)} · ${esc(dtxt)}</p></div>
+          <span class="pl-logo"><img src="ctd-logo.png" alt="CTD"></span>
+        </header>
+        <div class="ct-body">${blocks.map((b) => (b.head ? `<h3 class="ct-dep">${esc(b.head)}${b.cont ? ' <small>(continúa)</small>' : ''}</h3>` : line(b.r))).join('')}</div>
+        <div class="pg-foot">Hoja ${k + 1} de ${pages.length}</div>
+      </section></div>`).join('');
+    $$('#clientSheet .rp-ph img').forEach(fitImg);
+    $('#themeSel').innerHTML = '';
+    fitPages();
   }
 
   // Lista de nombres cortos de un grupo: se achica la letra hasta que quepan todos en la tarjeta
@@ -1938,7 +1976,7 @@
   }
   window.addEventListener('resize', () => { if (!$('#clientModal').hidden) fitPages(); });
 
-  $('#clientBtn').addEventListener('click', () => { sheetCards = null; sheetCat = null; sheetTheme = null; buildSheet(); openModal('#clientModal'); fitPages(); });
+  $('#clientBtn').addEventListener('click', () => { sheetCards = null; sheetCat = null; sheetReport = null; sheetTheme = null; buildSheet(); openModal('#clientModal'); fitPages(); });
 
   // Guardar como imagen (JPG por hoja): para WhatsApp o estados. En celular abre compartir.
   async function renderPages() {
@@ -1958,7 +1996,7 @@
       const canvases = await renderPages();
       const blobs = await Promise.all(canvases.map((cv) => new Promise((r) => cv.toBlob(r, 'image/jpeg', 0.9))));
       const list = sheetList(), d1 = list.length ? parseYmd(list.map((c) => c.from).sort()[0]) : new Date();
-      const base = `${sheetCat ? 'Catalogo' : 'Especiales'}-CTD-${d1.getDate()}${MES[d1.getMonth()]}`;
+      const base = `${sheetReport ? 'Caducidades' : sheetCat ? 'Catalogo' : 'Especiales'}-CTD-${d1.getDate()}${MES[d1.getMonth()]}`;
       const files = blobs.map((b, i) => new File([b], `${base}${blobs.length > 1 ? '-' + (i + 1) : ''}.jpg`, { type: 'image/jpeg' }));
       if (window.matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files })) {
         await navigator.share({ files, title: 'Especiales CTD' });
@@ -1969,7 +2007,7 @@
     } catch (e) { if (e && e.name !== 'AbortError') toast('No se pudo generar la imagen (' + (e.message || e) + ')'); }
     finally { btn.disabled = false; btn.innerHTML = label; }
   });
-  $('#themeSel').addEventListener('change', (e) => { sheetTheme = e.target.value; buildSheet(); });
+  $('#themeSel').addEventListener('change', (e) => { if (sheetReport) return; sheetTheme = e.target.value; buildSheet(); });
 
   $('#pdfBtn').addEventListener('click', async () => {
     const btn = $('#pdfBtn'); btn.disabled = true;
@@ -1991,7 +2029,10 @@
         if (i) doc.addPage();
         doc.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', 0, 0, 612, 792);
       }
-      if (sheetCat) {
+      if (sheetReport) {
+        const d = new Date();
+        download(doc.output('blob'), `Caducidades-CTD-${d.getDate()}${MES[d.getMonth()]}-${d.getFullYear()}.pdf`);
+      } else if (sheetCat) {
         const d = new Date();
         download(doc.output('blob'), `Catalogo-CTD-${d.getDate()}${MES[d.getMonth()]}-${d.getFullYear()}.pdf`);
       } else {
@@ -3060,41 +3101,116 @@
         const perDay = p && p.st ? (p.st.u90 || 0) / 90 : 0;
         const dias = daysTo(x.d);
         const venta = perDay > 0 && quedan != null ? Math.ceil(quedan / perDay) : null;
-        out.push({ sku, nombre: p ? p.name : v.nombre, d: x.d, recibido: x.q, quedan, dias, venta, riesgo: venta != null && venta > dias });
+        out.push({ sku, nombre: p ? p.name : v.nombre, d: x.d, recibido: x.q, quedan, dias, venta, riesgo: dias >= 0 && venta != null && venta > dias });
       });
     });
     return out.sort((a, b) => (a.d < b.d ? -1 : 1));
   }
   /* ---- Pestaña Fechas: todas las caducidades por producto (de los recibos y puestas a mano) ---- */
-  const F = { q: '', f: 'all', add: null };
-  async function renderFechas(reload) {
-    const box = $('#fechList'); if (!box) return;
-    if (reload || !R.lotes) { box.innerHTML = '<p class="data-info">Cargando…</p>'; await Promise.all([loadLotes(true), recProducts()]); }
-    const list = S.products.length ? S.products : (R.cat || []);
-    const photoOf = (sku) => { const p = list.find((x) => skuKey(x.id) === sku); return p ? p.photo : ''; };
+  const F = { q: '', f: 'all', dep: '', add: null };
+  const fechProds = () => (S.products.length ? S.products : (R.cat || []));
+  const fechProd = (sku) => fechProds().find((x) => skuKey(x.id) === sku) || null;
+  const depOf = (sku) => { const p = fechProd(sku); return (p && p.cat) || 'Otros'; };
+  const canMoney = () => !onlyView() && S.products.some((p) => p.cost > 0); // el dinero solo lo ven Oscar, Luis y Diego
+  // Filas con los filtros de la pantalla (departamento, cuándo vence, búsqueda)
+  function fechRows(ignoreDep) {
     const q = normTxt(F.q).trim();
-    let rows = lotRows();
+    let rows = lotRows().map((r) => ({ ...r, dep: depOf(r.sku) }));
     if (F.f === '60') rows = rows.filter((r) => r.dias >= 0 && r.dias <= 60);
     if (F.f === 'old') rows = rows.filter((r) => r.dias < 0);
     if (q) rows = rows.filter((r) => q.split(/\s+/).every((w) => normTxt(r.nombre).includes(w)));
+    if (F.dep && !ignoreDep) rows = rows.filter((r) => r.dep === F.dep);
+    return rows;
+  }
+  const cajasDe = (r) => (r.quedan != null ? r.quedan : r.recibido);
+  const valorDe = (r) => { const p = fechProd(r.sku); return p && p.cost > 0 ? cajasDe(r) * p.cost : 0; };
+  async function renderFechas(reload) {
+    const box = $('#fechList'); if (!box) return;
+    if (reload || !R.lotes) { box.innerHTML = '<p class="data-info">Cargando…</p>'; await Promise.all([loadLotes(true), recProducts()]); }
     const total = Object.keys(R.lotes || {}).length;
     $('#fechInfo').textContent = total ? `${total} productos con fecha. Las fechas salen de los recibos; también puedes ponerlas a mano.` : 'Todavía no hay fechas. Se llenan al revisar facturas en Recibo, o agrégalas a mano.';
+    // Departamentos (con cuántos productos hay en cada uno con los otros filtros)
+    const all = fechRows(true), cnt = {};
+    all.forEach((r) => { cnt[r.dep] = (cnt[r.dep] || 0) + 1; });
+    if (F.dep && !cnt[F.dep]) F.dep = '';
+    const deps = Object.keys(cnt).sort();
+    $('#fechDeps').innerHTML = deps.length > 1 || F.dep ? `<button type="button" data-dep="" class="${F.dep ? '' : 'on'}">Todos<small>${all.length}</small></button>`
+      + deps.map((d) => `<button type="button" data-dep="${esc(d)}" class="${F.dep === d ? 'on' : ''}">${esc(d)}<small>${cnt[d]}</small></button>`).join('') : '';
+    $('#fechDepsWrap').hidden = !$('#fechDeps').innerHTML;
+    const rows = fechRows();
+    // Resumen: cuántos productos/cajas (y dinero, si aplica) vencen por plazo
+    const money_ = canMoney();
+    const bucket = (lo, hi) => rows.filter((r) => r.dias >= lo && r.dias <= hi);
+    const tiles = [['Vencidas', rows.filter((r) => r.dias < 0), 'dead'], ['En 30 días', bucket(0, 30), 'hot'], ['En 31–60 días', bucket(31, 60), 'warm'], ['En 61–90 días', bucket(61, 90), '']];
+    $('#fechSum').innerHTML = rows.length ? tiles.map(([l, rs, cls]) => `<div class="fs ${cls}"><span class="lbl">${l}</span><b>${rs.length}</b><small>${nfmt(rs.reduce((a, r) => a + cajasDe(r), 0))} cajas${money_ ? ' · ' + money(rs.reduce((a, r) => a + valorDe(r), 0)) : ''}</small></div>`).join('') : '';
+    const soon = rows.filter((r) => r.dias >= 0 && (r.dias <= 60 || r.riesgo));
+    $('#fechActs').hidden = !rows.length;
+    $('#fechEsp').hidden = !!onlyView() || !soon.length;
+    $('#fechEsp').innerHTML = `${icon('sparkles')}Mandar a especiales (${soon.length})`;
+    $('#fechXls').hidden = !rows.length;
     box.innerHTML = rows.length ? rows.map((r) => {
       const info = (R.lotes[r.sku] || { fechas: {} }).fechas[r.d] || {};
-      const ph = photoOf(r.sku);
+      const p = fechProd(r.sku), ph = p ? p.photo : '';
       return `<div class="lot-row fr${r.dias < 0 ? ' dead' : r.dias <= 60 || r.riesgo ? ' hot' : r.dias <= 120 ? ' warm' : ''}">
         <div class="lot-d"><b>${esc(fmtD(r.d))}</b><small>${parseYmd(r.d).getFullYear()}</small></div>
         <div class="fr-ph">${ph ? `<img src="${esc(ph)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div>
         <div class="lot-m"><div class="ol-name">${esc(r.nombre)}</div>
-          <div class="meta">${r.dias < 0 ? `venció hace ${-r.dias} días` : `vence en ${r.dias} días`} · ${r.quedan != null ? `quedan ~${nfmt(r.quedan)} de ${nfmt(r.recibido)}` : `${nfmt(r.recibido)} ${r.recibido === 1 ? 'caja' : 'cajas'}`}${info.man ? ' · puesta a mano' : ''}${r.venta != null ? ` · se venden en ~${r.venta} días` : ''}${r.riesgo ? ' · <b>no alcanza a venderse: ponlo en especial</b>' : ''}</div></div>
+          <div class="meta">${esc(r.dep)} · ${r.dias < 0 ? `venció hace ${-r.dias} días` : `vence en ${r.dias} días`} · ${r.quedan != null ? `quedan ~${nfmt(r.quedan)} de ${nfmt(r.recibido)}` : `${nfmt(r.recibido)} ${r.recibido === 1 ? 'caja' : 'cajas'}`}${info.man ? ' · puesta a mano' : ''}${r.venta != null ? ` · se venden en ~${r.venta} días` : ''}${r.riesgo ? ' · <b>no alcanza a venderse: ponlo en especial</b>' : ''}</div></div>
         ${info.man ? `<button type="button" class="g-x" data-fdel="${esc(r.sku)}" data-d="${r.d}" title="Quitar la fecha puesta a mano" aria-label="Quitar">×</button>` : ''}
       </div>`;
-    }).join('') : `<p class="data-info">${total ? 'Nada con ese filtro.' : ''}</p>`;
+    }).join('') : `<p class="data-info">${total ? 'Nada con esos filtros.' : ''}</p>`;
   }
   $('#fechQ').addEventListener('input', (e) => { F.q = e.target.value; renderFechas(false); });
   $('#fechF').addEventListener('click', (e) => {
     const b = e.target.closest('[data-f]'); if (!b) return;
     F.f = b.dataset.f; $$('#fechF button').forEach((x) => x.classList.toggle('on', x === b)); renderFechas(false);
+  });
+  $('#fechDeps').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-dep]'); if (!b) return;
+    F.dep = F.dep === b.dataset.dep ? '' : b.dataset.dep; renderFechas(false);
+  });
+  const fechFilterTxt = () => [F.dep || 'Todos los departamentos', F.f === '60' ? 'vencen en 60 días' : F.f === 'old' ? 'vencidas' : '', F.q ? `"${F.q}"` : ''].filter(Boolean).join(' · ');
+  // Informe PDF (con fotos, por departamento; sin dinero) — misma vista de hojas que los especiales
+  $('#fechPdf').addEventListener('click', () => {
+    const rows = fechRows(); if (!rows.length) return;
+    sheetReport = { rows, filtro: fechFilterTxt() }; sheetCards = []; sheetCat = null; sheetTheme = 'ctd';
+    buildSheet(); openModal('#clientModal'); fitPages();
+  });
+  // Excel (con costo y valor para Oscar, Luis y Diego)
+  $('#fechXls').addEventListener('click', () => {
+    const rows = fechRows(); if (!rows.length || !window.XLSX) return;
+    const m = canMoney();
+    const data = rows.map((r) => {
+      const p = fechProd(r.sku) || {};
+      const o = { Departamento: r.dep, Producto: r.nombre, SKU: r.sku, UPC: p.upc || '', Vence: r.d, 'Días': r.dias, Cajas: cajasDe(r), 'Llegaron': r.recibido };
+      if (m) { o['Costo caja'] = p.cost || 0; o.Valor = r2(valorDe(r)); }
+      o.Nota = r.riesgo ? 'No alcanza a venderse' : r.dias < 0 ? 'Vencido' : '';
+      return o;
+    });
+    const ws = XLSX.utils.json_to_sheet(data), wb = XLSX.utils.book_new();
+    ws['!cols'] = Object.keys(data[0]).map((k) => ({ wch: k === 'Producto' ? 44 : k === 'Departamento' ? 18 : 12 }));
+    XLSX.utils.book_append_sheet(wb, ws, 'Caducidades');
+    const d = new Date();
+    XLSX.writeFile(wb, `Caducidades-CTD-${d.getDate()}${MES[d.getMonth()]}-${d.getFullYear()}.xlsx`);
+    toast('Excel guardado');
+  });
+  // Lo que vence pronto → especiales de la semana (fijados, con su precio especial sugerido)
+  $('#fechEsp').addEventListener('click', () => {
+    const rows = fechRows().filter((r) => r.dias >= 0 && (r.dias <= 60 || r.riesgo));
+    const inCards = new Set(S.cards.flatMap((c) => c.items.map((i) => String(i.id))));
+    let n = 0, skip = 0;
+    rows.forEach((r) => {
+      const p = S.products.find((x) => skuKey(x.id) === r.sku);
+      if (!p || inCards.has(String(p.id)) || !(p.price > 0 && p.cost > 0 && p.cost < p.price) || isCredito(p)) { skip++; return; }
+      const s = specialPrice(p.price, p.cost, 'lento') || r2(Math.max(psychUp(minPrice(p.cost)), p.price * 0.95));
+      const c = makeCard([p], p.price, p.cost, Math.min(s, p.price));
+      c.pinned = true; c.manual = true;
+      S.cards.unshift(c); inCards.add(String(p.id)); n++;
+    });
+    if (!n) { toast(skip ? 'Ya están en especiales o no tienen precio/costo' : 'Nada que mandar'); return; }
+    S.view = 'esp'; store.set(K_VIEW, S.view); applyView(); render(true);
+    toast(`${n} ${n === 1 ? 'producto mandado' : 'productos mandados'} a especiales (quedan fijados)${skip ? ` · ${skip} ya estaban o sin precio` : ''}`);
+    window.scrollTo({ top: $('#grid').offsetTop - 80, behavior: 'smooth' });
   });
   $('#fechList').addEventListener('click', async (e) => {
     const b = e.target.closest('[data-fdel]'); if (!b) return;

@@ -764,3 +764,29 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .ct-f{margin-top:auto;padding:0 9px 7px;display:flex;align-items:baseline;justify-content:space-between;gap:6px}
 .ct-pk{font-size:9.5px;color:#857c6e}
 .ct-pr{font-family:var(--display);font-weight:800;font-size:17px;color:var(--t-price);letter-spacing:-.02em}
+
+/* Fechas: filtros, resumen y acciones */
+.fech-group{margin-top:18px}
+.fech-group .lbl{margin-bottom:8px}
+.fech-pills{flex-wrap:wrap;width:auto}
+#fechF{margin-top:0}
+.fech-sum{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:22px}
+.fs{border-radius:16px;background:rgba(246,242,233,.05);padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.fs .lbl{margin:0}
+.fs b{font-family:var(--display);font-weight:800;font-size:28px;letter-spacing:-.03em;line-height:1.05}
+.fs small{font-size:12.5px;color:var(--muted)}
+.fs.dead b,.fs.hot b{color:#ff8f7d}
+.fs.warm b{color:var(--oro)}
+.fech-acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+@media (min-width:720px){.fech-sum{grid-template-columns:repeat(4,1fr)}}
+/* Informe de caducidades (hojas) */
+.rp-r{display:grid;grid-template-columns:52px 1fr 128px 70px;align-items:center;gap:12px;height:56px;margin-bottom:6px;padding:0 10px;border-radius:10px;background:#F8F5EE}
+.rp-r.dead{background:#fde3df}.rp-r.hot{background:#fdeee0}.rp-r.warm{background:#fdf6e3}
+.rp-ph{width:44px;height:44px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.rp-ph img{display:block;max-width:100%;max-height:100%}
+.rp-n{font-family:var(--display);font-weight:800;font-size:12px;line-height:1.2;color:#16120c;min-width:0;overflow:hidden}
+.rp-n small{display:block;font-family:var(--body);font-weight:500;font-size:10.5px;color:#857c6e;margin-top:2px}
+.rp-r.dead .rp-n small,.rp-r.hot .rp-n small{color:#b8361f}
+.rp-d{font-family:var(--display);font-weight:800;font-size:14px;color:#16120c;text-align:right}
+.rp-q{font-family:var(--display);font-weight:800;font-size:18px;color:#16120c;text-align:right;line-height:1}
+.rp-q small{display:block;font-family:var(--body);font-weight:500;font-size:9.5px;color:#857c6e}

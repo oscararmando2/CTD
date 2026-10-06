@@ -187,10 +187,23 @@
         <label class="field fech-search"><span>Buscar</span><input id="fechQ" type="search" placeholder="Nombre del producto" autocomplete="off"></label>
         <button id="fechAdd" class="btn btn-oro" type="button">+ Agregar fecha</button>
       </div>
-      <div class="pills" id="fechF" role="radiogroup" aria-label="Filtro">
-        <button type="button" data-f="all" class="on">Todas</button>
-        <button type="button" data-f="60">Vencen en 60 días</button>
-        <button type="button" data-f="old">Vencidas</button>
+      <div id="fechDepsWrap" class="fech-group" hidden>
+        <p class="lbl">Departamento</p>
+        <div id="fechDeps" class="pills fech-pills"></div>
+      </div>
+      <div class="fech-group">
+        <p class="lbl">Cuándo vence</p>
+        <div class="pills fech-pills" id="fechF" role="radiogroup" aria-label="Cuándo vence">
+          <button type="button" data-f="all" class="on">Todas</button>
+          <button type="button" data-f="60">En 60 días</button>
+          <button type="button" data-f="old">Vencidas</button>
+        </div>
+      </div>
+      <div id="fechSum" class="fech-sum"></div>
+      <div id="fechActs" class="fech-acts" hidden>
+        <button id="fechPdf" class="btn btn-ghost" type="button"><i data-icon="printer"></i>Bajar PDF</button>
+        <button id="fechXls" class="btn btn-ghost" type="button"><i data-icon="download"></i>Bajar Excel</button>
+        <button id="fechEsp" class="btn btn-oro" type="button" hidden></button>
       </div>
       <div id="fechAddBox" class="fech-add" hidden>
         <label class="field"><span>¿De qué producto?</span><input id="fechAddQ" type="search" placeholder="Busca por nombre, SKU o UPC" autocomplete="off"></label>
