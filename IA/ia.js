@@ -3005,10 +3005,6 @@
           ${thumb(l, 'rec-th')}
           <div><p class="hud">¿Cuándo vence?</p><p class="sh-prod">${esc(l.sku ? l.nombre : l.producto)}</p></div>
         </div>
-        ${(() => {
-          const pv = (R.lotes && l.sku && R.lotes[skuKey(l.sku)] && R.lotes[skuKey(l.sku)].prev || []).filter((d) => ymdOk(d) && daysTo(d) >= 0)[0];
-          return pv ? `<button type="button" class="sh-same" data-s="same" data-d="${pv}">¿La misma de la vez pasada? <b>${esc(fmtLong(pv))}</b></button>` : '';
-        })()}
         <div class="sh-months">${months}</div>
         <div class="sh-years">${years}</div>
         ${days}
@@ -3051,7 +3047,6 @@
     const a = b.dataset.s, sh = R.sheet;
     if (a === 'close') { const cb = R.sheet.cb; closeSheet(); if (!cb) renderRecibo(); return; }
     if (a === 'none') { pickDate(''); return; }
-    if (a === 'same') { pickDate(b.dataset.d); return; }
     if (a === 'm') { sh.m = +b.dataset.m; sh.day = false; monthYearReady(); return; }
     if (a === 'y') { sh.y = +b.dataset.y; sh.day = false; monthYearReady(); return; }
     if (a === 'd') pickDate(mkYmd(sh.y, sh.m, +b.dataset.d));
