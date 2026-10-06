@@ -3175,7 +3175,9 @@
   function bodegaProds() {
     // Solo producto empacado: con UPC (11+ dígitos) o código propio CTD-####. Lo que va por libra no caduca.
     const empacado = (p) => String(p.upc || '').replace(/\D/g, '').length >= 11 || /^\s*CTD-\d+/i.test(p.upc || '');
-    const list = fechProds().filter((p) => !isCredito(p) && !EXCLUDE_CATS.includes(p.cat) && p.price > 0 && empacado(p));
+    // Tampoco llevan fecha las veladoras / velas
+    const noCaduca = (p) => /\bvel(a|as|adora|adoras)\b/.test(normTxt(`${p.name} ${p.cat || ''}`));
+    const list = fechProds().filter((p) => !isCredito(p) && !EXCLUDE_CATS.includes(p.cat) && p.price > 0 && empacado(p) && !noCaduca(p));
     const conStock = list.some((p) => p.stock != null);
     return conStock ? list.filter((p) => p.stock > 0) : [];
   }
