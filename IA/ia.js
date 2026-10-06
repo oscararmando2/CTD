@@ -3173,7 +3173,9 @@
   /* ---- "Ponle fecha a la bodega": por departamento, solo lo que hay en existencia; tocar producto → mes + año ---- */
   F.bdep = null; F.bAll = false;
   function bodegaProds() {
-    const list = fechProds().filter((p) => !isCredito(p) && !EXCLUDE_CATS.includes(p.cat) && p.price > 0);
+    // Solo producto empacado: con UPC (11+ dígitos) o código propio CTD-####. Lo que va por libra no caduca.
+    const empacado = (p) => String(p.upc || '').replace(/\D/g, '').length >= 11 || /^\s*CTD-\d+/i.test(p.upc || '');
+    const list = fechProds().filter((p) => !isCredito(p) && !EXCLUDE_CATS.includes(p.cat) && p.price > 0 && empacado(p));
     const conStock = list.some((p) => p.stock != null);
     return conStock ? list.filter((p) => p.stock > 0) : [];
   }
