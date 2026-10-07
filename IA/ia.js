@@ -2678,8 +2678,9 @@
   }
   async function pushCatalog() {
     if (onlyView() || !S.products.length || !S.meta || S.meta.source !== 'InSitu') return;
-    const k = 'ctdIA.catPushed3'; // v3: con precio, departamento, stock y EAN
+    const k = 'ctdIA.catPushed3'; // v3: con precio, departamento, stock y EAN (se sube con cada actualización de InSitu)
     if (store.get(k, 0) === S.meta.at) return;
+    if (!S.products.some((p) => p.stock != null)) return; // sin existencia no sirve para bodega: no se pisa una copia buena
     try {
       await cosCall('catalogo_save', { items: S.products.map((p) => ({ id: p.id, name: p.name, upc: p.upc, ean: p.ean, photo: p.photo, price: p.price, cat: p.cat, pack: p.pack, brand: p.brand, stock: p.stock })) });
       store.set(k, S.meta.at);
@@ -2695,7 +2696,7 @@
   // Productos para emparejar: los de InSitu si este dispositivo ya los tiene; si no, el catálogo de QuickBooks (mismo código)
   async function recProducts() {
     if (S.products.length) return S.products;
-    if (!R.cat) { try { R.cat = (await cosCall('catalogo')).items || []; } catch (e) { R.cat = []; } }
+    if (!R.cat) { try { const d = await cosCall('catalogo'); R.cat = d.items || []; R.catAt = d.at || null; } catch (e) { R.cat = []; } }
     return R.cat;
   }
   // Emparejar: código aprendido del proveedor → código del proveedor = código de barras/SKU → UPC → nombre (misma presentación)
@@ -3239,7 +3240,13 @@
   function renderBodega() {
     const box = $('#bodega'); if (!box) return;
     const prods = bodegaProds();
-    if (!prods.length) { box.hidden = true; return; }
+    if (!prods.length) {
+      // Sin existencia no se puede saber qué falta: se dice por qué (en vez de esconderlo)
+      const sinStock = !fechProds().some((p) => p.stock != null);
+      box.hidden = !sinStock;
+      if (sinStock) box.innerHTML = `<p class="hud">Ponle fecha a la bodega</p><p class="status">Todavía no llega la existencia de InSitu a este teléfono${R.catAt ? ` (última copia: ${esc(fmtTs(R.catAt))})` : ''}. Que Oscar, Luis o Diego abran la IA o toquen "actualizar de InSitu", y luego recarga esta página.</p>`;
+      return;
+    }
     const done = fechadas(), byDep = {};
     prods.forEach((p) => { const d = p.cat || 'Otros'; (byDep[d] = byDep[d] || []).push(p); });
     const nDone = prods.filter((p) => done.has(skuKey(p.id))).length, pct0 = Math.round((nDone / prods.length) * 100);
