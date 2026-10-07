@@ -429,8 +429,8 @@ module.exports = async (req, res) => {
         let vendedor = '', lastT = 0;
         const lines = [];
         invs.forEach((inv) => {
-          if (inv.cancelled === true || inv.cancelled === 1) return;
-          const fecha = String(inv.invoice_date || '').slice(0, 10);
+          if (invCancel(inv)) return;
+          const fecha = invYmd(inv.invoice_date || inv.invoice_ship_date);
           const t = Date.parse(fecha);
           const mu = inv.mobile_user || {};
           if (t >= lastT && (mu.name || inv.mobile_user_login)) { lastT = t; vendedor = mu.name || inv.mobile_user_login; }
@@ -499,6 +499,15 @@ module.exports = async (req, res) => {
         if (Object.keys(up).length) await db('PATCH', '', up);
         return res.json({ ok: true, n: Object.keys(up).length });
       }
+      case 'avisos_tienda': {
+        if (RECIBO_ONLY.includes(who)) return res.status(403).json({ error: 'Sin permiso' });
+        const c = await db('GET', 'avisosTienda');
+        if (!body.force && c && c.at && Date.now() - c.at < 2 * 3600e3) return res.json(c);
+        const list = await avisosTienda();
+        const rec = { at: Date.now(), list };
+        await db('PUT', 'avisosTienda', rec);
+        return res.json(rec);
+      }
       case 'lotes': {
         // { sku: { nombre, fechas: { 'YYYY-MM-DD': cajas recibidas con esa caducidad } } }
         // Lo que queda de cada fecha: si ya se ajustó con la existencia real (aj = {r, ts}), cuenta ese resto
@@ -530,6 +539,67 @@ module.exports = async (req, res) => {
 };
 
 const CLI_CACHE = { at: 0, list: [] };
+function invYmd(s) {
+  const t = String(s || '');
+  const m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return `${m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+  const y = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return y ? y[0] : '';
+}
+const invCancel = (inv) => inv.cancelled === true || inv.cancelled === 1 || /cancel|void|anulad/i.test(inv.status || '');
+// ¿Seguía vivo ese lote (con cajas) en el momento t? Usa las entradas hasta t y el último ajuste si fue antes de t.
+function loteVivoEn(x, t) {
+  const es = Object.values((x && x.e) || {});
+  const aj = x && x.aj && typeof x.aj.r === 'number' ? x.aj : null;
+  if (!es.some((e) => (e.ts || 0) <= t)) return false; // todavía no llegaba
+  if (aj && aj.ts <= t) return aj.r + es.filter((e) => e.ts > aj.ts && e.ts <= t).reduce((a, e) => a + (Number(e.q) || 0), 0) > 0;
+  return true;
+}
+// Avisos: tiendas que se llevaron un lote que ya vence (≤30 días o vencido hace ≤15) y no han vuelto a comprar ese producto
+async function avisosTienda() {
+  const hoy = todayCT(), dHoy = Date.parse(hoy + 'T12:00:00Z');
+  const dias = (d) => Math.round((Date.parse(d + 'T12:00:00Z') - dHoy) / 864e5);
+  const lotes = (await db('GET', 'lotes')) || {};
+  const cand = {};
+  Object.entries(lotes).forEach(([sku, v]) => {
+    const fs = Object.entries(v.f || {}).filter(([d]) => /^\d{4}-\d{2}-\d{2}$/.test(d));
+    if (fs.some(([d]) => dias(d) <= 30 && dias(d) >= -15)) cand[sku] = { n: v.n || '', fs };
+  });
+  if (!Object.keys(cand).length) return [];
+  const from = new Date(dHoy - 150 * 864e5).toISOString().slice(0, 10);
+  const invs = await insituGet('/invoices', { fromDate: from + ' 00:00:00', toDate: hoy + ' 23:59:59' }, true);
+  const ult = {}; // cliente|sku → última compra
+  invs.forEach((inv) => {
+    if (invCancel(inv)) return;
+    const fecha = invYmd(inv.invoice_date || inv.invoice_ship_date); if (!fecha) return;
+    const cid = String(inv.client_branch_code || inv.client_nit || inv.account_number || inv.client_branch_name || '');
+    if (!cid) return;
+    const mu = inv.mobile_user || {};
+    (inv.invoiceDetailList || []).forEach((l) => {
+      const sku = String(l.product_code || '').trim(), q = Number(l.quantity) || 0;
+      if (!cand[sku] || q <= 0) return;
+      const k = cid + '|' + sku, prev = ult[k];
+      if (prev && prev.fecha > fecha) return;
+      if (prev && prev.fecha === fecha) { prev.cajas += q; return; }
+      ult[k] = { cid, sku, fecha, cajas: q, factura: String(inv.invoice_number || ''), tienda: String(inv.client_branch_name || cid),
+        vendedorId: String(inv.mobile_user_login || mu.login || inv.mobile_user_id || ''), vendedor: String(mu.name || inv.mobile_user_login || ''), tel: String(mu.phone || '') };
+    });
+  });
+  const cat = await db('GET', 'catalogo');
+  const nombre = {};
+  ((cat && cat.items) || []).forEach((p) => { nombre[String(p.id)] = p.name; });
+  const out = [];
+  Object.values(ult).forEach((u) => {
+    // Lote que salió (FEFO): el de fecha más próxima que ya había llegado, seguía con cajas y no estaba vencido ese día
+    const t = Date.parse(u.fecha + 'T23:59:59Z');
+    const lote = cand[u.sku].fs.filter(([d, x]) => d >= u.fecha && loteVivoEn(x, t)).map(([d]) => d).sort()[0];
+    if (!lote) return;
+    const dd = dias(lote);
+    if (dd > 30 || dd < -15) return;
+    out.push({ ...u, nombre: nombre[u.sku] || cand[u.sku].n || u.sku, caduca: lote, dias: dd, hace: -dias(u.fecha) });
+  });
+  return out.sort((a, b) => a.dias - b.dias || a.tienda.localeCompare(b.tienda)).slice(0, 300);
+}
 const RECIBO_ACTIONS = ['parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'lote_add', 'lote_del', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
 const ESTADOS = ['', 'ok', 'parcial', 'no', 'pendiente'];
 const ymdOk = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '');
@@ -559,3 +629,4 @@ async function syncLotes(id, prev, rec) {
 
 function str(v, n) { return String(v == null ? '' : v).slice(0, n); }
 function num(v) { return typeof v === 'number' && isFinite(v) ? Math.round(v * 100) / 100 : null; }
+module.exports.avisosTienda = avisosTienda; // para pruebas
