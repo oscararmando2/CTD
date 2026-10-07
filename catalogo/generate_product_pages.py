@@ -39,7 +39,7 @@ CAT_EMOJI = {
     'Frutas y Vegetales Frescos':'🥬','Bebidas':'🥤','Lácteos':'🧀','Carnicería':'🥩',
     'Refrigerados':'❄️','Congelados':'🧊','Abarrotes':'🛒','Granos':'🌾',
     'Harinas':'🌾','Condimentos':'🌶️','Conservas':'🥫','Galletas':'🍪',
-    'Dulces':'🍬','Snacks y Botanas':'🥨'
+    'Dulces':'🍬','Snacks y Botanas':'🥨','Veladoras':'🕯️'
 }
 
 def slug(s):
