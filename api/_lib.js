@@ -230,7 +230,16 @@ async function matchOne(p) {
 }
 
 
+// Lo que queda de cada fecha de caducidad (lotes/): con ajuste {r, ts} cuenta ese resto + lo que entró después
+function loteQueda(x) {
+  const es = Object.values((x && x.e) || {});
+  const aj = x && x.aj && typeof x.aj.r === 'number' ? x.aj : null;
+  return aj ? aj.r + es.filter((e) => (e.ts || 0) > aj.ts).reduce((a, e) => a + (Number(e.q) || 0), 0)
+    : es.reduce((a, e) => a + (Number(e.q) || 0), 0);
+}
+
 module.exports = {
+  loteQueda,
   cors, verifyUser, bearer, db, qbTokenRequest, tokenRecord, qbAuth, qb, qbQuery, qbItem, qbSetPrice, tick, log,
   todayCT, r2, same, QB_ENV, IA_URL, REDIRECT_URI, env, matchOne, similar, norm, RECIBO_ONLY, COSTEO_ONLY,
 };

@@ -406,6 +406,17 @@ module.exports = async (req, res) => {
         if (Object.keys(up).length) await db('PATCH', '', up);
         return res.json({ ok: true, n: Object.keys(up).length });
       }
+      case 'insitu_token': {
+        // La IA guarda la sesión de InSitu para que el servidor actualice existencia y fechas solo, cada hora.
+        // Se guarda en un nodo que solo lee el servidor; nunca se regresa al navegador.
+        if (RECIBO_ONLY.includes(who) || COSTEO_ONLY.includes(who)) return res.status(403).json({ error: 'Sin permiso' });
+        const token = String(body.token || '').replace(/^Bearer\s+/i, '').trim();
+        if (!/^[\w-]+\.[\w-]+\.[\w-]+$/.test(token)) return res.status(400).json({ error: 'Sesión inválida' });
+        const prev = await db('GET', 'insitu/token');
+        if (!prev || prev.token !== token) await db('PUT', 'insitu/token', { token, scheme: body.scheme === '' ? '' : 'Bearer ', by: who, at: Date.now() });
+        const last = (await db('GET', 'insitu/lastRun')) || {};
+        return res.json({ ok: true, lastRun: last.at || null, error: last.error || null });
+      }
       case 'lote_ajuste': {
         // La IA (con la existencia de InSitu) guarda cuánto queda de cada fecha; solo baja, nunca sube
         const items = (Array.isArray(body.items) ? body.items : []).slice(0, 500);
