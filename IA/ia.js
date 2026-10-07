@@ -486,8 +486,9 @@
         const code = String(l.product_code ?? '').trim();
         const q = Number(l.quantity) || 0;
         if (!code || q <= 0) continue;
-        const s = (sales[code] = sales[code] || { last: 0, u30: 0, u90: 0, uPrev90: 0, u365: 0, rev90: 0, clients: new Set(), m: new Array(12).fill(0) });
+        const s = (sales[code] = sales[code] || { last: 0, u30: 0, u90: 0, uPrev90: 0, u365: 0, rev90: 0, clients: new Set(), m: new Array(12).fill(0), d: {} });
         if (t > s.last) s.last = t;
+        if (age <= 200) { const dk = ymd(new Date(t)); s.d[dk] = r2((s.d[dk] || 0) + q); } // ventas por día (para medir especiales)
         s.u365 += q;
         if (age <= 30) s.u30 += q;
         if (age <= 90) { s.u90 += q; s.rev90 += Number(l.invoice_detail_net_value) || q * (Number(l.product_price) || 0); if (client) s.clients.add(client); }
@@ -525,8 +526,8 @@
           last: s.last ? ymd(new Date(s.last)) : null,
           days: s.last ? Math.floor((T - s.last) / DAY) : null,
           u30: r2(s.u30), u90: r2(s.u90), uPrev90: r2(s.uPrev90), u365: r2(s.u365), rev90: r2(s.rev90),
-          clients: s.clients.size, m: s.m.map(r2),
-        } : { last: null, days: null, u30: 0, u90: 0, uPrev90: 0, u365: 0, rev90: 0, clients: 0, m: new Array(12).fill(0) },
+          clients: s.clients.size, m: s.m.map(r2), d: s.d,
+        } : { last: null, days: null, u30: 0, u90: 0, uPrev90: 0, u365: 0, rev90: 0, clients: 0, m: new Array(12).fill(0), d: {} },
         stock: stocks ? r2(stockBy[p.id] || 0) : null,
       });
     }
@@ -1163,8 +1164,64 @@
         </div>`;
       }).join('');
       $('#vigCount').textContent = vig.length;
+      renderResultados(today);
     } catch (e) { sec.hidden = true; }
   }
+
+  /* ---- Resultados de los especiales: cuánto se vendió durante el especial vs lo normal
+   * (promedio de las 8 semanas anteriores, con las ventas por día de InSitu) ---- */
+  let resSel = null;
+  const addDays = (s, n) => { const d = parseYmd(s); d.setDate(d.getDate() + n); return ymd(d); };
+  function sumDias(dd, a, b) { let q = 0; Object.entries(dd || {}).forEach(([k, v]) => { if (k >= a && k <= b) q += v; }); return q; }
+  function resultadosDe(list, today) {
+    const rows = [];
+    list.forEach((e) => {
+      const p = S.products.find((x) => String(x.id) === String(e.sku));
+      if (!p || !p.st || !p.st.d) return;
+      const fin = e.to < today ? e.to : addDays(today, -1); // hasta ayer si sigue vigente
+      if (fin < e.from) return;
+      const dias = Math.round((parseYmd(fin) - parseYmd(e.from)) / 864e5) + 1;
+      const durante = sumDias(p.st.d, e.from, fin);
+      const base8 = sumDias(p.st.d, addDays(e.from, -56), addDays(e.from, -1)) / 8; // cajas por semana antes
+      const esperado = (base8 / 7) * dias;
+      const lift = esperado > 0 ? durante / esperado - 1 : durante > 0 ? null : 0;
+      rows.push({ e, p, durante: r2(durante), esperado: r2(esperado), extra: r2(durante - esperado), lift, venta: r2(durante * e.special), dias });
+    });
+    return rows;
+  }
+  function renderResultados(today) {
+    const sec = $('#resultados'); if (!sec) return;
+    if (onlyView() || !S.products.some((p) => p.st && p.st.d)) { sec.hidden = true; return; }
+    // Periodos (desde–hasta) que ya empezaron, de los últimos 90 días
+    const per = {};
+    qbAll.filter((e) => ['activo', 'terminado', 'omitido'].includes(e.status) && e.from <= today && e.to >= addDays(today, -90))
+      .forEach((e) => { (per[`${e.from}|${e.to}`] = per[`${e.from}|${e.to}`] || []).push(e); });
+    const keys = Object.keys(per).sort().reverse();
+    if (!keys.length) { sec.hidden = true; return; }
+    if (!resSel || !per[resSel]) resSel = keys.find((k) => k.split('|')[1] < today) || keys[0]; // el último que ya terminó
+    const [from, to] = resSel.split('|'), enCurso = to >= today;
+    const rows = resultadosDe(per[resSel], today).sort((a, b) => (b.lift ?? 9) - (a.lift ?? 9));
+    const tot = rows.reduce((a, r) => a + r.durante, 0), esp = rows.reduce((a, r) => a + r.esperado, 0);
+    const liftT = esp > 0 ? tot / esp - 1 : null, venta = rows.reduce((a, r) => a + r.venta, 0);
+    const subio = rows.filter((r) => r.lift == null || r.lift > 0.2).length;
+    const tag = (r) => (r.lift == null ? '<span class="pill ok">se movió (antes no se vendía)</span>' : r.lift > 0.2 ? `<span class="pill ok">funcionó · +${Math.round(r.lift * 100)}%</span>`
+      : r.lift >= -0.1 ? `<span class="pill">igual que siempre${r.lift ? ` · ${r.lift > 0 ? '+' : ''}${Math.round(r.lift * 100)}%` : ''}</span>` : `<span class="pill bad">bajó · ${Math.round(r.lift * 100)}%</span>`);
+    sec.hidden = false;
+    sec.innerHTML = `
+      <div class="vig-h"><p class="lbl">Resultados de especiales${enCurso ? ' <small>(en curso, hasta ayer)</small>' : ''}</p></div>
+      ${keys.length > 1 ? `<div class="pills res-per">${keys.slice(0, 6).map((k) => { const [a, b] = k.split('|'); return `<button type="button" data-res="${k}" class="${k === resSel ? 'on' : ''}">${fmtD(a)} – ${fmtD(b)}</button>`; }).join('')}</div>` : ''}
+      <div class="res-kpis">
+        <div class="fs"><span class="lbl">Cajas vendidas</span><b>${nfmt(tot)}</b><small>normal ~${nfmt(r2(esp))}</small></div>
+        <div class="fs ${liftT == null ? '' : liftT > 0.2 ? 'good' : liftT < -0.1 ? 'hot' : ''}"><span class="lbl">Contra lo normal</span><b>${liftT == null ? '—' : `${liftT >= 0 ? '+' : ''}${Math.round(liftT * 100)}%`}</b><small>${nfmt(r2(tot - esp))} cajas ${tot >= esp ? 'extra' : 'menos'}</small></div>
+        <div class="fs"><span class="lbl">Funcionaron</span><b>${subio} de ${rows.length}</b><small>subieron más de 20%</small></div>
+        <div class="fs"><span class="lbl">Venta en especial</span><b>${money(venta)}</b><small>${fmtD(from)} – ${fmtD(to)}</small></div>
+      </div>
+      <div class="res-list">${rows.map((r) => `<div class="res-r">
+        <div class="vig-ph">${r.p.photo ? `<img src="${esc(r.p.photo)}" alt="" loading="lazy">` : ''}</div>
+        <div class="res-m"><b>${esc(r.p.name)}</b><small>Vendiste ${nfmt(r.durante)} ${r.durante === 1 ? 'caja' : 'cajas'} en ${r.dias} ${r.dias === 1 ? 'día' : 'días'} · normal ~${nfmt(r.esperado)} · a ${money(r.e.special)}</small></div>
+        ${tag(r)}</div>`).join('')}</div>`;
+  }
+  $('#resultados').addEventListener('click', (e) => { const b = e.target.closest('[data-res]'); if (!b) return; resSel = b.dataset.res; renderResultados(ymd(new Date())); });
 
   /* ---- Grupo con el mismo precio: varios productos (ej. veladoras) con un solo precio especial c/u.
    * En QuickBooks cada producto lleva ese precio durante la vigencia. ---- */
@@ -3276,8 +3333,8 @@
         return (fb > 0) - (fa > 0) || a.localeCompare(b);
       });
       box.innerHTML = `
-        <div class="bd-h"><div><p class="hud">Ponle fecha a la bodega</p><p class="bd-t">Llevas <b>${pct0}%</b> · ${nDone} de ${prods.length} productos en existencia</p></div></div>
-        ${bar(nDone, prods.length)}
+        <div class="bd-top"><div class="bd-h"><div><p class="hud">Ponle fecha a la bodega</p><p class="bd-t">Llevas <b>${pct0}%</b><span class="bd-sep"> · </span>${nDone} de ${prods.length} productos en existencia</p></div></div>
+        ${bar(nDone, prods.length)}</div>
         <div class="bd-deps">${deps.map((d) => {
           const all = byDep[d], n = all.filter((p) => done.has(skuKey(p.id))).length, pc = Math.round((n / all.length) * 100);
           return `<button type="button" class="bd-dep${n === all.length ? ' full' : ''}" data-bdep="${esc(d)}"><b>${esc(d)}</b><span>${n === all.length ? '✓ completo' : `${pc}% · faltan ${all.length - n}`}</span>${bar(n, all.length)}</button>`;
