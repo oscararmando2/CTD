@@ -22,7 +22,7 @@
   const INSITU = 'https://app.b2bmobilesales.com/api/v1';
   const PEOPLE = ['Oscar', 'Luis', 'Diego', 'Jonathan', 'Rocio'];
   // Usuarios con una sola sección: Jonathan (bodega) → Recibo; Rocío → Costeo
-  const ONLY = { Jonathan: ['rec', 'fech'], Rocio: ['cos', 'cat', 'fech'] };
+  const ONLY = { Jonathan: ['rec', 'fech'], Rocio: ['cos', 'cred', 'cat', 'fech'] };
   // Secciones que un usuario solo puede ver, sin cambiar nada (Rocío ve las fechas pero no las mueve)
   const READ_ONLY = { Rocio: ['fech'] };
   const soloVer = (v) => (READ_ONLY[S.who] || []).includes(v);
@@ -3560,6 +3560,272 @@
     return r.length ? r[0] : null;
   }
 
+  /* ================= CRÉDITOS A CLIENTES =================
+   * Rocío (o Oscar/Luis/Diego) captura el crédito que pide el vendedor: cliente + productos CR- en piezas.
+   * La IA revisa con las facturas de InSitu (12 meses) cuántas veces y a qué precio se le vendió, avisa si
+   * algo no cuadra, sugiere el precio correcto y arma la hoja para imprimir. La nota se hace en InSitu
+   * y aquí se marca con su número. */
+  const CR = { list: null, ed: null, clientes: null, hist: {}, q: '' };
+  const MOTIVOS = ['Caducado', 'Dañado', 'Cambio', 'Faltante', 'Otro'];
+  const crProds = () => (S.products.length ? S.products : (R.cat || []));
+  const baseName = (n) => String(n || '').replace(/^\s*CR\s*-\s*/i, '');
+  // Producto original de un CR- (mismo nombre sin "CR-"); si no es exacto, el más parecido de la misma presentación
+  function origDe(p) {
+    if (!isCredito(p)) return p;
+    const list = crProds().filter((x) => !isCredito(x)), b = normTxt(baseName(p.name)).replace(/\s+/g, ' ').trim();
+    const ex = list.find((x) => normTxt(x.name).replace(/\s+/g, ' ').trim() === b);
+    if (ex) return ex;
+    let best = null;
+    list.forEach((x) => { if (!sameSize(baseName(p.name), x.name)) return; const s = nameScore(baseName(p.name), x.name); if (s >= 0.75 && (!best || s > best.s)) best = { x, s }; });
+    return best ? best.x : null;
+  }
+  // Versión CR- de un producto normal (para el precio por pieza)
+  const crDe = (p) => (isCredito(p) ? p : crProds().find((x) => isCredito(x) && normTxt(baseName(x.name)).trim() === normTxt(p.name).trim()) || null);
+  // Piezas por caja: "Caja 12", "CJ 12", "12/14OZ"
+  function piezasPorCaja(p) {
+    if (!p) return 1;
+    const a = String(p.pack || '').match(/caja\s*(\d+)/i) || String(p.name || '').match(/\bcj\.?\s*(\d+)/i) || String(p.name || '').match(/(?:^|\s)(\d{1,3})\s*\/\s*\d/);
+    return a ? Math.max(1, Number(a[1])) : 1;
+  }
+
+  async function crLoadList() {
+    try { CR.list = (await cosCall('cr_list')).list || []; } catch (e) { CR.list = []; toast(e.message); }
+    renderCreditos();
+  }
+  function renderCreditos() {
+    const ed = CR.ed;
+    $('#crHero').hidden = !!ed; $('#crEdit').hidden = !ed; $('#crListWrap').hidden = !!ed;
+    if (ed) { renderCrEdit(); return; }
+    if (!CR.list) { $('#crList').innerHTML = '<p class="data-info">Cargando…</p>'; crLoadList(); return; }
+    const q = normTxt(CR.q).trim();
+    const list = CR.list.filter((c) => !q || normTxt(`${c.cliente.name} ${c.vendedor} ${c.numero} ${(c.lineas || []).map((l) => l.nombre).join(' ')}`).includes(q));
+    const pend = CR.list.filter((c) => c.status !== 'aplicado').length;
+    $('#crInfo').textContent = CR.list.length ? `${CR.list.length} créditos · ${pend} sin aplicar en InSitu` : 'Todavía no hay créditos capturados.';
+    $('#crList').innerHTML = list.map((c) => `
+      <div class="hist-item hist-prop" data-crid="${esc(c.id)}">
+        <div class="hi-top"><div class="hi-txt"><b>${esc(c.cliente.name)} · ${crM(c.total || 0)}</b>
+          ${(c.lineas || []).reduce((a, l) => a + (l.piezas || 0), 0)} piezas · ${(c.lineas || []).length} ${(c.lineas || []).length === 1 ? 'producto' : 'productos'} · vendedor ${esc(c.vendedor || '—')} · ${esc(LABEL[c.by] || c.by || '')} · ${fmtTs(c.updated || c.ts)}</div></div>
+        <div class="hi-acts">
+          ${c.status === 'aplicado' ? `<span class="st sent">Aplicado · ${esc(c.numero)}</span>` : '<span class="st">Falta hacerlo en InSitu</span>'}
+          <button class="btn btn-ghost btn-sm" data-cr="open" type="button">Abrir</button>
+          <button class="btn btn-ghost btn-sm" data-cr="pdf" type="button">${icon('printer')}Hoja</button>
+          ${c.status === 'aplicado' ? '' : '<button class="btn btn-oro btn-sm" data-cr="apl" type="button">Ya lo hice en InSitu</button>'}
+          <button class="icon-btn" data-cr="del" type="button" title="Borrar" aria-label="Borrar">${icon('trash')}</button>
+        </div></div>`).join('') || '<p class="data-info">Nada con esa búsqueda.</p>';
+  }
+  $('#crQ').addEventListener('input', (e) => { CR.q = e.target.value; renderCreditos(); });
+  $('#crNew').addEventListener('click', () => { CR.ed = { cliente: null, vendedor: '', nota: '', lineas: [] }; renderCreditos(); window.scrollTo({ top: 0 }); });
+  $('#crList').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-cr]'); if (!b) return;
+    const c = CR.list.find((x) => x.id === b.closest('[data-crid]').dataset.crid); if (!c) return;
+    const a = b.dataset.cr;
+    if (a === 'open') { CR.ed = JSON.parse(JSON.stringify(c)); renderCreditos(); crCargarHist(); window.scrollTo({ top: 0 }); }
+    if (a === 'pdf') { if (c.cliente.code && !CR.hist[c.cliente.code]) await crCargarHist(c); crPdf(c); }
+    if (a === 'apl') {
+      const n = prompt('Número de la nota de crédito en InSitu (ej. HM102):', ''); if (!n) return;
+      try { await cosCall('cr_aplicar', { id: c.id, numero: n.trim() }); toast('Marcado como aplicado'); crLoadList(); } catch (err) { toast(err.message); }
+    }
+    if (a === 'del') {
+      if (!confirm(`¿Borrar el crédito de ${c.cliente.name}?`)) return;
+      try { await cosCall('cr_borrar', { id: c.id }); crLoadList(); } catch (err) { toast(err.message); }
+    }
+  });
+
+  // ---- Editor ----
+  const crM = (v) => (v > 0 ? '-' : '') + money(Math.abs(v)); // el crédito se muestra en negativo, como en InSitu
+  const crTotal = (ed) => ed.lineas.reduce((a, l) => a + (l.piezas || 0) * (l.precio || 0), 0);
+  function crRevision(l, h) {
+    // Lo que dice el historial de ese cliente para esta línea
+    const o = crProds().find((x) => String(x.id) === String(l.skuOrig)), ppc = piezasPorCaja(o);
+    const compras = (h ? h.lineas : []).filter((x) => x.sku === String(l.skuOrig) && x.cant > 0);
+    const previos = (h ? h.lineas : []).filter((x) => x.sku === String(l.sku) && x.cant < 0);
+    const hoy = Date.now(), seis = compras.filter((x) => hoy - Date.parse(x.fecha) <= 183 * 864e5);
+    const pzas6 = seis.reduce((a, x) => a + x.cant, 0) * ppc;
+    const ult = compras[0], ppPagado = ult && ult.precio != null ? r2(ult.precio / ppc) : null;
+    const especial = ult && o && o.price > 0 && ult.precio < o.price * 0.97;
+    const alertas = [];
+    if (!h) return { compras, previos, ppc, ppPagado, alertas, cargando: true };
+    if (!l.skuOrig) alertas.push('No encontré el producto original de este CR-: revisa a mano.');
+    else if (!compras.length) alertas.push('No se le ha vendido este producto en 12 meses.');
+    else {
+      const dias = Math.round((hoy - Date.parse(ult.fecha)) / 864e5);
+      if (dias > 180) alertas.push(`La última compra fue hace ${dias} días (${fmtLong(ult.fecha)}).`);
+      if (l.piezas > pzas6) alertas.push(`Pide ${l.piezas} piezas y en 6 meses compró ${nfmt(pzas6)}.`);
+      if (ppPagado != null && l.precio > ppPagado + 0.01) alertas.push(`Se lo vendiste a ${money(ppPagado)} la pieza${especial ? ' (en especial)' : ''} el ${fmtLong(ult.fecha)}; el crédito va a ${money(l.precio)}.`);
+    }
+    if (previos.length) alertas.push(`Ya se le dio crédito de este producto: ${previos.slice(0, 2).map((x) => `${nfmt(-x.cant)} pzas el ${fmtLong(x.fecha)}`).join(', ')}.`);
+    return { compras, previos, ppc, ppPagado, alertas, especial };
+  }
+  function renderCrEdit() {
+    const ed = CR.ed, h = ed.cliente ? CR.hist[ed.cliente.code] : null;
+    $('#crCliSel').innerHTML = ed.cliente ? `<b>${esc(ed.cliente.name)}</b> <button type="button" class="btn-link sm" data-crx="cli">cambiar</button>` : '';
+    $('#crCliBox').hidden = !!ed.cliente;
+    $('#crVend').value = ed.vendedor || '';
+    $('#crNota').value = ed.nota || '';
+    $('#crHistInfo').textContent = !ed.cliente ? '' : !h ? 'Revisando sus facturas en InSitu…' : h.error ? `No se pudo revisar: ${h.error}` : `Revisé ${h.facturas} facturas de los últimos 12 meses.`;
+    $('#crLineas').innerHTML = ed.lineas.map((l, i) => {
+      const rv = crRevision(l, h && !h.error ? h : null);
+      return `<div class="cr-l" data-i="${i}">
+        <div class="cr-lh"><div><b>${esc(l.nombre)}</b>${l.nombreOrig && l.nombreOrig !== l.nombre ? `<small>Original: ${esc(l.nombreOrig)} · ${rv.ppc} piezas por caja</small>` : ''}</div>
+          <button type="button" class="g-x" data-crx="rm" aria-label="Quitar">×</button></div>
+        <div class="cr-lf">
+          <label class="field"><span>Piezas</span><input type="number" inputmode="numeric" min="1" step="1" data-f="piezas" value="${l.piezas || 1}"></label>
+          <label class="field"><span>Precio por pieza</span><input type="number" inputmode="decimal" min="0" step="0.01" data-f="precio" value="${(l.precio || 0).toFixed(2)}"></label>
+          <label class="field"><span>Motivo</span><select data-f="motivo">${MOTIVOS.map((m) => `<option${l.motivo === m ? ' selected' : ''}>${m}</option>`).join('')}</select></label>
+          <div class="cr-sub"><span class="lbl">Subtotal</span><b>${crM((l.piezas || 0) * (l.precio || 0))}</b></div>
+        </div>
+        <div class="cr-rev">
+          ${rv.cargando ? '<p class="status">Revisando historial…</p>' : ''}
+          ${rv.alertas.map((a) => `<p class="cr-al">${icon('alert')}${esc(a)}</p>`).join('')}
+          ${rv.ppPagado != null && Math.abs(rv.ppPagado - l.precio) > 0.01 ? `<button type="button" class="btn btn-ghost btn-sm" data-crx="usar" data-p="${rv.ppPagado}">Usar ${money(rv.ppPagado)} (lo que pagó)</button>` : ''}
+          ${rv.compras.length ? `<p class="lbl cr-hl">Compras de este producto (12 meses)</p><div class="cr-h">${rv.compras.slice(0, 8).map((x) => `<span>${esc(fmtLong(x.fecha))} · ${nfmt(x.cant)} ${x.cant === 1 ? 'caja' : 'cajas'} a ${money(x.precio)} <small>(${money(x.precio / rv.ppc)}/pza)</small>${x.factura ? ` · #${esc(x.factura)}` : ''}</span>`).join('')}</div>` : ''}
+          ${!rv.cargando && !rv.alertas.length ? '<p class="cr-ok">✓ Cuadra con lo que se le vendió.</p>' : ''}
+        </div></div>`;
+    }).join('') || '<p class="data-info">Agrega los productos del crédito.</p>';
+    $('#crTotal').textContent = crM(crTotal(ed));
+    $('#crSave').disabled = !ed.cliente || !ed.lineas.length;
+    $('#crPdfBtn').disabled = !ed.cliente || !ed.lineas.length;
+  }
+  async function crCargarHist(c) {
+    const ed = c || CR.ed; if (!ed || !ed.cliente) return;
+    const code = ed.cliente.code;
+    const skus = [...new Set(ed.lineas.flatMap((l) => [l.sku, l.skuOrig]).filter(Boolean))];
+    try {
+      const d = await cosCall('cr_historial', { code, skus });
+      CR.hist[code] = d;
+      if (CR.ed && CR.ed.cliente && CR.ed.cliente.code === code && !CR.ed.vendedor && d.vendedor) CR.ed.vendedor = d.vendedor;
+    } catch (e) { CR.hist[code] = { error: e.message, lineas: [] }; }
+    if (CR.ed && !c) renderCrEdit();
+  }
+  // Clientes (de InSitu, vía servidor)
+  $('#crCli').addEventListener('input', async (e) => {
+    const q = normTxt(e.target.value.trim()), box = $('#crCliRes');
+    if (q.length < 2) { box.innerHTML = ''; return; }
+    if (!CR.clientes) { box.innerHTML = '<p class="data-info" style="padding:10px">Cargando clientes…</p>'; try { CR.clientes = (await cosCall('cr_clientes')).clientes || []; } catch (err) { box.innerHTML = `<p class="data-info" style="padding:10px">${esc(err.message)}</p>`; return; } }
+    const res = CR.clientes.filter((c) => q.split(/\s+/).every((w) => normTxt(`${c.name} ${c.code} ${c.city}`).includes(w))).slice(0, 12);
+    box.innerHTML = res.map((c) => `<button type="button" data-cli="${esc(c.code)}"><span>${esc(c.name)}<small>${esc(c.city || '')}${c.seller ? ' · ' + esc(c.seller) : ''}</small></span></button>`).join('') || '<p class="data-info" style="padding:10px">Sin resultados</p>';
+  });
+  $('#crCliRes').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-cli]'); if (!b) return;
+    const c = CR.clientes.find((x) => x.code === b.dataset.cli); if (!c) return;
+    CR.ed.cliente = { code: c.code, name: c.name };
+    $('#crCli').value = ''; $('#crCliRes').innerHTML = '';
+    delete CR.hist[c.code];
+    renderCrEdit(); crCargarHist();
+  });
+  // Productos (CR- primero)
+  $('#crProd').addEventListener('input', async (e) => {
+    const q = normTxt(e.target.value.trim()), box = $('#crProdRes');
+    if (q.length < 2) { box.innerHTML = ''; return; }
+    if (!S.products.length && !R.cat) await recProducts();
+    const res = crProds().filter((p) => q.split(/\s+/).every((w) => normTxt(`${p.name} ${p.id} ${p.upc || ''}`).includes(w)))
+      .sort((a, b) => isCredito(b) - isCredito(a)).slice(0, 12);
+    box.innerHTML = res.map((p) => `<button type="button" data-crp="${esc(p.id)}">${p.photo ? `<img src="${esc(p.photo)}" alt="">` : ''}<span>${esc(p.name)}<small>SKU ${esc(p.id)} · ${money(p.price || 0)}${isCredito(p) ? ' por pieza' : ''}</small></span></button>`).join('') || '<p class="data-info" style="padding:10px">Sin resultados</p>';
+  });
+  $('#crProdRes').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-crp]'); if (!b) return;
+    const p = crProds().find((x) => String(x.id) === b.dataset.crp); if (!p) return;
+    const o = origDe(p), cr = crDe(p) || p;
+    const precio = isCredito(cr) && cr.price > 0 ? cr.price : o && o.price ? r2(o.price / piezasPorCaja(o)) : 0;
+    CR.ed.lineas.push({ sku: String(cr.id), nombre: cr.name, skuOrig: o ? String(o.id) : '', nombreOrig: o ? o.name : '', piezas: 1, precio: r2(precio), motivo: 'Caducado' });
+    $('#crProd').value = ''; $('#crProdRes').innerHTML = '';
+    renderCrEdit();
+    if (CR.ed.cliente) crCargarHist();
+  });
+  $('#crEdit').addEventListener('input', (e) => {
+    const el = e.target, row = el.closest('.cr-l');
+    if (el.id === 'crVend') { CR.ed.vendedor = el.value; return; }
+    if (el.id === 'crNota') { CR.ed.nota = el.value; return; }
+    if (!row || !el.dataset.f) return;
+    const l = CR.ed.lineas[Number(row.dataset.i)];
+    if (el.dataset.f === 'piezas') l.piezas = Math.max(0, Math.round(Number(el.value) || 0));
+    if (el.dataset.f === 'precio') l.precio = r2(Number(el.value) || 0);
+    if (el.dataset.f === 'motivo') l.motivo = el.value;
+    row.querySelector('.cr-sub b').textContent = crM((l.piezas || 0) * (l.precio || 0));
+    $('#crTotal').textContent = crM(crTotal(CR.ed));
+  });
+  $('#crEdit').addEventListener('change', (e) => {
+    const f = e.target.dataset.f; if (!f) return;
+    if (f === 'motivo') CR.ed.lineas[Number(e.target.closest('.cr-l').dataset.i)].motivo = e.target.value;
+    else renderCrEdit(); // revisa de nuevo con las piezas/precio ya escritos
+  });
+  $('#crEdit').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-crx]'); if (!b) return;
+    const a = b.dataset.crx, row = b.closest('.cr-l'), i = row ? Number(row.dataset.i) : -1;
+    if (a === 'cli') { CR.ed.cliente = null; CR.ed.vendedor = ''; renderCrEdit(); $('#crCli').focus(); }
+    if (a === 'rm') { CR.ed.lineas.splice(i, 1); renderCrEdit(); }
+    if (a === 'usar') { CR.ed.lineas[i].precio = Number(b.dataset.p); renderCrEdit(); }
+  });
+  $('#crCancel').addEventListener('click', () => { CR.ed = null; renderCreditos(); });
+  async function crGuardar() {
+    const ed = CR.ed;
+    ed.lineas.forEach((l) => { const rv = crRevision(l, CR.hist[ed.cliente.code]); l.alerta = rv.alertas.join(' '); });
+    const d = await cosCall('cr_save', { credito: ed });
+    ed.id = d.id;
+    return ed;
+  }
+  $('#crSave').addEventListener('click', async () => {
+    try { await crGuardar(); toast('Crédito guardado'); CR.ed = null; CR.list = null; renderCreditos(); } catch (e) { toast('No se pudo guardar: ' + e.message); }
+  });
+  $('#crPdfBtn').addEventListener('click', async () => {
+    try { const c = await crGuardar(); CR.list = null; crPdf({ ...c, total: crTotal(c), updated: Date.now() }); } catch (e) { toast(e.message); }
+  });
+
+  // ---- Hoja de crédito para imprimir ----
+  async function crPdf(c) {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const W = doc.internal.pageSize.getWidth();
+    const logo = await logoData();
+    if (logo) doc.addImage(logo, 'PNG', 40, 34, 84, 45);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(20, 18, 12);
+    doc.text('Hoja de crédito', W - 40, 52, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(90, 84, 74);
+    const d = new Date(c.updated || Date.now());
+    doc.text(`${d.getDate()} ${MES[d.getMonth()]} ${d.getFullYear()}  ·  Capturó ${LABEL[c.by || S.who] || c.by || S.who}${c.numero ? `  ·  Nota InSitu ${c.numero}` : ''}`, W - 40, 68, { align: 'right' });
+    doc.setTextColor(20, 18, 12); doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold'); doc.text('Cliente:', 40, 104); doc.setFont('helvetica', 'normal'); doc.text(c.cliente.name || '', 92, 104);
+    doc.setFont('helvetica', 'bold'); doc.text('Vendedor:', 40, 120); doc.setFont('helvetica', 'normal'); doc.text(c.vendedor || '—', 102, 120);
+    const h = CR.hist[c.cliente.code];
+    doc.autoTable({
+      startY: 136, margin: { left: 40, right: 40 },
+      head: [['Producto', 'Motivo', 'Piezas', 'Precio pza', 'Subtotal']],
+      body: c.lineas.map((l) => [l.nombre, l.motivo || '', l.piezas, money(l.precio), crM(l.piezas * l.precio)]),
+      foot: [['', '', c.lineas.reduce((a, l) => a + l.piezas, 0), 'Total', crM(c.lineas.reduce((a, l) => a + l.piezas * l.precio, 0))]],
+      styles: { font: 'helvetica', fontSize: 9, cellPadding: 5, textColor: [20, 18, 12] },
+      headStyles: { fillColor: [15, 13, 10], textColor: [242, 163, 30], fontStyle: 'bold' },
+      footStyles: { fillColor: [246, 242, 233], textColor: [20, 18, 12], fontStyle: 'bold' },
+      columnStyles: { 2: { halign: 'right', cellWidth: 50 }, 3: { halign: 'right', cellWidth: 70 }, 4: { halign: 'right', cellWidth: 76, fontStyle: 'bold' } },
+    });
+    let y = doc.lastAutoTable.finalY + 22;
+    // Revisión: compras del cliente y avisos por producto
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.text('Revisión con facturas de InSitu (12 meses)', 40, y); y += 6;
+    const rows = [];
+    c.lineas.forEach((l) => {
+      const rv = crRevision(l, h && !h.error ? h : null);
+      const compras = rv.compras.slice(0, 4).map((x) => `${fmtLong(x.fecha)}: ${nfmt(x.cant)} cj a ${money(x.precio)} (${money(x.precio / rv.ppc)}/pza)`).join('\n') || 'Sin compras en 12 meses';
+      rows.push([l.nombreOrig || l.nombre, compras, (rv.alertas.length ? rv.alertas : ['Cuadra con lo que se le vendió.']).join('\n')]);
+    });
+    doc.autoTable({
+      startY: y + 6, margin: { left: 40, right: 40 },
+      head: [['Producto original', 'Compras', 'Revisión']],
+      body: rows,
+      styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 5, textColor: [20, 18, 12], valign: 'top' },
+      headStyles: { fillColor: [246, 242, 233], textColor: [20, 18, 12], fontStyle: 'bold' },
+      columnStyles: { 0: { cellWidth: 150 } },
+    });
+    y = doc.lastAutoTable.finalY + 20;
+    if (c.nota) { doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.text(doc.splitTextToSize(`Notas: ${c.nota}`, W - 80), 40, y); y += 30; }
+    if (y > 690) { doc.addPage(); y = 80; }
+    doc.setDrawColor(150); doc.line(60, y + 50, 250, y + 50); doc.line(W - 250, y + 50, W - 60, y + 50);
+    doc.setFontSize(9); doc.setTextColor(90, 84, 74);
+    doc.text('Vendedor', 155, y + 64, { align: 'center' }); doc.text('Recibió / Autorizó', W - 155, y + 64, { align: 'center' });
+    download(doc.output('blob'), `Credito-CTD-${normTxt(c.cliente.name).replace(/[^a-z0-9]+/g, '-').slice(0, 30)}-${d.getDate()}${MES[d.getMonth()]}.pdf`);
+    toast('Hoja de crédito guardada');
+  }
+
   /* ================= VENDEDORES =================
    * De las facturas de 12 meses: ventas por vendedor, sus clientes, a quién ya le toca pedir
    * (días desde el último pedido vs. cada cuánto compra) y qué dejó de comprar. */
@@ -3693,12 +3959,14 @@
     if ($('#workspace').hidden) return;
     const ov = onlyView();
     if (ov && !ov.includes(S.view)) S.view = ov[0];
-    const ord = S.view === 'ord', cos = S.view === 'cos', ven = S.view === 'ven', rec = S.view === 'rec', fech = S.view === 'fech', cat = S.view === 'cat';
+    const ord = S.view === 'ord', cos = S.view === 'cos', ven = S.view === 'ven', rec = S.view === 'rec', fech = S.view === 'fech', cat = S.view === 'cat', cred = S.view === 'cred';
     $$('#viewTabs button').forEach((b) => { const on = b.dataset.v === S.view; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
     // En el celular las pestañas se deslizan: la activa siempre a la vista (y el botón de salir fijo a la derecha)
     const act = $('#viewTabs button.on'), bar = $('#viewTabs');
     if (act) bar.scrollLeft = Math.max(0, act.offsetLeft - (bar.clientWidth - act.offsetWidth) / 2);
-    $('#espView').hidden = ord || cos || ven || rec || fech || cat;
+    $('#espView').hidden = ord || cos || ven || rec || fech || cat || cred;
+    $('#credView').hidden = !cred;
+    if (cred) { CR.list = null; renderCreditos(); }
     $('#catView').hidden = !cat;
     if (cat) renderCatalogo();
     $('#venView').hidden = !ven;
@@ -3708,11 +3976,11 @@
     if (rec) { R.list = null; renderRecibo(); }
     $('#ordView').hidden = !ord;
     $('#cosView').hidden = !cos;
-    $('#dock').hidden = ord || cos || ven || rec || fech || cat;
+    $('#dock').hidden = ord || cos || ven || rec || fech || cat || cred;
     $('#ordDock').hidden = !ord || O.vendor === null;
     $('#cosDock').hidden = !cos;
     if (cos) renderCosteo();
-    if (!ord && !cos && !ven && !rec && !fech && !cat) loadVigentes();
+    if (!ord && !cos && !ven && !rec && !fech && !cat && !cred) loadVigentes();
     if (ven) renderVendors();
     if (ord) {
       if (!O.lines.length && !O.touched) suggestOrder(); else renderOrders();

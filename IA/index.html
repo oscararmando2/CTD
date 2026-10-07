@@ -65,6 +65,7 @@
       <button type="button" role="tab" data-v="rec">Recibo</button>
       <button type="button" role="tab" data-v="fech">Fechas</button>
       <button type="button" role="tab" data-v="cos">Costeo</button>
+      <button type="button" role="tab" data-v="cred">Créditos</button>
       <button type="button" role="tab" data-v="ven">Vendors</button>
       <button type="button" role="tab" data-v="cat">Catálogo</button>
     </div>
@@ -240,6 +241,34 @@
     <section class="ord-recent">
       <p class="lbl">Facturas guardadas <small>(todos ven lo mismo)</small></p>
       <div id="cosRecent" class="hist-list"></div>
+    </section>
+   </div>
+   <!-- Créditos a clientes (Rocío) -->
+   <div id="credView" hidden>
+    <section class="hero" id="crHero">
+      <h1 class="display">Créditos</h1>
+      <p id="crInfo" class="status"></p>
+      <div class="fech-ctl">
+        <label class="field fech-search"><span>Buscar</span><input id="crQ" type="search" placeholder="Cliente, vendedor, producto o número" autocomplete="off"></label>
+        <button id="crNew" class="btn btn-oro" type="button">+ Nuevo crédito</button>
+      </div>
+    </section>
+    <section id="crListWrap" class="ord-recent"><div id="crList" class="hist-list"></div></section>
+    <section id="crEdit" class="cr-edit" hidden>
+      <button id="crCancel" class="btn-back" type="button"><span aria-hidden="true">←</span> Créditos</button>
+      <h2 class="rec-title">Nuevo crédito</h2>
+      <div class="cr-top">
+        <div class="field cr-cli"><span>Cliente</span><div id="crCliSel" class="cr-sel"></div>
+          <div id="crCliBox"><input id="crCli" type="search" placeholder="Busca la tienda" autocomplete="off"><div id="crCliRes" class="grp-res ord-results"></div></div></div>
+        <label class="field"><span>Vendedor</span><input id="crVend" type="text" placeholder="Sale solo al escoger el cliente"></label>
+      </div>
+      <p id="crHistInfo" class="status"></p>
+      <div class="field cr-addp"><span>Agregar producto (CR-)</span><input id="crProd" type="search" placeholder="Ej. CR-LA COSTEÑA, CR-DOÑA NITA…" autocomplete="off"><div id="crProdRes" class="grp-res ord-results"></div></div>
+      <div id="crLineas" class="cr-lineas"></div>
+      <label class="field"><span>Notas</span><input id="crNota" type="text" maxlength="500" placeholder="Lo que dijo el vendedor, etc."></label>
+      <div class="cr-foot"><div><span class="lbl">Total del crédito</span><b id="crTotal">$0.00</b></div>
+        <div class="cr-btns"><button id="crPdfBtn" class="btn btn-ghost" type="button"><i data-icon="printer"></i>Guardar e imprimir hoja</button>
+          <button id="crSave" class="btn btn-oro" type="button">Guardar</button></div></div>
     </section>
    </div>
    <!-- Catálogo descargable (promociones + catálogo completo) -->

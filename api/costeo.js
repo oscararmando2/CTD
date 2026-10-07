@@ -10,7 +10,7 @@
 //   recibo_costeado → la factura ya pasó por Costeo;  lotes → caducidades por producto (lote = fecha)
 // QuickBooks es el dueño de productos y precios: InSitu recibe los cambios en su sincronización (cada hora).
 const crypto = require('crypto');
-const { RECIBO_ONLY, COSTEO_ONLY, cors, verifyUser, bearer, db, qb, qbQuery, qbItem, log, todayCT, r2, same, env, matchOne, norm } = require('./_lib');
+const { insituGet, RECIBO_ONLY, COSTEO_ONLY, cors, verifyUser, bearer, db, qb, qbQuery, qbItem, log, todayCT, r2, same, env, matchOne, norm } = require('./_lib');
 
 const MODEL = 'claude-opus-5';
 const MAX_IMAGES = 12;
@@ -406,6 +406,76 @@ module.exports = async (req, res) => {
         if (Object.keys(up).length) await db('PATCH', '', up);
         return res.json({ ok: true, n: Object.keys(up).length });
       }
+      /* ---------- Créditos a clientes (Rocío): revisión con las facturas de InSitu y seguimiento ---------- */
+      case 'cr_clientes': {
+        if (!CLI_CACHE.at || Date.now() - CLI_CACHE.at > 10 * 60000) {
+          const list = await insituGet('/customers', {}, true);
+          CLI_CACHE.list = list.filter((c) => !c.disabled && (c.branch_name || c.branch_code))
+            .map((c) => ({ code: String(c.branch_code || c.id), name: String(c.branch_name || c.branch_code), seller: c.mobile_user_login || '', city: c.ship_address_city || c.city || '' }));
+          CLI_CACHE.at = Date.now();
+        }
+        return res.json({ clientes: CLI_CACHE.list });
+      }
+      case 'cr_historial': {
+        // Todo lo que se le vendió a ese cliente en 12 meses de los productos pedidos (y créditos CR- anteriores)
+        const code = str(body.code, 60);
+        if (!code) return res.status(400).json({ error: 'Falta el cliente' });
+        const skus = new Set((Array.isArray(body.skus) ? body.skus : []).map((s) => String(s)));
+        const d = new Date(); d.setDate(d.getDate() - 365);
+        const rango = { fromDate: d.toISOString().slice(0, 10), toDate: todayCT() };
+        const delCliente = (i) => [i.client_branch_code, i.client_nit, i.account_number].map((x) => String(x || '')).includes(code);
+        let invs = (await insituGet('/invoices', { ...rango, where: JSON.stringify({ client_branch_code: code }) }, true)).filter(delCliente);
+        if (!invs.length) invs = (await insituGet('/invoices', { ...rango, where: JSON.stringify({ client_nit: code }) }, true)).filter(delCliente);
+        let vendedor = '', lastT = 0;
+        const lines = [];
+        invs.forEach((inv) => {
+          if (inv.cancelled === true || inv.cancelled === 1) return;
+          const fecha = String(inv.invoice_date || '').slice(0, 10);
+          const t = Date.parse(fecha);
+          const mu = inv.mobile_user || {};
+          if (t >= lastT && (mu.name || inv.mobile_user_login)) { lastT = t; vendedor = mu.name || inv.mobile_user_login; }
+          (inv.invoiceDetailList || []).forEach((l) => {
+            const pc = String(l.product_code || '').trim();
+            if (!skus.has(pc)) return;
+            lines.push({ sku: pc, fecha, factura: inv.invoice_number || '', cant: Number(l.quantity) || 0, precio: num(Number(l.product_price)), unidades: str(l.units, 20) });
+          });
+        });
+        lines.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+        return res.json({ facturas: invs.length, vendedor, lineas: lines });
+      }
+      case 'cr_save': {
+        const c = body.credito || {};
+        const id = /^[a-z0-9]{6,32}$/.test(String(c.id || '')) ? String(c.id) : Date.now().toString(36) + crypto.randomBytes(3).toString('hex');
+        const prev = await db('GET', 'creditos/' + id);
+        const rec = {
+          id, cliente: { code: str(c.cliente && c.cliente.code, 60), name: str(c.cliente && c.cliente.name, 120) },
+          vendedor: str(c.vendedor, 80), nota: str(c.nota, 500),
+          lineas: (Array.isArray(c.lineas) ? c.lineas : []).slice(0, 60).map((l) => ({
+            sku: str(l.sku, 40), nombre: str(l.nombre, 160), skuOrig: str(l.skuOrig, 40), nombreOrig: str(l.nombreOrig, 160),
+            piezas: num(Number(l.piezas)), precio: num(Number(l.precio)), motivo: str(l.motivo, 40), caducidad: ymdOk(l.caducidad),
+            alerta: str(l.alerta, 300),
+          })),
+          status: (prev && prev.status) || 'capturado', numero: (prev && prev.numero) || '',
+          by: (prev && prev.by) || who, ts: (prev && prev.ts) || Date.now(), updated: Date.now(),
+        };
+        rec.total = num(rec.lineas.reduce((a, l) => a + (l.piezas || 0) * (l.precio || 0), 0));
+        await db('PUT', 'creditos/' + id, rec);
+        return res.json({ id });
+      }
+      case 'cr_list': {
+        const all = (await db('GET', 'creditos')) || {};
+        return res.json({ list: Object.values(all).sort((a, b) => (b.updated || b.ts) - (a.updated || a.ts)).slice(0, 200) });
+      }
+      case 'cr_aplicar': {
+        const id = codeKey(body.id), numero = str(body.numero, 40);
+        if (!(await db('GET', 'creditos/' + id))) return res.status(404).json({ error: 'No existe' });
+        await db('PATCH', 'creditos/' + id, numero ? { status: 'aplicado', numero, aplicadoBy: who, aplicadoAt: Date.now() } : { status: 'capturado', numero: '' });
+        return res.json({ ok: true });
+      }
+      case 'cr_borrar': {
+        await db('DELETE', 'creditos/' + codeKey(body.id));
+        return res.json({ ok: true });
+      }
       case 'insitu_token': {
         // La IA guarda la sesión de InSitu para que el servidor actualice existencia y fechas solo, cada hora.
         // Se guarda en un nodo que solo lee el servidor; nunca se regresa al navegador.
@@ -459,6 +529,7 @@ module.exports = async (req, res) => {
   }
 };
 
+const CLI_CACHE = { at: 0, list: [] };
 const RECIBO_ACTIONS = ['parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'lote_add', 'lote_del', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
 const ESTADOS = ['', 'ok', 'parcial', 'no', 'pendiente'];
 const ymdOk = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '');
