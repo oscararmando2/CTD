@@ -238,8 +238,27 @@ function loteQueda(x) {
     : es.reduce((a, e) => a + (Number(e.q) || 0), 0);
 }
 
+// InSitu desde el servidor, con la sesión que comparte la IA (insitu/token). Recorre páginas si se pide.
+async function insituGet(path, params = {}, all = false) {
+  const tok = await db('GET', 'insitu/token');
+  if (!tok || !tok.token) throw Object.assign(new Error('Falta la sesión de InSitu: que Oscar, Luis o Diego abran la IA'), { code: 'no_insitu' });
+  const out = [], LIM = 500;
+  for (let off = 0; off < 20000; off += LIM) {
+    const q = new URLSearchParams({ ...params, ...(all ? { limit: LIM, offset: off } : {}) }).toString();
+    const r = await fetch(`https://app.b2bmobilesales.com/api/v1${path}${q ? '?' + q : ''}`, { headers: { Authorization: (tok.scheme ?? 'Bearer ') + tok.token } });
+    if (r.status === 401 || r.status === 403) throw Object.assign(new Error('InSitu rechazó la sesión guardada; abran la IA otra vez'), { code: 'no_insitu' });
+    if (!r.ok) throw new Error(`InSitu ${r.status} en ${path}`);
+    const j = await r.json();
+    if (!all) return j;
+    const arr = Object.values(j).find(Array.isArray) || [];
+    out.push(...arr);
+    if (arr.length < LIM) break;
+  }
+  return out;
+}
+
 module.exports = {
-  loteQueda,
+  loteQueda, insituGet,
   cors, verifyUser, bearer, db, qbTokenRequest, tokenRecord, qbAuth, qb, qbQuery, qbItem, qbSetPrice, tick, log,
   todayCT, r2, same, QB_ENV, IA_URL, REDIRECT_URI, env, matchOne, similar, norm, RECIBO_ONLY, COSTEO_ONLY,
 };
