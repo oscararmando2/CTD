@@ -1812,17 +1812,25 @@
         const mismoDepto = g.every((e) => e.departamento === g[0].departamento);
         if (!g[0].grupo && !pre.length && !mismoDepto) { g.forEach((e) => grupos.push({ items: [e] })); return; }
         const suf = pre.length < nombres[0].split(/\s+/).length ? sufijoComun(nombres) : [];
-        const titulo = g[0].grupoTitulo || (pre.length ? pre.join(' ')
-          : (ESP_DEPTO[g[0].departamento] || t('esp.badge')));
+        // "Stella" o "Festival" a secas no dicen qué son; si el título es de una
+        // sola palabra se le antepone el departamento: "Veladoras · Stella".
+        const depto = ESP_DEPTO[g[0].departamento];
+        const base = g[0].grupoTitulo || (pre.length ? pre.join(' ') : depto) || t('esp.badge');
+        const titulo = (depto && base !== depto && !/\s/.test(base.trim()))
+          ? `${depto} · ${base}` : base;
         const sueltos = nombres.map((n) => {
           const w = n.trim().split(/\s+/);
           return w.slice(pre.length, w.length - suf.length).join(' ').trim();
         }).filter(Boolean);
-        // Con 8 variantes la tarjeta se alarga de más en móvil: se listan 4 y se cuenta el resto.
+        // Con 8 variantes la tarjeta se alarga de más en móvil: se listan 4 y se
+        // cuenta el resto. Aplica venga la lista del endpoint o la derivada.
         const TOPE = 4;
-        const variantes = g[0].grupoCorto || (sueltos.length > TOPE
-          ? sueltos.slice(0, TOPE).join(' · ') + ` + ${sueltos.length - TOPE} ${t('esp.mas')}`
-          : sueltos.join(' · '));
+        const lista = g[0].grupoCorto
+          ? String(g[0].grupoCorto).split('·').map((x) => x.trim()).filter(Boolean)
+          : sueltos;
+        const variantes = lista.length > TOPE
+          ? lista.slice(0, TOPE).join(' · ') + ` + ${lista.length - TOPE} ${t('esp.mas')}`
+          : lista.join(' · ');
         grupos.push({ items: g, titulo, variantes });
       });
       return grupos;
