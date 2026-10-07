@@ -398,24 +398,41 @@
     /* Especiales: banners verticales 2:3, en rejilla */
     .esp-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
-      gap: 18px;
-      align-items: start;
-      max-width: 1000px;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 16px;
+      align-items: stretch;
     }
     .esp-card {
-      border: none; padding: 0; background: none; cursor: pointer;
-      border-radius: var(--radio); overflow: hidden;
-      box-shadow: var(--sombra);
-      transition: transform .15s, box-shadow .15s;
-      display: block; width: 100%;
+      border: none; padding: 0; background: var(--card); cursor: pointer;
+      border-radius: var(--radio); overflow: hidden; text-align: left;
+      box-shadow: var(--sombra); transition: transform .15s, box-shadow .15s;
+      display: flex; flex-direction: column; width: 100%;
     }
     .esp-card:hover, .esp-card:focus-visible {
       transform: translateY(-3px); box-shadow: var(--sombra-hover);
     }
-    .esp-card img { display: block; width: 100%; height: auto; }
+    .esp-foto {
+      position: relative; aspect-ratio: 1; background: #fff;
+      display: flex; align-items: center; justify-content: center; padding: 12px;
+    }
+    .esp-foto img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .esp-off {
+      position: absolute; top: 10px; left: 10px;
+      background: var(--red); color: #fff; font-weight: 800; font-size: .76rem;
+      letter-spacing: .02em; padding: 5px 9px; border-radius: 999px;
+    }
+    .esp-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 5px; flex: 1; }
+    .esp-nom { font-weight: 700; font-size: .92rem; line-height: 1.25; color: var(--text); }
+    .esp-var { font-size: .76rem; color: var(--muted); line-height: 1.35; }
+    .esp-precios { display: flex; align-items: baseline; gap: 8px; margin-top: auto; padding-top: 6px; }
+    .esp-ahora { font-size: 1.42rem; font-weight: 800; color: var(--green); letter-spacing: -.02em; }
+    .esp-antes { font-size: .85rem; color: var(--muted); text-decoration: line-through; }
+    .esp-cu { font-size: .72rem; color: var(--muted); font-weight: 600; }
+    .esp-vig { font-size: .72rem; color: var(--muted); }
     @media (max-width: 640px) {
-      .esp-grid { grid-template-columns: 1fr; gap: 14px; max-width: 420px; }
+      .esp-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+      .esp-nom { font-size: .84rem; }
+      .esp-ahora { font-size: 1.22rem; }
     }
 
     /* Banners de promoción (uno por oferta) */
@@ -1276,8 +1293,8 @@
     <div class="new-inner">
       <div class="new-head">
         <span class="new-badge" data-i18n="esp.badge">🔥 Especiales</span>
-        <h2 data-i18n="esp.title">Especiales de septiembre</h2>
-        <p data-i18n="esp.sub">Vigentes hasta agotar existencias — cotiza por WhatsApp.</p>
+        <h2 id="espTitulo">Especiales</h2>
+        <p id="espSub" data-i18n="esp.sub">Precios de mayoreo por caja — cotiza por WhatsApp.</p>
       </div>
       <div class="esp-grid" id="espTrack"></div>
     </div>
@@ -1430,18 +1447,11 @@
       { name: 'Delicias Yeya Mini Squares 3.5 oz',          img: './yeya/mini-squares.jpeg' },
       { name: 'Delicias Yeya Mini Squares Chili Lime 3.5 oz', img: './yeya/mini-squares-chile.jpeg' },
     ];
-    // ESPECIALES del mes — cada banner abre el producto del CSV; el de Diana
-    // lleva a su propia sección porque la oferta es de toda la línea.
-    const ESPECIALES = [
-      { img: './especiales/tajadas-platano.jpg', code: '317' }, // LA FINCA TAJADAS PLATANO DULCE 12/12.7 OZ — 5+1
-      { img: './especiales/jugo-naranja.jpg',    code: '300' }, // DE LA GRANJA JUGO NARANJA 12/500 ML — $18.99
-      { img: './especiales/jasmine-rice.jpg',    code: '63'  }, // LA FINCA JASMINE RICE 6/5 LB — 5+1
-      { img: './especiales/nata-mix.jpg',        code: '34'  }, // REFRESHING NATA 12/490 ML — 5+1 mix and match
-      { img: './especiales/diana-snacks.jpg',    ancla: '#promosDiana' },
-      // Estos dos todavía no están en el CSV: no hay ficha que abrir, van a WhatsApp.
-      { img: './especiales/zambos-chile-limon.jpg', wa: 'Zambos Chile Limón 24 PZ — $58.99' },
-      { img: './especiales/cueritos-yeya.jpg',      wa: 'Las Delicias de Yeya Cueritos 12/16 oz — $36.00' },
-    ];
+    // ESPECIALES — los publica la IA en /IA y se leen de su endpoint, para que
+    // la web siga la vigencia sola en vez de llevar banners escritos a mano.
+    const ESP_API = 'https://ctd-seven.vercel.app/api/especiales-web';
+    let ESP_DATA = null;
+
     // Hojas de maíz Delicias Yeya — lo más nuevo, aún no está en el CSV
     const TAMAL_PRODUCTS = [
       { name: 'Delicias Yeya Hojas de Maíz 1 LB (16 oz)', img: './tamal/hojas-maiz.jpg' },
@@ -1476,8 +1486,9 @@
         'new.cta': 'Cotizar',
         'promo.tag': 'OFERTA',
         'esp.badge': '🔥 Especiales',
-        'esp.title': 'Especiales de septiembre',
-        'esp.sub': 'Vigentes hasta agotar existencias — cotiza por WhatsApp.',
+        'esp.sub': 'Precios de mayoreo por caja — cotiza por WhatsApp.',
+        'esp.cu': 'c/u',
+        'esp.mas': 'más',
         'tamal.badge': '🌽 ¡Nuevo!',
         'tamal.title': 'Hojas de Maíz Delicias Yeya',
         'tamal.sub': 'Perfectas para tamales — cotiza por WhatsApp.',
@@ -1541,8 +1552,9 @@
         'new.cta': 'Get a quote',
         'promo.tag': 'DEAL',
         'esp.badge': '🔥 Specials',
-        'esp.title': 'September Specials',
-        'esp.sub': 'While supplies last — quote on WhatsApp.',
+        'esp.sub': 'Wholesale case pricing — quote on WhatsApp.',
+        'esp.cu': 'ea.',
+        'esp.mas': 'more',
         'tamal.badge': '🌽 New!',
         'tamal.title': 'Delicias Yeya Corn Husks',
         'tamal.sub': 'Perfect for tamales — quote on WhatsApp.',
@@ -1754,39 +1766,145 @@
     // ============================================================
     // RENDER — Especiales del mes (banner → producto o sección)
     // ============================================================
+    // El endpoint puede traer el grupo vacío (los especiales programados antes
+    // del 6 oct no lo llevan). En ese caso se agrupa por mismo precio y mismas
+    // fechas, y solo si además comparten prefijo de nombre o departamento, para
+    // no juntar dos cosas que coincidan de precio por casualidad.
+    const ESP_DEPTO = {
+      Household: 'Veladoras', Cookies: 'Galletas', Condiments: 'Condimentos',
+      Beverages: 'Bebidas', Snacks: 'Snacks', Sweets: 'Dulces',
+      Preserves: 'Conservas', Grains: 'Granos', 'Dry Goods': 'Abarrotes',
+    };
+
+    function prefijoComun(nombres) {
+      const parts = nombres.map(n => n.trim().split(/\s+/));
+      const out = [];
+      for (let i = 0; i < parts[0].length; i++) {
+        const w = parts[0][i];
+        if (parts.every(p => (p[i] || '').toUpperCase() === w.toUpperCase())) out.push(w);
+        else break;
+      }
+      return out;
+    }
+
+    function sufijoComun(nombres) {
+      const parts = nombres.map(n => n.trim().split(/\s+/));
+      const out = [];
+      for (let i = 1; i <= parts[0].length; i++) {
+        const w = parts[0][parts[0].length - i];
+        if (parts.every(p => (p[p.length - i] || '').toUpperCase() === w.toUpperCase())) out.unshift(w);
+        else break;
+      }
+      return out;
+    }
+
+    function agruparEspeciales(lista) {
+      const porClave = {};
+      lista.forEach((e) => {
+        const k = e.grupo || `${e.precio}|${e.desde}|${e.hasta}`;
+        (porClave[k] = porClave[k] || []).push(e);
+      });
+      const grupos = [];
+      Object.values(porClave).forEach((g) => {
+        if (g.length < 2) { grupos.push({ items: g }); return; }
+        const nombres = g.map((e) => String(e.nombre || ''));
+        const pre = prefijoComun(nombres);
+        const mismoDepto = g.every((e) => e.departamento === g[0].departamento);
+        if (!g[0].grupo && !pre.length && !mismoDepto) { g.forEach((e) => grupos.push({ items: [e] })); return; }
+        const suf = pre.length < nombres[0].split(/\s+/).length ? sufijoComun(nombres) : [];
+        const titulo = g[0].grupoTitulo || (pre.length ? pre.join(' ')
+          : (ESP_DEPTO[g[0].departamento] || t('esp.badge')));
+        const sueltos = nombres.map((n) => {
+          const w = n.trim().split(/\s+/);
+          return w.slice(pre.length, w.length - suf.length).join(' ').trim();
+        }).filter(Boolean);
+        // Con 8 variantes la tarjeta se alarga de más en móvil: se listan 4 y se cuenta el resto.
+        const TOPE = 4;
+        const variantes = g[0].grupoCorto || (sueltos.length > TOPE
+          ? sueltos.slice(0, TOPE).join(' · ') + ` + ${sueltos.length - TOPE} ${t('esp.mas')}`
+          : sueltos.join(' · '));
+        grupos.push({ items: g, titulo, variantes });
+      });
+      return grupos;
+    }
+
+    function rangoEspeciales(lista) {
+      const MES = CURRENT_LANG === 'en'
+        ? ['January','February','March','April','May','June','July','August','September','October','November','December']
+        : ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+      const d = (s) => { const [a, m, dd] = String(s).split('-').map(Number); return new Date(a, m - 1, dd); };
+      const desde = new Date(Math.min(...lista.map((e) => d(e.desde))));
+      const hasta = new Date(Math.max(...lista.map((e) => d(e.hasta))));
+      const mes = MES[hasta.getMonth()];
+      if (CURRENT_LANG === 'en') return `Specials · ${MES[desde.getMonth()]} ${desde.getDate()}–${hasta.getDate()}`;
+      return desde.getMonth() === hasta.getMonth()
+        ? `Especiales del ${desde.getDate()} al ${hasta.getDate()} de ${mes}`
+        : `Especiales del ${desde.getDate()} de ${MES[desde.getMonth()]} al ${hasta.getDate()} de ${mes}`;
+    }
+
+    async function cargarEspeciales() {
+      try {
+        const r = await fetch(ESP_API, { cache: 'no-store' });
+        if (!r.ok) throw new Error(r.status);
+        const d = await r.json();
+        ESP_DATA = Array.isArray(d.especiales) ? d.especiales.filter((e) => e.estado === 'activo') : [];
+      } catch (e) {
+        ESP_DATA = [];   // sin datos se esconde la sección, nunca especiales vencidos
+      }
+      renderEspeciales();
+    }
+
     function renderEspeciales() {
       const track = $('#espTrack');
-      if (!track) return;
-      const items = ESPECIALES.filter(e => e.ancla || e.wa || TODOS.find(x => x.code === e.code));
-      if (!items.length) { $('#especiales')?.classList.add('hidden'); return; }
-      $('#especiales')?.classList.remove('hidden');
+      const sec = $('#especiales');
+      if (!track || !sec) return;
+      if (!ESP_DATA || !ESP_DATA.length) { sec.classList.add('hidden'); return; }
+      sec.classList.remove('hidden');
 
-      track.innerHTML = items.map(e => {
-        const p = e.code ? TODOS.find(x => x.code === e.code) : null;
-        const etiqueta = p ? p.name : (e.wa || t('esp.title'));
-        // Los que no están en el CSV no tienen ficha: se cotizan por WhatsApp.
-        if (e.wa) {
-          const waMsg = encodeURIComponent(`${t('wa.singleIntro')}\n\n• ${e.wa}`);
-          return `
-        <a class="esp-card" href="https://wa.me/${WHATSAPP_NUMBER}?text=${waMsg}"
-           target="_blank" rel="noopener" aria-label="${esc(etiqueta)}">
-          <img src="${esc(e.img)}" alt="${esc(etiqueta)}" loading="lazy">
-        </a>`;
-        }
+      const tit = $('#espTitulo');
+      if (tit) tit.textContent = rangoEspeciales(ESP_DATA);
+
+      const grupos = agruparEspeciales(ESP_DATA)
+        .map((g) => {
+          const e = g.items[0];
+          const antes = Number(e.antes) || 0, ahora = Number(e.precio) || 0;
+          return { ...g, off: antes > 0 ? 1 - ahora / antes : 0, antes, ahora };
+        })
+        .sort((a, b) => b.off - a.off);
+
+      track.innerHTML = grupos.map((g) => {
+        const e = g.items[0];
+        const nom = g.titulo || e.nombre;
+        const cu = g.items.length > 1 ? `<span class="esp-cu">${esc(t('esp.cu'))}</span>` : '';
         return `
-        <button class="esp-card" type="button"
-                data-code="${esc(e.code || '')}" data-ancla="${esc(e.ancla || '')}"
-                aria-label="${esc(etiqueta)}">
-          <img src="${esc(e.img)}" alt="${esc(etiqueta)}" loading="lazy">
+        <button class="esp-card" type="button" data-code="${esc(e.code || '')}"
+                aria-label="${esc(nom)}">
+          <div class="esp-foto">
+            ${g.off > 0 ? `<span class="esp-off">-${Math.round(g.off * 100)}%</span>` : ''}
+            ${e.foto ? `<img src="${esc(e.foto)}" alt="${esc(nom)}" loading="lazy"
+                 onerror="this.closest('.esp-foto').textContent='📦'">` : '📦'}
+          </div>
+          <div class="esp-body">
+            <div class="esp-nom">${esc(nom)}</div>
+            ${g.variantes ? `<div class="esp-var">${esc(g.variantes)}</div>`
+                          : (e.empaque ? `<div class="esp-var">${esc(e.empaque)}</div>` : '')}
+            <div class="esp-precios">
+              <span class="esp-ahora">$${g.ahora.toFixed(2)}</span>
+              ${g.antes > g.ahora ? `<span class="esp-antes">$${g.antes.toFixed(2)}</span>` : ''}
+              ${cu}
+            </div>
+          </div>
         </button>`;
       }).join('');
 
-      track.querySelectorAll('button.esp-card').forEach(el => {
+      track.querySelectorAll('.esp-card').forEach((el) => {
         el.addEventListener('click', () => {
-          if (el.dataset.ancla) {
-            document.querySelector(el.dataset.ancla)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          } else {
-            openModal(el.dataset.code);
+          const code = el.dataset.code;
+          if (code && TODOS.find((x) => x.code === code)) openModal(code);
+          else {
+            const g = grupos.find((x) => String(x.items[0].code) === code);
+            const msg = encodeURIComponent(`${t('wa.singleIntro')}\n\n• ${(g && (g.titulo || g.items[0].nombre)) || ''}`);
+            window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank', 'noopener');
           }
         });
       });
@@ -2333,6 +2451,11 @@
         EFFECTIVE_CAT_ORDER.forEach(c => { SECTION_OPEN[c] = true; });
 
         applyLang();
+
+        // Los especiales vienen de la IA; se piden aparte para que una caída
+        // del endpoint no tumbe el catálogo (renderEspeciales esconde la
+        // sección si no hay datos, en vez de dejar los del mes pasado).
+        cargarEspeciales();
 
         // Search input
         $('#searchInput').addEventListener('input', (e) => {
