@@ -705,6 +705,7 @@
     stockTrusted = null;
     if (!R.lotes) loadLotes().then(() => { if (S.cards.length) render(); });
     pushCatalog();
+    shareInsituSession();
     $('#dropzone').hidden = true;
     $('#workspace').hidden = false;
     buildFilters();
@@ -2676,6 +2677,15 @@
     R.lotesV = (R.lotesV || 0) + 1;
     try { await cosCall('lote_ajuste', { items }); } catch (e) { /* se reintenta la próxima vez */ }
   }
+  // Comparte la sesión de InSitu con el servidor para que actualice existencia y fechas solo, cada hora
+  // (así Jonathan y Rocío siempre tienen la existencia, aunque nadie abra la IA)
+  async function shareInsituSession() {
+    if (onlyView() || !Insitu.token()) return;
+    const saved = store.get(K_TOKEN, null) || {};
+    const k = 'ctdIA.insituShared';
+    if (store.get(k, '') === saved.token) return;
+    try { await cosCall('insitu_token', { token: saved.token, scheme: saved.scheme ?? 'Bearer ' }); store.set(k, saved.token); } catch (e) { /* se intenta después */ }
+  }
   async function pushCatalog() {
     if (onlyView() || !S.products.length || !S.meta || S.meta.source !== 'InSitu') return;
     const k = 'ctdIA.catPushed3'; // v3: con precio, departamento, stock y EAN (se sube con cada actualización de InSitu)
@@ -3166,7 +3176,12 @@
     const box = $('#fechList'); if (!box) return;
     const ro = soloVer('fech');
     $('#fechAdd').hidden = ro; if (ro) $('#fechAddBox').hidden = true;
-    if (reload || !R.lotes) { box.innerHTML = '<p class="data-info">Cargando…</p>'; await Promise.all([loadLotes(true), recProducts()]); }
+    if (reload || !R.lotes) {
+      box.innerHTML = '<p class="data-info">Cargando…</p>';
+      if (!S.products.length && R.catAt && Date.now() - R.catAt > 15 * 60000) R.cat = null; // copia nueva (el servidor la renueva cada hora)
+      if (!S.products.length && !R.catAt) R.cat = null;
+      await Promise.all([loadLotes(true), recProducts()]);
+    }
     if (ro) $('#bodega').hidden = true; else renderBodega();
     renderTips();
     const total = Object.keys(R.lotes || {}).length;
@@ -3204,6 +3219,8 @@
     }).join('') : `<p class="data-info">${total ? 'Nada con esos filtros.' : ''}</p>`;
   }
   $('#fechQ').addEventListener('input', (e) => { F.q = e.target.value; renderFechas(false); });
+  // Con la página abierta, cada 30 min se vuelve a traer existencia y fechas
+  setInterval(() => { if (S.view === 'fech' && !document.hidden && S.who) { R.cat = null; renderFechas(true); } }, 30 * 60000);
   $('#fechF').addEventListener('click', (e) => {
     const b = e.target.closest('[data-f]'); if (!b) return;
     F.f = b.dataset.f; $$('#fechF button').forEach((x) => x.classList.toggle('on', x === b)); renderFechas(false);

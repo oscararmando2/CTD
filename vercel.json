@@ -3,6 +3,7 @@
     { "path": "/api/qb-cron", "schedule": "0 9 * * *" }
   ],
   "functions": {
-    "api/costeo.js": { "maxDuration": 300 }
+    "api/costeo.js": { "maxDuration": 300 },
+    "api/insitu-cron.js": { "maxDuration": 120 }
   }
 }
