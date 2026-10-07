@@ -3220,6 +3220,57 @@
     });
     return out.sort((a, b) => (a.d < b.d ? -1 : 1));
   }
+  /* ---- Avisos a tiendas: el lote que se llevó una tienda ya va a vencer y no ha vuelto a comprar ---- */
+  const AV = { list: null, at: 0, busy: null, all: false };
+  const avOk = () => !ONLY[S.who] || ONLY[S.who].includes('cred'); // Jonathan (bodega) no
+  function loadAvisos(force) {
+    if (!avOk()) return Promise.resolve([]);
+    if (!force && AV.list && Date.now() - AV.at < 30 * 60000) return Promise.resolve(AV.list);
+    if (AV.busy) return AV.busy;
+    AV.busy = cosCall('avisos_tienda', { force: !!force })
+      .then((d) => { AV.list = d.list || []; AV.at = Date.now(); AV.srvAt = d.at; AV.err = ''; return AV.list; })
+      .catch((e) => { AV.err = e.message; AV.list = AV.list || []; return AV.list; })
+      .finally(() => { AV.busy = null; });
+    return AV.busy;
+  }
+  const avCuando = (a) => (a.dias < 0 ? `ya venció (${fmtLong(a.caduca)})` : a.dias === 0 ? 'vence hoy' : `vence el ${fmtLong(a.caduca)} (en ${a.dias} ${a.dias === 1 ? 'día' : 'días'})`);
+  const avLinea = (a) => `${a.tienda}: ${a.nombre} — ${avCuando(a)}. Compró ${nfmt(a.cajas)} ${a.cajas === 1 ? 'caja' : 'cajas'} el ${fmtLong(a.fecha)}${a.factura ? ` (#${a.factura})` : ''}.`;
+  function avWhats(list, nombre, tel) {
+    const first = String(nombre || '').split(' ')[0];
+    const txt = `Hola ${first}, revisa por favor con estas tiendas el producto que se les va a vencer (no han vuelto a comprar):\n\n${list.map((a, i) => `${i + 1}. ${avLinea(a)}`).join('\n')}\n\nSi todavía lo tienen, que lo pongan al frente o lo ofrezcan antes de que venza. Avísame qué te dicen.`;
+    const ph = String(tel || '').replace(/\D/g, ''), num = ph.length === 10 ? '1' + ph : ph;
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(txt)}`, '_blank', 'noopener');
+    if (!num) toast('No tengo su teléfono en InSitu: elige el chat en WhatsApp');
+  }
+  function avHTML(list, max) {
+    const show = max ? list.slice(0, max) : list;
+    return show.map((a) => `
+      <div class="av-r${a.dias < 0 ? ' dead' : a.dias <= 10 ? ' hot' : ''}">
+        <div><b>${esc(a.tienda)}</b> · ${esc(a.nombre)}
+          <p>Su lote ${esc(avCuando(a))} · compró ${nfmt(a.cajas)} ${a.cajas === 1 ? 'caja' : 'cajas'} el ${esc(fmtLong(a.fecha))}${a.factura ? ` (#${esc(a.factura)})` : ''} y no ha vuelto a comprar${a.vendedor ? ` · vendedor ${esc(a.vendedor)}` : ''}</p></div>
+        <button type="button" class="btn btn-ghost btn-sm" data-avwa="${esc(a.cid + '|' + a.sku)}">${icon('send')}Avisar${a.vendedor ? ' a ' + esc(a.vendedor.split(' ')[0]) : ''}</button>
+      </div>`).join('');
+  }
+  async function renderAvisos() {
+    const box = $('#fechAvisos'); if (!box) return;
+    if (!avOk()) { box.hidden = true; return; }
+    await loadAvisos();
+    const list = AV.list.filter((a) => !F.dep || depOf(a.sku) === F.dep);
+    box.hidden = !list.length && !AV.err;
+    if (box.hidden) return;
+    if (AV.err && !list.length) { box.innerHTML = `<p class="lbl">Avisos a tiendas</p><p class="data-info">${esc(AV.err)}</p>`; return; }
+    box.innerHTML = `<p class="lbl">Avisos a tiendas <small>(${list.length})</small></p>
+      <p class="status">Tiendas que se llevaron un lote que ya vence y no han vuelto a comprar. Verifica con el vendedor.</p>
+      ${avHTML(list, AV.all ? 0 : 5)}
+      ${list.length > 5 ? `<button type="button" class="btn-link sm" data-avmore>${AV.all ? 'ver menos' : `ver los ${list.length}`}</button>` : ''}`;
+  }
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-avmore]')) { AV.all = !AV.all; renderAvisos(); return; }
+    const b = e.target.closest('[data-avwa]'); if (!b) return;
+    const a = (AV.list || []).find((x) => x.cid + '|' + x.sku === b.dataset.avwa); if (!a) return;
+    avWhats([a], a.vendedor, a.tel);
+  });
+
   /* ---- Pestaña Fechas: todas las caducidades por producto (de los recibos y puestas a mano) ---- */
   const F = { q: '', f: 'all', dep: '', add: null };
   const fechProds = () => (S.products.length ? S.products : (R.cat || []));
@@ -3249,7 +3300,7 @@
       await Promise.all([loadLotes(true), recProducts()]);
     }
     if (ro) $('#bodega').hidden = true; else renderBodega();
-    renderTips();
+    renderTips(); renderAvisos();
     const total = Object.keys(R.lotes || {}).length;
     $('#fechInfo').textContent = ro ? (total ? `${total} productos con fecha (solo consulta).` : 'Todavía no hay fechas.')
       : total ? `${total} productos con fecha. Las fechas salen de los recibos; también puedes ponerlas a mano.` : 'Todavía no hay fechas. Se llenan al revisar facturas en Recibo, o agrégalas a mano.';
@@ -3903,12 +3954,14 @@
       return;
     }
     $('#venInfo').textContent = `Según ${S.meta && S.meta.invoices ? S.meta.invoices + ' facturas' : 'las facturas'} de InSitu · actualizado ${fmtTs(sd.at)}`;
+    if (avOk() && !AV.list && !AV.busy) loadAvisos().then(() => { if (S.view === 'ven') renderVendors(); });
     if (venSel) { renderVenDetail(); return; }
     $('#venDetail').hidden = true; $('#venGrid').hidden = false;
     $('#venGrid').innerHTML = sd.sellers.map((s) => {
       const ch = s.p30 ? (s.s30 - s.p30) / s.p30 : null;
       return `<button type="button" class="vcard" data-sid="${esc(s.id)}">
         ${s.due ? `<span class="due">${s.due} por pedir</span>` : ''}
+        ${(() => { const n = (AV.list || []).filter((a) => a.vendedorId === s.id).length; return n ? `<span class="due av">${n} por vencer en tiendas</span>` : ''; })()}
         <span class="vn">${esc(s.name)}</span>
         <span class="vs"><b>${money(s.s30)}</b> en 30 días${ch != null ? ` <em class="${ch >= 0 ? 'up' : 'dn'}">${ch >= 0 ? '▲' : '▼'} ${pct(Math.abs(ch), 0)}</em>` : ''}</span>
         <span class="vm">${s.inv30} facturas · ticket ${money(s.inv30 ? s.s30 / s.inv30 : 0)} · ${s.active90} clientes activos (90 días)</span>
@@ -3927,11 +3980,13 @@
     $('#venGrid').hidden = true;
     const box = $('#venDetail'); box.hidden = false;
     const promos = (vigData || []).filter((e) => e.status === 'activo');
+    const avs = (AV.list || []).filter((a) => a.vendedorId === s.id);
     box.innerHTML = `
       <button id="venBack" class="btn-back" type="button"><span aria-hidden="true">←</span> Todos los vendedores</button>
       <div class="cos-h1"><div><p class="hud">Vendedor</p><h2 class="ven-h">${esc(s.name)}</h2>
         <p class="status">${money(s.s30)} en 30 días · ${money(s.s90)} en 90 · ${mine.length} clientes · <b>${s.due}</b> ya les toca pedir</p></div>
         <button id="venSend" class="btn btn-oro" type="button"><i data-icon="send"></i>Mandar a ${esc(s.name.split(' ')[0])}</button></div>
+      ${avs.length ? `<div class="av-box"><p class="lbl">Producto por vencer en sus tiendas <small>(${avs.length})</small></p>${avHTML(avs)}</div>` : ''}
       <div class="ven-list">${mine.map((c) => `
         <div class="ven-c${c.due ? ' due' : ''}">
           <div class="ven-top"><b>${esc(c.name)}</b>${c.due ? `<span class="pill warn">le toca pedir${c.late > 0 ? ` · ${c.late} días tarde` : ''}</span>` : ''}</div>
@@ -3944,6 +3999,7 @@
       const due = mine.filter((c) => c.due).slice(0, 15);
       const lines = due.map((c, i) => `${i + 1}. ${c.name} — último pedido hace ${c.since} días${c.every ? ` (compra cada ~${c.every})` : ''}${c.lost.length ? `\n   Ofrécele (dejó de comprar): ${c.lost.slice(0, 3).map((x) => x.name).join(', ')}` : ''}`);
       const txt = `Hola ${s.name.split(' ')[0]}, clientes que ya les toca pedir:\n\n${lines.join('\n') || '(ninguno por ahora)'}` +
+        (avs.length ? `\n\nRevisa con estas tiendas, se les va a vencer (no han vuelto a comprar):\n${avs.slice(0, 10).map((a) => `• ${avLinea(a)}`).join('\n')}` : '') +
         (promos.length ? `\n\nPromos vigentes:\n${promos.map((e) => `• ${e.name}: ${money(e.special)}${e.original ? ` (antes ${money(e.original)})` : ''} hasta ${fmtD(e.to)}`).join('\n')}` : '');
       const phone = String(s.phone || '').replace(/\D/g, '');
       const num = phone.length === 10 ? '1' + phone : phone;

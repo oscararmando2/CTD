@@ -892,3 +892,15 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .cr-foot b{font-family:var(--display);font-weight:800;font-size:30px;color:#ff9a88}
 .cr-btns{display:flex;gap:10px;flex-wrap:wrap}
 @media (min-width:720px){.cr-top{grid-template-columns:2fr 1fr}.cr-lf{grid-template-columns:110px 150px 1fr 140px}}
+
+/* Avisos a tiendas (lote por vencer) */
+.av-box{margin-top:14px}
+.av-box .status{margin:2px 0 8px}
+.av-r{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--linea)}
+.av-r b{font-family:var(--display);font-weight:800}
+.av-r p{margin:3px 0 0;font-size:13px;color:var(--muted)}
+.av-r.hot b{color:var(--oro)}
+.av-r.dead b{color:#ff9a88}
+.av-r .btn{flex:none}
+.vcard .due.av{position:static;align-self:flex-start;order:9;margin-top:4px;background:rgba(216,51,27,.18);color:#ff9a88}
+@media (max-width:560px){.av-r{flex-direction:column;align-items:flex-start}}
