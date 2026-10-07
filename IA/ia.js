@@ -3600,16 +3600,16 @@
     const q = normTxt(CR.q).trim();
     const list = CR.list.filter((c) => !q || normTxt(`${c.cliente.name} ${c.vendedor} ${c.numero} ${(c.lineas || []).map((l) => l.nombre).join(' ')}`).includes(q));
     const pend = CR.list.filter((c) => c.status !== 'aplicado').length;
-    $('#crInfo').textContent = CR.list.length ? `${CR.list.length} créditos · ${pend} sin aplicar en InSitu` : 'Todavía no hay créditos capturados.';
+    $('#crInfo').textContent = CR.list.length ? `${CR.list.length} créditos · ${pend} pendientes en InSitu` : 'Todavía no hay créditos capturados.';
     $('#crList').innerHTML = list.map((c) => `
       <div class="hist-item hist-prop" data-crid="${esc(c.id)}">
         <div class="hi-top"><div class="hi-txt"><b>${esc(c.cliente.name)} · ${crM(c.total || 0)}</b>
           ${(c.lineas || []).reduce((a, l) => a + (l.piezas || 0), 0)} piezas · ${(c.lineas || []).length} ${(c.lineas || []).length === 1 ? 'producto' : 'productos'} · vendedor ${esc(c.vendedor || '—')} · ${esc(LABEL[c.by] || c.by || '')} · ${fmtTs(c.updated || c.ts)}</div></div>
         <div class="hi-acts">
-          ${c.status === 'aplicado' ? `<span class="st sent">Aplicado · ${esc(c.numero)}</span>` : '<span class="st">Falta hacerlo en InSitu</span>'}
+          ${c.status === 'aplicado' ? `<span class="st sent">Aplicado · ${esc(c.numero)}</span>` : '<span class="st">Pendiente en InSitu</span>'}
           <button class="btn btn-ghost btn-sm" data-cr="open" type="button">Abrir</button>
           <button class="btn btn-ghost btn-sm" data-cr="pdf" type="button">${icon('printer')}Hoja</button>
-          ${c.status === 'aplicado' ? '' : '<button class="btn btn-oro btn-sm" data-cr="apl" type="button">Ya lo hice en InSitu</button>'}
+          ${c.status === 'aplicado' ? '' : '<button class="btn btn-oro btn-sm" data-cr="apl" type="button">Registrar nota de crédito</button>'}
           <button class="icon-btn" data-cr="del" type="button" title="Borrar" aria-label="Borrar">${icon('trash')}</button>
         </div></div>`).join('') || '<p class="data-info">Nada con esa búsqueda.</p>';
   }
@@ -3622,8 +3622,8 @@
     if (a === 'open') { CR.ed = JSON.parse(JSON.stringify(c)); renderCreditos(); crCargarHist(); window.scrollTo({ top: 0 }); }
     if (a === 'pdf') { if (c.cliente.code && !CR.hist[c.cliente.code]) await crCargarHist(c); crPdf(c); }
     if (a === 'apl') {
-      const n = prompt('Número de la nota de crédito en InSitu (ej. HM102):', ''); if (!n) return;
-      try { await cosCall('cr_aplicar', { id: c.id, numero: n.trim() }); toast('Marcado como aplicado'); crLoadList(); } catch (err) { toast(err.message); }
+      const n = prompt('Número de la nota de crédito que se hizo en InSitu (ej. HM102):', ''); if (!n) return;
+      try { await cosCall('cr_aplicar', { id: c.id, numero: n.trim() }); toast('Nota de crédito registrada'); crLoadList(); } catch (err) { toast(err.message); }
     }
     if (a === 'del') {
       if (!confirm(`¿Borrar el crédito de ${c.cliente.name}?`)) return;
