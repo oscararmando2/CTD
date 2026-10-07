@@ -3688,16 +3688,23 @@
   function crRevision(l, h) {
     // Lo que dice el historial de ese cliente para esta línea
     const o = crProds().find((x) => String(x.id) === String(l.skuOrig)), ppc = piezasPorCaja(o);
-    const compras = (h ? h.lineas : []).filter((x) => x.sku === String(l.skuOrig) && x.cant > 0);
+    const todas = (h ? h.lineas : []).filter((x) => x.sku === String(l.skuOrig) && x.cant > 0); // 3 años
+    const hoy = Date.now(), compras = todas.filter((x) => hoy - Date.parse(x.fecha) <= 365 * 864e5);
     const previos = (h ? h.lineas : []).filter((x) => x.sku === String(l.sku) && x.cant < 0);
-    const hoy = Date.now(), seis = compras.filter((x) => hoy - Date.parse(x.fecha) <= 183 * 864e5);
+    const seis = compras.filter((x) => hoy - Date.parse(x.fecha) <= 183 * 864e5);
     const pzas6 = seis.reduce((a, x) => a + x.cant, 0) * ppc;
-    const ult = compras[0], ppPagado = ult && ult.precio != null ? r2(ult.precio / ppc) : null;
+    const ult = compras[0] || todas[0], ppPagado = ult && ult.precio != null ? r2(ult.precio / ppc) : null;
     const especial = ult && o && o.price > 0 && ult.precio < o.price * 0.97;
     const alertas = [];
     if (!h) return { compras, previos, ppc, ppPagado, alertas, cargando: true };
     if (!l.skuOrig) alertas.push('No encontré el producto original de este CR-: revisa a mano.');
-    else if (!compras.length) alertas.push('No se le ha vendido este producto en 12 meses.');
+    else if (!compras.length) {
+      const v = todas[0];
+      if (v) alertas.push(`No se le ha vendido en 12 meses. La última vez fue el ${fmtLong(v.fecha)}${v.factura ? ` (#${v.factura})` : ''}: ${nfmt(v.cant)} ${v.cant === 1 ? 'caja' : 'cajas'} a ${money(v.precio)}.`);
+      else alertas.push(`No se le ha vendido este producto en 3 años (revisé sus ${h.facturas} facturas desde el ${fmtLong(h.desde)}).`);
+      const par = crParecidos(l, h);
+      if (par.length) alertas.push(`Lo más parecido que sí compró: ${par.map((x) => `${x.nombre} el ${fmtLong(x.fecha)}${x.factura ? ` (#${x.factura})` : ''}`).join('; ')}. Revisa si el vendedor se equivocó de producto.`);
+    }
     else {
       const dias = Math.round((hoy - Date.parse(ult.fecha)) / 864e5);
       if (dias > 180) alertas.push(`La última compra fue hace ${dias} días (${fmtLong(ult.fecha)}).`);
@@ -3707,13 +3714,27 @@
     if (previos.length) alertas.push(`Ya se le dio crédito de este producto: ${previos.slice(0, 2).map((x) => `${nfmt(-x.cant)} pzas el ${fmtLong(x.fecha)}`).join(', ')}.`);
     return { compras, previos, ppc, ppPagado, alertas, especial };
   }
+  // Productos de la misma marca que el cliente sí compró (por si el vendedor reportó el producto equivocado)
+  function crParecidos(l, h) {
+    const n = (s) => normTxt(baseName(s)).replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !/^\d/.test(w));
+    const mio = n(l.nombreOrig || l.nombre); if (!mio.length) return [];
+    const nombre = {}; crProds().forEach((p) => { nombre[String(p.id)] = p.name; });
+    const vistos = {}, out = [];
+    h.lineas.forEach((x) => {
+      if (x.cant <= 0 || x.sku === String(l.skuOrig) || x.sku === String(l.sku) || vistos[x.sku] || !nombre[x.sku] || isCredito({ name: nombre[x.sku] })) return;
+      const w = n(nombre[x.sku]);
+      const comun = mio.filter((a) => w.includes(a)).length;
+      if (w[0] === mio[0] || comun >= 2) { vistos[x.sku] = 1; out.push({ nombre: nombre[x.sku], fecha: x.fecha, factura: x.factura, s: comun }); }
+    });
+    return out.sort((a, b) => b.s - a.s || (a.fecha < b.fecha ? 1 : -1)).slice(0, 3);
+  }
   function renderCrEdit() {
     const ed = CR.ed, h = ed.cliente ? CR.hist[ed.cliente.code] : null;
     $('#crCliSel').innerHTML = ed.cliente ? `<b>${esc(ed.cliente.name)}</b> <button type="button" class="btn-link sm" data-crx="cli">cambiar</button>` : '';
     $('#crCliBox').hidden = !!ed.cliente;
     $('#crVend').value = ed.vendedor || '';
     $('#crNota').value = ed.nota || '';
-    $('#crHistInfo').textContent = !ed.cliente ? '' : !h ? 'Revisando sus facturas en InSitu…' : h.error ? `No se pudo revisar: ${h.error}` : `Revisé ${h.facturas} facturas de los últimos 12 meses.`;
+    $('#crHistInfo').textContent = !ed.cliente ? '' : !h ? 'Revisando sus facturas en InSitu…' : h.error ? `No se pudo revisar: ${h.error}` : `Revisé sus ${h.facturas} facturas de los últimos 3 años.`;
     $('#crLineas').innerHTML = ed.lineas.map((l, i) => {
       const rv = crRevision(l, h && !h.error ? h : null);
       return `<div class="cr-l" data-i="${i}">
@@ -3729,6 +3750,7 @@
           ${rv.cargando ? '<p class="status">Revisando historial…</p>' : ''}
           ${rv.alertas.map((a) => `<p class="cr-al">${icon('alert')}${esc(a)}</p>`).join('')}
           ${rv.ppPagado != null && Math.abs(rv.ppPagado - l.precio) > 0.01 ? `<button type="button" class="btn btn-ghost btn-sm" data-crx="usar" data-p="${rv.ppPagado}">Usar ${money(rv.ppPagado)} (lo que pagó)</button>` : ''}
+          ${l.precioAuto && rv.ppPagado != null ? `<p class="cr-ok">Precio = lo que pagó por pieza en su última compra.</p>` : ''}
           ${rv.compras.length ? `<p class="lbl cr-hl">Compras de este producto (12 meses)</p><div class="cr-h">${rv.compras.slice(0, 8).map((x) => `<span>${esc(fmtLong(x.fecha))} · ${nfmt(x.cant)} ${x.cant === 1 ? 'caja' : 'cajas'} a ${money(x.precio)} <small>(${money(x.precio / rv.ppc)}/pza)</small>${x.factura ? ` · #${esc(x.factura)}` : ''}</span>`).join('')}</div>` : ''}
           ${!rv.cargando && !rv.alertas.length ? '<p class="cr-ok">✓ Cuadra con lo que se le vendió.</p>' : ''}
         </div></div>`;
@@ -3744,6 +3766,11 @@
     try {
       const d = await cosCall('cr_historial', { code, skus });
       CR.hist[code] = d;
+      // Sin producto CR-, el precio de la pieza es lo que pagó en su última compra (no el precio de lista)
+      if (CR.ed && CR.ed.cliente && CR.ed.cliente.code === code) CR.ed.lineas.forEach((l) => {
+        if (!l.precioAuto) return;
+        const rv = crRevision(l, d); if (rv.ppPagado != null) l.precio = rv.ppPagado;
+      });
       if (CR.ed && CR.ed.cliente && CR.ed.cliente.code === code && !CR.ed.vendedor && d.vendedor) CR.ed.vendedor = d.vendedor;
     } catch (e) { CR.hist[code] = { error: e.message, lineas: [] }; }
     if (CR.ed && !c) renderCrEdit();
@@ -3778,7 +3805,7 @@
     const p = crProds().find((x) => String(x.id) === b.dataset.crp); if (!p) return;
     const o = origDe(p), cr = crDe(p) || p;
     const precio = isCredito(cr) && cr.price > 0 ? cr.price : o && o.price ? r2(o.price / piezasPorCaja(o)) : 0;
-    CR.ed.lineas.push({ sku: String(cr.id), nombre: cr.name, skuOrig: o ? String(o.id) : '', nombreOrig: o ? o.name : '', piezas: 1, precio: r2(precio), motivo: 'Caducado' });
+    CR.ed.lineas.unshift({ sku: String(cr.id), nombre: cr.name, skuOrig: o ? String(o.id) : '', nombreOrig: o ? o.name : '', piezas: 1, precio: r2(precio), motivo: 'Caducado', precioAuto: !isCredito(cr) });
     $('#crProd').value = ''; $('#crProdRes').innerHTML = '';
     renderCrEdit();
     if (CR.ed.cliente) crCargarHist();
@@ -3790,7 +3817,7 @@
     if (!row || !el.dataset.f) return;
     const l = CR.ed.lineas[Number(row.dataset.i)];
     if (el.dataset.f === 'piezas') l.piezas = Math.max(0, Math.round(Number(el.value) || 0));
-    if (el.dataset.f === 'precio') l.precio = r2(Number(el.value) || 0);
+    if (el.dataset.f === 'precio') { l.precio = r2(Number(el.value) || 0); l.precioAuto = false; }
     if (el.dataset.f === 'motivo') l.motivo = el.value;
     row.querySelector('.cr-sub b').textContent = crM((l.piezas || 0) * (l.precio || 0));
     $('#crTotal').textContent = crM(crTotal(CR.ed));
@@ -3805,7 +3832,7 @@
     const a = b.dataset.crx, row = b.closest('.cr-l'), i = row ? Number(row.dataset.i) : -1;
     if (a === 'cli') { CR.ed.cliente = null; CR.ed.vendedor = ''; renderCrEdit(); $('#crCli').focus(); }
     if (a === 'rm') { CR.ed.lineas.splice(i, 1); renderCrEdit(); }
-    if (a === 'usar') { CR.ed.lineas[i].precio = Number(b.dataset.p); renderCrEdit(); }
+    if (a === 'usar') { CR.ed.lineas[i].precio = Number(b.dataset.p); CR.ed.lineas[i].precioAuto = false; renderCrEdit(); }
   });
   $('#crCancel').addEventListener('click', () => { CR.ed = null; renderCreditos(); });
   async function crGuardar() {
