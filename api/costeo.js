@@ -417,11 +417,10 @@ module.exports = async (req, res) => {
         return res.json({ clientes: CLI_CACHE.list });
       }
       case 'cr_historial': {
-        // Todo lo que se le vendió a ese cliente en 12 meses de los productos pedidos (y créditos CR- anteriores)
+        // Todo lo que se le vendió a ese cliente en 3 años (la IA filtra: el producto, su CR- y los parecidos)
         const code = str(body.code, 60);
         if (!code) return res.status(400).json({ error: 'Falta el cliente' });
-        const skus = new Set((Array.isArray(body.skus) ? body.skus : []).map((s) => String(s)));
-        const d = new Date(); d.setDate(d.getDate() - 365);
+        const d = new Date(); d.setDate(d.getDate() - 1095);
         const rango = { fromDate: d.toISOString().slice(0, 10), toDate: todayCT() };
         const delCliente = (i) => [i.client_branch_code, i.client_nit, i.account_number].map((x) => String(x || '')).includes(code);
         let invs = (await insituGet('/invoices', { ...rango, where: JSON.stringify({ client_branch_code: code }) }, true)).filter(delCliente);
@@ -436,12 +435,12 @@ module.exports = async (req, res) => {
           if (t >= lastT && (mu.name || inv.mobile_user_login)) { lastT = t; vendedor = mu.name || inv.mobile_user_login; }
           (inv.invoiceDetailList || []).forEach((l) => {
             const pc = String(l.product_code || '').trim();
-            if (!skus.has(pc)) return;
+            if (!pc || lines.length >= 6000) return;
             lines.push({ sku: pc, fecha, factura: inv.invoice_number || '', cant: Number(l.quantity) || 0, precio: num(Number(l.product_price)), unidades: str(l.units, 20) });
           });
         });
         lines.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
-        return res.json({ facturas: invs.length, vendedor, lineas: lines });
+        return res.json({ facturas: invs.length, desde: rango.fromDate, vendedor, lineas: lines });
       }
       case 'cr_save': {
         const c = body.credito || {};
