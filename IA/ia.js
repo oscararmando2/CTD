@@ -1191,7 +1191,16 @@
   }
   function renderResultados(today) {
     const sec = $('#resultados'); if (!sec) return;
-    if (onlyView() || !S.products.some((p) => p.st && p.st.d)) { sec.hidden = true; return; }
+    if (onlyView()) { sec.hidden = true; return; }
+    if (!S.products.some((p) => p.st && p.st.d)) {
+      // Datos bajados antes de que existiera esta medición: falta traer las ventas por día
+      const hay = qbAll.some((e) => ['activo', 'terminado'].includes(e.status));
+      sec.hidden = !hay;
+      if (hay) sec.innerHTML = `<div class="vig-h"><p class="lbl">Resultados de especiales</p></div><p class="status">Para calcular cómo le fue a cada especial hay que volver a bajar las ventas: toca <button id="resSync" class="btn-link" type="button">actualizar de InSitu</button>.</p>`;
+      const b = $('#resSync');
+      if (b) b.addEventListener('click', () => { if (Insitu.token() && !syncing) syncInsitu({ silent: false }).catch(() => {}); });
+      return;
+    }
     // Periodos (desde–hasta) que ya empezaron, de los últimos 90 días
     const per = {};
     qbAll.filter((e) => ['activo', 'terminado', 'omitido'].includes(e.status) && e.from <= today && e.to >= addDays(today, -90))
