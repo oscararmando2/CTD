@@ -398,41 +398,72 @@
     /* Especiales: banners verticales 2:3, en rejilla */
     .esp-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(216px, 1fr));
       gap: 16px;
       align-items: stretch;
     }
     .esp-card {
-      border: none; padding: 0; background: var(--card); cursor: pointer;
-      border-radius: var(--radio); overflow: hidden; text-align: left;
-      box-shadow: var(--sombra); transition: transform .15s, box-shadow .15s;
+      border: 1px solid var(--border); padding: 0; background: var(--card);
+      cursor: pointer; border-radius: var(--radio); overflow: hidden; text-align: left;
+      box-shadow: var(--sombra); transition: transform .16s, box-shadow .16s, border-color .16s;
       display: flex; flex-direction: column; width: 100%;
     }
     .esp-card:hover, .esp-card:focus-visible {
-      transform: translateY(-3px); box-shadow: var(--sombra-hover);
+      transform: translateY(-3px);
+      box-shadow: var(--sombra-hover);
+      border-color: var(--green-100);
     }
+    /* Alto fijo: las fotos vienen de 512x512 a 512x977 y con aspect-ratio
+       las tarjetas quedaban de 356 a 547 px de alto en la misma fila. */
     .esp-foto {
-      position: relative; aspect-ratio: 1; background: #fff;
-      display: flex; align-items: center; justify-content: center; padding: 12px;
+      position: relative; height: 176px; flex: none;
+      background: #fafbfa; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center; padding: 14px;
     }
-    .esp-foto img { width: 100%; height: 100%; object-fit: contain; display: block; }
+    .esp-foto img {
+      max-width: 100%; max-height: 100%; width: auto; height: auto;
+      object-fit: contain; display: block;
+    }
     .esp-off {
       position: absolute; top: 10px; left: 10px;
-      background: var(--red); color: #fff; font-weight: 800; font-size: .76rem;
-      letter-spacing: .02em; padding: 5px 9px; border-radius: 999px;
+      background: var(--red); color: #fff; font-weight: 800; font-size: .74rem;
+      letter-spacing: .01em; padding: 5px 9px; border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(219,44,26,.28);
     }
-    .esp-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 5px; flex: 1; }
-    .esp-nom { font-weight: 700; font-size: .92rem; line-height: 1.25; color: var(--text); }
-    .esp-var { font-size: .76rem; color: var(--muted); line-height: 1.35; }
-    .esp-precios { display: flex; align-items: baseline; gap: 8px; margin-top: auto; padding-top: 6px; }
-    .esp-ahora { font-size: 1.42rem; font-weight: 800; color: var(--green); letter-spacing: -.02em; }
-    .esp-antes { font-size: .85rem; color: var(--muted); text-decoration: line-through; }
-    .esp-cu { font-size: .72rem; color: var(--muted); font-weight: 600; }
-    .esp-vig { font-size: .72rem; color: var(--muted); }
+    .esp-n {
+      position: absolute; top: 10px; right: 10px;
+      background: rgba(26,46,31,.82); color: #fff; font-weight: 700; font-size: .68rem;
+      padding: 4px 8px; border-radius: 999px; backdrop-filter: blur(4px);
+    }
+    .esp-body { padding: 12px 14px 14px; display: flex; flex-direction: column; flex: 1; }
+    .esp-nom {
+      font-weight: 700; font-size: .9rem; line-height: 1.28; color: var(--text);
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .esp-var {
+      font-size: .74rem; color: var(--muted); line-height: 1.38; margin-top: 4px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .esp-precios {
+      display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap;
+      margin-top: auto; padding-top: 10px;
+    }
+    .esp-ahora { font-size: 1.36rem; font-weight: 800; color: var(--green); letter-spacing: -.02em; }
+    .esp-antes { font-size: .82rem; color: var(--muted); text-decoration: line-through; }
+    .esp-cu { font-size: .7rem; color: var(--muted); font-weight: 600; }
+    .esp-ahorra {
+      margin-top: 7px; align-self: flex-start;
+      background: var(--green-50); color: var(--green-dark);
+      font-size: .71rem; font-weight: 700; padding: 4px 9px; border-radius: 999px;
+    }
     @media (max-width: 640px) {
-      .esp-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
-      .esp-nom { font-size: .84rem; }
-      .esp-ahora { font-size: 1.22rem; }
+      .esp-grid { grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 12px; }
+      .esp-foto { height: 132px; padding: 10px; }
+      .esp-nom { font-size: .82rem; }
+      .esp-ahora { font-size: 1.16rem; }
+      .esp-body { padding: 10px 11px 12px; }
     }
 
     /* Banners de promoción (uno por oferta) */
@@ -1316,21 +1347,6 @@
     </div>
   </section>
 
-  <!-- ══════════ SNACKS DIANA (toda la línea a $35.99) ══════════ -->
-  <section class="new-section" id="promosDiana" aria-label="Snacks Diana">
-    <div class="new-inner">
-      <div class="new-head">
-        <span class="new-badge" data-i18n="diana.badge">🌽 Snacks Diana</span>
-        <h2 data-i18n="diana.title">Toda la línea Diana a $35.99</h2>
-        <p data-i18n="diana.sub">12 sabores — cotiza por WhatsApp.</p>
-      </div>
-      <div class="new-banner">
-        <img src="./promo-diana.jpg" alt="" data-i18n-attr="alt=diana.bannerAlt" loading="lazy" />
-      </div>
-      <div class="new-track" id="dianaTrack"></div>
-    </div>
-  </section>
-
   <!-- ══════════ CONTROLS ══════════ -->
   <div class="controls">
     <div class="controls-inner">
@@ -1456,9 +1472,6 @@
     const TAMAL_PRODUCTS = [
       { name: 'Delicias Yeya Hojas de Maíz 1 LB (16 oz)', img: './tamal/hojas-maiz.jpg' },
     ];
-    // SNACKS DIANA — toda la línea al mismo precio de promo
-    const DIANA_PRICE = '$35.99';
-    const DIANA = ['242','243','244','245','246','247','248','249','250','251','252','253'];
     const STORAGE_KEYS = {
       list: 'ctd_catalog_list_v1',
       lang: 'ctd_catalog_lang_v1',
@@ -1484,19 +1497,15 @@
         'new.bannerAlt': 'Nuevos snacks Delicias Yeya: Duros, Mini Rings, Mini Wheels y Mini Squares',
         'new.tag': 'NUEVO',
         'new.cta': 'Cotizar',
-        'promo.tag': 'OFERTA',
         'esp.badge': '🔥 Especiales',
         'esp.sub': 'Precios de mayoreo por caja — cotiza por WhatsApp.',
         'esp.cu': 'c/u',
         'esp.mas': 'más',
+        'esp.ahorra': 'Ahorra',
         'tamal.badge': '🌽 ¡Nuevo!',
         'tamal.title': 'Hojas de Maíz Delicias Yeya',
         'tamal.sub': 'Perfectas para tamales — cotiza por WhatsApp.',
         'tamal.bannerAlt': 'Hojas de maíz Delicias Yeya, 1 LB — perfectas para tamales',
-        'diana.badge': '🌽 Snacks Diana',
-        'diana.title': 'Toda la línea Diana a $35.99',
-        'diana.sub': '12 sabores — cotiza por WhatsApp.',
-        'diana.bannerAlt': 'Promo: snacks Diana, toda la línea a $35.99',
         'intro.now': 'ahora',
         'intro.title': '🌽 ¡Llegaron las Hojas de Maíz Delicias Yeya!',
         'intro.body': 'Perfectas para tamales — 1 LB, producto de México. Cotiza por WhatsApp.',
@@ -1550,19 +1559,15 @@
         'new.bannerAlt': 'New Delicias Yeya snacks: Duros, Mini Rings, Mini Wheels and Mini Squares',
         'new.tag': 'NEW',
         'new.cta': 'Get a quote',
-        'promo.tag': 'DEAL',
         'esp.badge': '🔥 Specials',
         'esp.sub': 'Wholesale case pricing — quote on WhatsApp.',
         'esp.cu': 'ea.',
         'esp.mas': 'more',
+        'esp.ahorra': 'Save',
         'tamal.badge': '🌽 New!',
         'tamal.title': 'Delicias Yeya Corn Husks',
         'tamal.sub': 'Perfect for tamales — quote on WhatsApp.',
         'tamal.bannerAlt': 'Delicias Yeya corn husks, 1 LB — perfect for tamales',
-        'diana.badge': '🌽 Diana Snacks',
-        'diana.title': 'All Diana snacks at $35.99',
-        'diana.sub': '12 flavors — quote on WhatsApp.',
-        'diana.bannerAlt': 'Deal: Diana snacks, whole line at $35.99',
         'intro.now': 'now',
         'intro.title': '🌽 Delicias Yeya Corn Husks are here!',
         'intro.body': 'Perfect for tamales — 1 LB, product of Mexico. Quote on WhatsApp.',
@@ -1883,14 +1888,16 @@
       track.innerHTML = grupos.map((g) => {
         const e = g.items[0];
         const nom = g.titulo || e.nombre;
+        const ahorro = g.antes - g.ahora;
         const cu = g.items.length > 1 ? `<span class="esp-cu">${esc(t('esp.cu'))}</span>` : '';
         return `
         <button class="esp-card" type="button" data-code="${esc(e.code || '')}"
                 aria-label="${esc(nom)}">
           <div class="esp-foto">
             ${g.off > 0 ? `<span class="esp-off">-${Math.round(g.off * 100)}%</span>` : ''}
+            ${g.items.length > 1 ? `<span class="esp-n">${g.items.length}</span>` : ''}
             ${e.foto ? `<img src="${esc(e.foto)}" alt="${esc(nom)}" loading="lazy"
-                 onerror="this.closest('.esp-foto').textContent='📦'">` : '📦'}
+                 onerror="this.replaceWith(document.createTextNode('📦'))">` : '📦'}
           </div>
           <div class="esp-body">
             <div class="esp-nom">${esc(nom)}</div>
@@ -1901,6 +1908,7 @@
               ${g.antes > g.ahora ? `<span class="esp-antes">$${g.antes.toFixed(2)}</span>` : ''}
               ${cu}
             </div>
+            ${ahorro > 0 ? `<span class="esp-ahorra">${esc(t('esp.ahorra'))} $${ahorro.toFixed(2)}</span>` : ''}
           </div>
         </button>`;
       }).join('');
@@ -1962,37 +1970,6 @@
           </div>
         </a>`;
       }).join('');
-    }
-
-    // ============================================================
-    // RENDER — Snacks Diana (12 sabores, todos al mismo precio de promo)
-    // ============================================================
-    function renderDiana() {
-      const track = $('#dianaTrack');
-      if (!track) return;
-      const items = DIANA.map(c => TODOS.find(x => x.code === c)).filter(Boolean);
-      if (!items.length) { $('#promosDiana')?.classList.add('hidden'); return; }
-      $('#promosDiana')?.classList.remove('hidden');
-
-      track.innerHTML = items.map(p => `
-        <button class="new-card" type="button" data-action="open-modal" data-code="${esc(p.code)}">
-          <span class="new-card-ribbon promo">${esc(t('promo.tag'))}</span>
-          <div class="new-card-icon">${p.image
-            ? `<img src="${esc(p.image)}" alt="${esc(p.name)}" loading="lazy" onerror="this.outerHTML='🌽'">`
-            : '🌽'}</div>
-          <div class="new-card-body">
-            <div class="new-card-name">${esc(p.name)}</div>
-            <div class="new-card-pkg">${esc(p.brand || 'Diana')}</div>
-            <div class="new-card-foot">
-              <span class="new-card-price">${esc(DIANA_PRICE)}</span>
-              <span class="new-card-cta">${esc(t('new.cta'))} →</span>
-            </div>
-          </div>
-        </button>`).join('');
-
-      track.querySelectorAll('[data-action="open-modal"]').forEach(el => {
-        el.addEventListener('click', () => openModal(el.dataset.code));
-      });
     }
 
     // ============================================================
@@ -2400,7 +2377,6 @@
       renderTamal();
       renderEspeciales();
       renderYeya();
-      renderDiana();
       renderBrandFilter();
       renderCatNav();
       renderCatalog();
