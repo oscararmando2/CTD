@@ -209,7 +209,9 @@ module.exports = async (req, res) => {
       }
       case 'save': {
         const f = body.factura || {};
-        const id = Date.now().toString(36) + crypto.randomBytes(3).toString('hex');
+        // Misma factura vuelta a guardar (ej. se corrigió y se aplicó otra vez): se actualiza, no se duplica
+        const prevId = /^[a-z0-9]{6,40}$/.test(String(body.id || '')) ? String(body.id) : '';
+        const id = prevId && (await db('GET', 'costeoFacturas/' + prevId + '/key')) ? prevId : Date.now().toString(36) + crypto.randomBytes(3).toString('hex');
         const key = vendorKey(f.proveedor) + '|' + codeKey(f.factura);
         const rec = {
           key, proveedor: str(f.proveedor, 120), factura: str(f.factura, 60), fecha: str(f.fecha, 10),
