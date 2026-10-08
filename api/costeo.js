@@ -137,8 +137,8 @@ module.exports = async (req, res) => {
         return res.json({ dup: hit ? { id: hit[0], ts: hit[1].ts, by: hit[1].by } : null });
       }
       case 'map': {
-        const m = (await db('GET', 'costeoMap/' + vendorKey(body.proveedor))) || {};
-        return res.json({ map: m });
+        const [m, pz] = await Promise.all([db('GET', 'costeoMap/' + vendorKey(body.proveedor)), db('GET', 'costeoPz')]);
+        return res.json({ map: m || {}, pz: pz || {} }); // pz: { sku: piezas por caja (0 = por caja) } aprendido en Costeo
       }
       case 'lookup': {
         const items = (Array.isArray(body.items) ? body.items : []).slice(0, 150);
@@ -221,7 +221,7 @@ module.exports = async (req, res) => {
             producto: str(l.producto, 160), upc: str(l.upc, 40), codigo_proveedor: str(l.codigo_proveedor, 40), cantidad: num(l.cantidad),
             empaque: str(l.empaque, 40), costo_caja: num(l.costo_caja), sku: str(l.sku, 40), qbId: str(l.qbId, 40), nombre: str(l.nombre, 160),
             costo_antes: num(l.costo_antes), precio_antes: num(l.precio_antes), precio_nuevo: num(l.precio_nuevo), aplicado: !!l.aplicado, nuevo: !!l.nuevo,
-            caducidad: ymdOk(l.caducidad),
+            caducidad: ymdOk(l.caducidad), pz: Math.max(0, Math.round(num(Number(l.pz)) || 0)), pzSet: !!l.pzSet,
           })),
           applied: Array.isArray(body.results) ? body.results.slice(0, 300) : [],
           by: who, ts: Date.now(),
@@ -232,6 +232,10 @@ module.exports = async (req, res) => {
         const learn = {};
         rec.lines.forEach((l) => { if (l.codigo_proveedor && l.sku) learn[codeKey(l.codigo_proveedor)] = { sku: l.sku, nombre: l.nombre }; });
         if (Object.keys(learn).length) await db('PATCH', 'costeoMap/' + vk, learn);
+        // Aprende si el producto se vende por pieza (para todas las facturas, de cualquier proveedor)
+        const pzLearn = {};
+        rec.lines.forEach((l) => { if (l.sku && l.pzSet) pzLearn[codeKey(l.sku)] = l.pz > 1 ? l.pz : 0; });
+        if (Object.keys(pzLearn).length) await db('PATCH', 'costeoPz', pzLearn);
         // Liga con Recibo (misma factura = proveedor + número): si bodega ya la revisó queda costeada;
         // si no existe, se le crea a bodega para que la revise y confirme
         let recibo = await findRecibo(key), recStatus = 'enviado';
