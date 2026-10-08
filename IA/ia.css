@@ -909,3 +909,4 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 /* Alta de productos: campos obligatorios sin llenar */
 .cos-alta .field.falta select,.cos-alta .field.falta input{box-shadow:inset 0 0 0 1.5px rgba(242,163,30,.7)}
 .cos-alta select{width:100%}
+.cos-pz{margin-top:8px}
