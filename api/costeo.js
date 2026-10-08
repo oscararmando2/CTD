@@ -266,6 +266,19 @@ module.exports = async (req, res) => {
         if (!f) return res.status(404).json({ error: 'No existe' });
         return res.json({ factura: f });
       }
+      case 'qb_buscar': {
+        // Buscar un producto que ya existe en QuickBooks por Id, SKU o nombre (aunque todavía no llegue a InSitu)
+        const s = str(body.q, 80).trim();
+        if (s.length < 2) return res.json({ items: [] });
+        const qq = s.replace(/\\/g, '').replace(/'/g, "\\'");
+        const found = new Map();
+        const add = (r) => (r.Item || []).forEach((it) => { if (['Inventory', 'NonInventory', 'Service'].includes(it.Type)) found.set(it.Id, it); });
+        if (/^\d+$/.test(s)) { try { const it = await qbItem(s); if (it) found.set(it.Id, it); } catch (e) { /* no es Id */ } }
+        try { add(await qbQuery(`select * from Item where Sku = '${qq}'`)); } catch (e) { /* ok */ }
+        const words = norm(s).split(' ').filter((w) => w.length > 1).slice(0, 3).join('%');
+        if (words) { try { add(await qbQuery(`select * from Item where Name like '%${words.replace(/'/g, "\\'")}%' maxresults 15`)); } catch (e) { /* ok */ } }
+        return res.json({ items: [...found.values()].slice(0, 12).map((it) => ({ qbId: String(it.Id), name: it.Name, sku: it.Sku || '', price: r2(it.UnitPrice || 0), cost: r2(it.PurchaseCost || 0), active: it.Active !== false })) });
+      }
       case 'qb_vendors': {
         const r = await qbQuery('select Id, DisplayName from Vendor where Active = true maxresults 1000');
         return res.json({ vendors: (r.Vendor || []).map((v) => ({ id: String(v.Id), name: String(v.DisplayName || '') })).sort((a, b) => a.name.localeCompare(b.name)) });
