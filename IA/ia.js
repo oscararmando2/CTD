@@ -3820,19 +3820,32 @@
   function crRevision(l, h) {
     // Lo que dice el historial de ese cliente para esta línea
     const o = crProds().find((x) => String(x.id) === String(l.skuOrig)), ppc = piezasPorCaja(o);
+    // ¿Esa factura vendió piezas o cajas? Muchos productos (Doña Nita, pan, mayonesa…) se venden por pieza aunque el nombre diga "CJ 12"
+    const crP = crProds().find((x) => String(x.id) === String(l.sku));
+    const refPz = crP && isCredito(crP) && crP.price > 0 ? crP.price : o && o.pack === 'Pieza' && o.price > 0 ? o.price : null;
+    const fac = (x) => {
+      const u = String(x.unidades || '');
+      if (/each|pieza|pza|unidad|\bea\b|\bpc\b|^\s*1\s*$/i.test(u)) return 1;
+      if (/case|caja|\bcs\b|\bcj\b/i.test(u)) return ppc;
+      if (o && o.pack === 'Pieza') return 1;
+      if (refPz && x.precio > 0 && Math.abs(x.precio - refPz) / refPz < 0.3) return 1;
+      return ppc;
+    };
+    const cuanto = (x) => { const f = fac(x), n = Math.abs(x.cant); return `${nfmt(n)} ${f === 1 ? (n === 1 ? 'pieza' : 'piezas') : (n === 1 ? 'caja' : 'cajas')} a ${money(x.precio)}`; };
     const todas = (h ? h.lineas : []).filter((x) => x.sku === String(l.skuOrig) && x.cant > 0); // 3 años
     const hoy = Date.now(), compras = todas.filter((x) => hoy - Date.parse(x.fecha) <= 365 * 864e5);
     const previos = (h ? h.lineas : []).filter((x) => x.sku === String(l.sku) && x.cant < 0);
     const seis = compras.filter((x) => hoy - Date.parse(x.fecha) <= 183 * 864e5);
-    const pzas6 = seis.reduce((a, x) => a + x.cant, 0) * ppc;
-    const ult = compras[0] || todas[0], ppPagado = ult && ult.precio != null ? r2(ult.precio / ppc) : null;
-    const especial = ult && o && o.price > 0 && ult.precio < o.price * 0.97;
+    const pzas6 = seis.reduce((a, x) => a + x.cant * fac(x), 0);
+    const ult = compras[0] || todas[0], ppPagado = ult && ult.precio != null ? r2(ult.precio / fac(ult)) : null;
+    const lista = ult && o && o.price > 0 ? (o.pack === 'Pieza' ? (fac(ult) === 1 ? o.price : o.price * ppc) : (fac(ult) === 1 ? (refPz || o.price / ppc) : o.price)) : 0;
+    const especial = ult && lista > 0 && ult.precio < lista * 0.97;
     const alertas = [];
-    if (!h) return { compras, previos, ppc, ppPagado, alertas, cargando: true };
+    if (!h) return { compras, previos, ppc, fac, cuanto, ppPagado, alertas, cargando: true };
     if (!l.skuOrig) alertas.push('No encontré el producto original de este CR-: revisa a mano.');
     else if (!compras.length) {
       const v = todas[0];
-      if (v) alertas.push(`No se le ha vendido en 12 meses. La última vez fue el ${fmtLong(v.fecha)}${v.factura ? ` (#${v.factura})` : ''}: ${nfmt(v.cant)} ${v.cant === 1 ? 'caja' : 'cajas'} a ${money(v.precio)}.`);
+      if (v) alertas.push(`No se le ha vendido en 12 meses. La última vez fue el ${fmtLong(v.fecha)}${v.factura ? ` (#${v.factura})` : ''}: ${cuanto(v)}.`);
       else alertas.push(`No se le ha vendido este producto en 3 años (revisé sus ${h.facturas} facturas desde el ${fmtLong(h.desde)}).`);
       const par = crParecidos(l, h);
       if (par.length) alertas.push(`Lo más parecido que sí compró: ${par.map((x) => `${x.nombre} el ${fmtLong(x.fecha)}${x.factura ? ` (#${x.factura})` : ''}`).join('; ')}. Revisa si el vendedor se equivocó de producto.`);
@@ -3844,7 +3857,7 @@
       if (ppPagado != null && l.precio > ppPagado + 0.01) alertas.push(`Se lo vendiste a ${money(ppPagado)} la pieza${especial ? ' (en especial)' : ''} el ${fmtLong(ult.fecha)}; el crédito va a ${money(l.precio)}.`);
     }
     if (previos.length) alertas.push(`Ya se le dio crédito de este producto: ${previos.slice(0, 2).map((x) => `${nfmt(-x.cant)} pzas el ${fmtLong(x.fecha)}`).join(', ')}.`);
-    return { compras, previos, ppc, ppPagado, alertas, especial };
+    return { compras, previos, ppc, fac, cuanto, ppPagado, alertas, especial };
   }
   // Productos de la misma marca que el cliente sí compró (por si el vendedor reportó el producto equivocado)
   function crParecidos(l, h) {
@@ -3870,7 +3883,7 @@
     $('#crLineas').innerHTML = ed.lineas.map((l, i) => {
       const rv = crRevision(l, h && !h.error ? h : null);
       return `<div class="cr-l" data-i="${i}">
-        <div class="cr-lh"><div><b>${esc(l.nombre)}</b>${l.nombreOrig && l.nombreOrig !== l.nombre ? `<small>Original: ${esc(l.nombreOrig)} · ${rv.ppc} piezas por caja</small>` : ''}</div>
+        <div class="cr-lh"><div><b>${esc(l.nombre)}</b>${l.nombreOrig && l.nombreOrig !== l.nombre ? `<small>Original: ${esc(l.nombreOrig)} ${rv.compras.length && rv.compras.every((x) => rv.fac(x) === 1) ? ' · se vende por pieza' : ` · ${rv.ppc} piezas por caja`}</small>` : ''}</div>
           <button type="button" class="g-x" data-crx="rm" aria-label="Quitar">×</button></div>
         <div class="cr-lf">
           <label class="field"><span>Piezas</span><input type="number" inputmode="numeric" min="1" step="1" data-f="piezas" value="${l.piezas || 1}"></label>
@@ -3883,7 +3896,7 @@
           ${rv.alertas.map((a) => `<p class="cr-al">${icon('alert')}${esc(a)}</p>`).join('')}
           ${rv.ppPagado != null && Math.abs(rv.ppPagado - l.precio) > 0.01 ? `<button type="button" class="btn btn-ghost btn-sm" data-crx="usar" data-p="${rv.ppPagado}">Usar ${money(rv.ppPagado)} (lo que pagó)</button>` : ''}
           ${l.precioAuto && rv.ppPagado != null ? `<p class="cr-ok">Precio = lo que pagó por pieza en su última compra.</p>` : ''}
-          ${rv.compras.length ? `<p class="lbl cr-hl">Compras de este producto (12 meses)</p><div class="cr-h">${rv.compras.slice(0, 8).map((x) => `<span>${esc(fmtLong(x.fecha))} · ${nfmt(x.cant)} ${x.cant === 1 ? 'caja' : 'cajas'} a ${money(x.precio)} <small>(${money(x.precio / rv.ppc)}/pza)</small>${x.factura ? ` · #${esc(x.factura)}` : ''}</span>`).join('')}</div>` : ''}
+          ${rv.compras.length ? `<p class="lbl cr-hl">Compras de este producto (12 meses)</p><div class="cr-h">${rv.compras.slice(0, 8).map((x) => `<span>${esc(fmtLong(x.fecha))} · ${esc(rv.cuanto(x))}${rv.fac(x) > 1 ? ` <small>(${money(x.precio / rv.fac(x))}/pza)</small>` : ''}${x.factura ? ` · #${esc(x.factura)}` : ''}</span>`).join('')}</div>` : ''}
           ${!rv.cargando && !rv.alertas.length ? '<p class="cr-ok">✓ Cuadra con lo que se le vendió.</p>' : ''}
         </div></div>`;
     }).join('') || '<p class="data-info">Agrega los productos del crédito.</p>';
@@ -4015,7 +4028,7 @@
     const rows = [];
     c.lineas.forEach((l) => {
       const rv = crRevision(l, h && !h.error ? h : null);
-      const compras = rv.compras.slice(0, 4).map((x) => `${fmtLong(x.fecha)}: ${nfmt(x.cant)} cj a ${money(x.precio)} (${money(x.precio / rv.ppc)}/pza)`).join('\n') || 'Sin compras en 12 meses';
+      const compras = rv.compras.slice(0, 4).map((x) => `${fmtLong(x.fecha)}: ${rv.cuanto(x)}${rv.fac(x) > 1 ? ` (${money(x.precio / rv.fac(x))}/pza)` : ''}`).join('\n') || 'Sin compras en 12 meses';
       rows.push([l.nombreOrig || l.nombre, compras, (rv.alertas.length ? rv.alertas : ['Cuadra con lo que se le vendió.']).join('\n')]);
     });
     doc.autoTable({
