@@ -31,6 +31,42 @@ async function insituAll(tok, path, key) {
   return out;
 }
 
+const PROD_KEYS = ['code', 'name', 'channel_name', 'description', 'line_name', 'subline_name', 'brand_name', 'barcode', 'group_name', 'default_price', 'default_cost', 'default_tax', 'photourl', 'units', 'is_featured', 'retail_price', 'hidden', 'disabled'];
+async function completarAltas(tok, prods) {
+  const pend = (await db('GET', 'costeoFotos')) || {};
+  const auth = { Authorization: (tok.scheme ?? 'Bearer ') + tok.token };
+  let n = 0;
+  for (const [qbId, a] of Object.entries(pend)) {
+    const p = prods.find((x) => String(x.code ?? '').trim() === String(qbId));
+    if (!p) { if (Date.now() - (a.ts || 0) > 14 * 864e5) await db('DELETE', 'costeoFotos/' + qbId); continue; } // aún no llega de QuickBooks
+    // Se manda el producto completo como está en InSitu, cambiando solo lo que se capturó (no se toca precio ni costo)
+    const body = {};
+    PROD_KEYS.forEach((k) => { if (p[k] !== undefined && p[k] !== null) body[k] = p[k]; });
+    if (a.cat) body.line_name = a.cat;
+    if (a.brand) body.brand_name = a.brand;
+    if (a.barcode) body.barcode = a.barcode;
+    if (a.photo) body.photourl = a.photo;
+    const r = await fetch(`${INSITU}/products`, { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!r.ok) { await db('PUT', `costeoFotos/${qbId}/error`, `InSitu ${r.status}`); continue; }
+    // La foto también como imagen del producto (InSitu no siempre muestra solo el link)
+    if (a.photo) {
+      try {
+        const img = await fetch(a.photo);
+        if (img.ok) {
+          const type = img.headers.get('content-type') || 'image/jpeg';
+          const fd = new FormData();
+          fd.append('file', new Blob([await img.arrayBuffer()], { type }), 'foto.' + (type.includes('png') ? 'png' : type.includes('webp') ? 'webp' : 'jpg'));
+          await fetch(`${INSITU}/products/${p.id}/images`, { method: 'PUT', headers: auth, body: fd });
+        }
+      } catch (e) { /* queda el link */ }
+    }
+    await db('DELETE', 'costeoFotos/' + qbId);
+    await db('PUT', 'qbLog/' + Date.now().toString(36) + qbId, { ts: Date.now(), action: 'insitu-alta', name: p.name, qbId, cat: a.cat || '', brand: a.brand || '', barcode: a.barcode || '', photo: !!a.photo, by: a.by || 'auto' });
+    n++;
+  }
+  return n;
+}
+
 module.exports = async (req, res) => {
   try {
     const force = req.query && req.query.force === '1';
@@ -70,8 +106,11 @@ module.exports = async (req, res) => {
       });
     });
     if (ajustes) await db('PATCH', '', up);
-    await db('PUT', 'insitu/lastRun', { at: Date.now(), productos: items.length, ajustes });
-    return res.json({ ok: true, productos: items.length, conExistencia: items.filter((p) => p.stock > 0).length, ajustes });
+    // Productos dados de alta en Costeo: cuando ya llegaron de QuickBooks a InSitu se les pone categoría, marca, código de barras y foto
+    let altas = 0;
+    try { altas = await completarAltas(tok, prods); } catch (e) { /* no detiene la sincronización */ }
+    await db('PUT', 'insitu/lastRun', { at: Date.now(), productos: items.length, ajustes, altas });
+    return res.json({ ok: true, productos: items.length, conExistencia: items.filter((p) => p.stock > 0).length, ajustes, altas });
   } catch (e) {
     await db('PUT', 'insitu/lastRun', { at: Date.now(), error: String(e.message || e).slice(0, 200) }).catch(() => {});
     return res.status(e.auth ? 401 : 500).json({ ok: false, error: String(e.message || e) });

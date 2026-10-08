@@ -193,10 +193,13 @@ module.exports = async (req, res) => {
               Description: c.description ? String(c.description).slice(0, 4000) : undefined,
               IncomeAccountRef: tpl.IncomeAccountRef, ExpenseAccountRef: tpl.ExpenseAccountRef,
             };
+            if (/^\d+$/.test(String(c.vendorId || ''))) item.PrefVendorRef = { value: String(c.vendorId) };
             if (tpl.Type === 'Inventory') Object.assign(item, { AssetAccountRef: tpl.AssetAccountRef, TrackQtyOnHand: true, QtyOnHand: 0, InvStartDate: todayCT() });
             const d = await qb('POST', 'item', item);
             await log({ action: 'costeo-alta', name, qbId: d.Item.Id, price: item.UnitPrice, cost: item.PurchaseCost, factura: body.factura || '', by: who });
-            if (c.photo) await db('PUT', 'costeoFotos/' + d.Item.Id, { photo: String(c.photo).slice(0, 1000), name, sku: item.Sku || '', ts: Date.now(), by: who });
+            // Lo que QuickBooks no guarda (categoría, marca, código de barras, foto) se pone en InSitu cuando el producto llegue (cron de cada hora)
+            const extra = { photo: /^https?:\/\//.test(String(c.photo || '')) ? String(c.photo).trim().slice(0, 1000) : '', barcode: str(c.barcode, 40), cat: str(c.cat, 80), brand: str(c.brand, 80) };
+            if (extra.photo || extra.barcode || extra.cat || extra.brand) await db('PUT', 'costeoFotos/' + d.Item.Id, { ...extra, name, sku: item.Sku || '', ts: Date.now(), by: who });
             results.push({ create: name, ok: true, qbId: d.Item.Id, type: tpl.Type });
           } catch (err) {
             results.push({ create: c.name, ok: false, error: String(err.message || err) });
@@ -262,6 +265,10 @@ module.exports = async (req, res) => {
         const f = await db('GET', 'costeoFacturas/' + String(body.id || ''));
         if (!f) return res.status(404).json({ error: 'No existe' });
         return res.json({ factura: f });
+      }
+      case 'qb_vendors': {
+        const r = await qbQuery('select Id, DisplayName from Vendor where Active = true maxresults 1000');
+        return res.json({ vendors: (r.Vendor || []).map((v) => ({ id: String(v.Id), name: String(v.DisplayName || '') })).sort((a, b) => a.name.localeCompare(b.name)) });
       }
       case 'photos': {
         return res.json({ photos: (await db('GET', 'costeoFotos')) || {} });

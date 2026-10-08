@@ -2282,6 +2282,7 @@
   const COS_API = 'https://ctd-seven.vercel.app/api/costeo';
   const C = { head: null, lines: [], saved: false, applied: false, results: [], dup: null, busy: false, recibo: null, reciboNota: '', reciboBy: '', bodega: null };
   const CS = Object.assign({ target: 20, round: true }, store.get('ctdIA.costeoSettings', {}));
+  const ALTA = { vendors: null, busy: false }; // proveedores de QuickBooks para dar de alta (no se guardan en el navegador)
   delete CS.down; // si el costo baja, el precio se queda (decisión de Oscar)
 
   async function cosCall(action, extra = {}) {
@@ -2398,7 +2399,7 @@
       const m = matchLine(it, vmap);
       const l = { i, ...it, precio_nuevo: null, costo_caja: r2(Number(it.costo_caja) || 0), duda: (d.dudas || []).filter((x) => x.renglon === i + 1).map((x) => x.nota).join(' ') };
       if (m) Object.assign(l, { sku: String(m.p.id), nombre: m.p.name, photo: m.p.photo, pack: m.p.pack, costo_antes: r2(m.p.cost || 0), precio_antes: r2(m.p.price || 0), how: m.how, review: !!m.review, nuevo: false });
-      else Object.assign(l, { nuevo: true, alta: { name: cleanTitle(it.producto), sku: it.upc || '', photo: '' } });
+      else Object.assign(l, { nuevo: true, alta: { name: cleanTitle(it.producto), sku: it.upc || '', barcode: it.upc || '', photo: '', ...altaGuess(it.producto) } });
       return l;
     });
     C.saved = false; C.applied = false; C.results = []; C.dup = null; C.busy = false;
@@ -2498,8 +2499,12 @@
     ].join('');
     const nuevo = l.nuevo ? `
       <div class="cos-alta">
-        <label class="field"><span>Nombre en QuickBooks</span><input data-a="name" value="${esc(l.alta.name)}"></label>
-        <label class="field"><span>SKU / UPC</span><input data-a="sku" value="${esc(l.alta.sku)}"></label>
+        <label class="field alta-n"><span>Nombre en QuickBooks</span><input data-a="name" value="${esc(l.alta.name)}"></label>
+        <label class="field"><span>SKU</span><input data-a="sku" value="${esc(l.alta.sku)}"></label>
+        <label class="field"><span>Código de barras (UPC)</span><input data-a="barcode" inputmode="numeric" value="${esc(l.alta.barcode || '')}"></label>
+        <label class="field${l.alta.cat ? '' : ' falta'}"><span>Categoría</span><select data-a="cat"><option value="">Elige…</option>${altaCats().map((c) => `<option${c === l.alta.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
+        <label class="field${l.alta.brand ? '' : ' falta'}"><span>Marca</span><input data-a="brand" list="altaBrands" placeholder="Ej. La Costeña" value="${esc(l.alta.brand || '')}"></label>
+        <label class="field${l.alta.vendorId ? '' : ' falta'}"><span>Proveedor (QuickBooks)</span><select data-a="vendorId"><option value="">${ALTA.vendors ? 'Elige…' : 'Cargando proveedores…'}</option>${(ALTA.vendors || []).map((v) => `<option value="${esc(v.id)}"${v.id === l.alta.vendorId ? ' selected' : ''}>${esc(v.name)}</option>`).join('')}</select></label>
         <label class="field"><span>Foto (URL)</span><input data-a="photo" placeholder="https://…" value="${esc(l.alta.photo)}"></label>
         <button class="btn-link" type="button" data-link>¿Ya existe? buscar y ligar</button>
       </div>` : '';
@@ -2532,7 +2537,11 @@
     if (f === 'cost') { const v = parseFloat(e.target.value); if (v >= 0) { l.costo_caja = r2(v); decide(l); el.querySelector('[data-f="aplicar"]').checked = l.aplicar; } }
     else if (f === 'price') { const v = parseFloat(e.target.value); l.precio_nuevo = v > 0 ? r2(v) : null; decide(l); el.querySelector('[data-f="aplicar"]').checked = l.aplicar; }
     else if (f === 'aplicar') { l.aplicar = e.target.checked; }
-    else if (a) { l.alta[a] = e.target.value; if (a === 'photo') el.querySelector('.ol-ph').innerHTML = cosImg(cosPhoto(l)); }
+    else if (a) {
+      l.alta[a] = e.target.value; if (a === 'photo') el.querySelector('.ol-ph').innerHTML = cosImg(cosPhoto(l));
+      if (['cat', 'brand', 'vendorId'].includes(a)) e.target.closest('.field').classList.toggle('falta', !String(e.target.value).trim());
+      if (a === 'vendorId') { const m = store.get('ctdIA.altaVendor', {}); m[normTxt(C.head.proveedor || '')] = e.target.value; store.set('ctdIA.altaVendor', m); }
+    }
     const m1 = marginOf(effPrice(l), l.costo_caja), mv = el.querySelector('[data-v="m"]');
     mv.textContent = pct(m1); mv.className = m1 < CS.target / 100 - 1e-9 ? 'warn' : 'okc';
     el.classList.toggle('is-off', !l.aplicar);
@@ -2566,7 +2575,10 @@
   $('#cosApply').addEventListener('click', async () => {
     const sel = C.lines.filter((l) => l.aplicar);
     const changes = sel.filter((l) => !l.nuevo && l.qb).map((l) => ({ qbId: l.qb.qbId, price: priceChanged(l) ? l.precio_nuevo : null, cost: same2(l.costo_caja, l.costo_antes) ? null : l.costo_caja })).filter((c) => c.price != null || c.cost != null);
-    const creates = sel.filter((l) => l.nuevo).map((l) => ({ name: l.alta.name, sku: l.alta.sku, price: effPrice(l), cost: l.costo_caja, photo: l.alta.photo, description: l.producto }));
+    const faltan = sel.filter((l) => l.nuevo && (!l.alta.cat || !String(l.alta.brand || '').trim() || !l.alta.vendorId));
+    if (faltan.length) { toast(`Falta categoría, marca o proveedor en ${faltan.length} ${faltan.length === 1 ? 'producto nuevo' : 'productos nuevos'}`); const el = $(`.cos-l[data-i="${faltan[0].i}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+    const creates = sel.filter((l) => l.nuevo).map((l) => ({ name: l.alta.name, sku: l.alta.sku, price: effPrice(l), cost: l.costo_caja, photo: l.alta.photo, description: l.producto,
+      barcode: String(l.alta.barcode || '').trim(), cat: l.alta.cat, brand: String(l.alta.brand || '').trim(), vendorId: l.alta.vendorId }));
     const sinPrecio = sel.filter((l) => l.nuevo && l.precio_nuevo == null).length;
     const nP = changes.filter((c) => c.price != null).length, nC = changes.filter((c) => c.cost != null).length;
     if (!changes.length && !creates.length) { toast('No hay cambios que aplicar'); return; }
@@ -2684,9 +2696,38 @@
     } catch (err) { toast(err.message); C.busy = false; renderCosteo(); }
   });
 
-  // ---- Fotos de productos dados de alta: se ponen en InSitu cuando el producto ya llegó de QuickBooks ----
+  // ---- Alta de productos: categoría y marca (de InSitu) y proveedor (de QuickBooks) ----
+  const altaCats = () => [...new Set(fechProds().map((p) => p.cat).filter((c) => c && c !== 'Otros'))].sort((a, b) => a.localeCompare(b));
+  const altaBrands = () => [...new Set(fechProds().map((p) => String(p.brand || '').trim()).filter(Boolean))];
+  // Adivina marca y categoría por el nombre de la factura (marca que ya existe en el catálogo)
+  function altaGuess(producto) {
+    const n = ' ' + normTxt(producto).replace(/[^a-z0-9]+/g, ' ') + ' ';
+    const brand = altaBrands().filter((b) => normTxt(b).length > 2 && n.includes(' ' + normTxt(b).replace(/[^a-z0-9]+/g, ' ').trim() + ' ')).sort((a, b) => b.length - a.length)[0] || '';
+    if (!brand) return { brand: '', cat: '' };
+    const cnt = {};
+    fechProds().filter((p) => p.brand === brand && p.cat && p.cat !== 'Otros').forEach((p) => { cnt[p.cat] = (cnt[p.cat] || 0) + 1; });
+    return { brand, cat: Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0] || '' };
+  }
+  async function altaVendors() {
+    if (!C.lines.some((l) => l.nuevo) || ALTA.vendors || ALTA.busy) return;
+    ALTA.busy = true;
+    try { ALTA.vendors = (await cosCall('qb_vendors')).vendors || []; } catch (e) { ALTA.vendors = []; toast('No pude bajar los proveedores de QuickBooks: ' + e.message); }
+    ALTA.busy = false;
+    // Proveedor de la factura: el último que se eligió para ese proveedor, o el que se llame igual
+    const prov = normTxt(C.head.proveedor || ''), w = prov.split(/\s+/)[0] || '';
+    const last = store.get('ctdIA.altaVendor', {})[prov];
+    const v = (last && ALTA.vendors.find((x) => x.id === last))
+      || ALTA.vendors.find((x) => normTxt(x.name) === prov) || (w.length > 2 && ALTA.vendors.find((x) => normTxt(x.name).split(/\s+/)[0] === w));
+    if (v) C.lines.forEach((l) => { if (l.nuevo && l.alta && !l.alta.vendorId) l.alta.vendorId = v.id; });
+    renderCosteo();
+  }
+  // ---- Productos dados de alta: el servidor les pone categoría, marca, código y foto en InSitu cuando llegan de QuickBooks ----
   let cosPhotos = null;
   async function renderCosPhotos() {
+    if (!$('#altaBrands')) document.body.insertAdjacentHTML('beforeend', '<datalist id="altaBrands"></datalist>');
+    $('#altaBrands').innerHTML = altaBrands().slice(0, 800).map((b) => `<option value="${esc(b)}">`).join('');
+    altaVendors();
+    return; // lo de abajo ya lo hace solo el servidor cada hora
     if (!Insitu.token()) return; // poner fotos en InSitu necesita la sesión de InSitu
     if (cosPhotos === null) { cosPhotos = {}; try { cosPhotos = (await cosCall('photos')).photos || {}; } catch (e) { cosPhotos = {}; } }
     const ready = Object.entries(cosPhotos).map(([qbId, f]) => ({ qbId, ...f, p: S.products.find((x) => String(x.id) === qbId || normTxt(x.name) === normTxt(f.name)) })).filter((x) => x.p);
