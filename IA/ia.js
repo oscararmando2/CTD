@@ -2437,6 +2437,7 @@
         });
       } catch (e) { /* sigue con lo que hay */ }
     }
+    await ligarNuevosEnQb();
     // Precio y costo reales de QuickBooks (el dueño) para los emparejados
     const matched = C.lines.filter((l) => !l.nuevo);
     if (matched.length) {
@@ -2455,6 +2456,25 @@
     }
     renderCosteo();
     window.scrollTo({ top: $('#cosHead').offsetTop - 80, behavior: 'smooth' });
+  }
+  // "Nuevos" que en realidad ya están en QuickBooks (dados de alta antes o aún sin llegar a InSitu): se ligan solos
+  // si coincide el nombre exacto o el SKU/UPC (no por parecido, para no ligar mal)
+  async function ligarNuevosEnQb() {
+    C.lines.forEach((l) => { // dado de alta desde esta misma factura: ya tiene su Id
+      if (l.nuevo && l.qbId) { Object.assign(l, { nuevo: false, sku: String(l.qbId), nombre: l.nombre || (l.alta && l.alta.name) || l.producto, how: 'dado de alta aquí', review: false }); delete l.alta; }
+    });
+    const ns = C.lines.filter((l) => l.nuevo);
+    if (!ns.length) return;
+    try {
+      const r = await cosCall('lookup', { items: ns.map((l) => ({ sku: 'n' + l.i, upc: l.upc || (l.alta && l.alta.barcode) || '', name: (l.alta && l.alta.name) || cleanTitle(l.producto) })) });
+      ns.forEach((l) => {
+        const q = r.items['n' + l.i];
+        if (!q || !q.active || !['sku', 'nombre'].includes(q.how)) return;
+        const p = S.products.find((x) => String(x.id) === String(q.qbId));
+        Object.assign(l, { nuevo: false, sku: String(q.qbId), nombre: q.qbName, photo: p ? p.photo : l.photo, pack: p ? p.pack : '', qb: q, costo_antes: q.cost, precio_antes: q.price, how: 'ya estaba en QuickBooks', review: false });
+        delete l.alta; detectPieza(l);
+      });
+    } catch (e) { /* se quedan como nuevos */ }
   }
   const cleanTitle = (s) => String(s || '').replace(/\s+/g, ' ').trim().toUpperCase().slice(0, 100);
 
@@ -2532,7 +2552,7 @@
       <div class="ol-ph">${img}</div>
       <div class="ol-main">
         <div class="ol-name">${esc(l.nuevo ? l.producto : l.nombre)}</div>
-        <div class="meta">Factura: ${esc(l.producto)} · ${esc(l.empaque || '')}${l.upc ? ' · UPC ' + esc(l.upc) : ''}${l.codigo_proveedor ? ' · código ' + esc(l.codigo_proveedor) : ''}${!l.nuevo ? ` · SKU ${esc(l.sku)} · por ${esc(l.how)}` : ''}</div>
+        <div class="meta">Factura: ${esc(l.producto)}${l.empaque ? ' · ' + esc(l.empaque) : ''}${l.upc ? ' · UPC ' + esc(l.upc) : ''}${l.codigo_proveedor ? ' · código ' + esc(l.codigo_proveedor) : ''}${!l.nuevo ? ` · SKU ${esc(l.sku)} · por ${esc(l.how)}` : ''}</div>
         <div class="cos-badges">${badges}</div>
         <div class="cos-grid">
           <span><small>Cant.</small><b>${nfmt(l.cantidad)}</b></span>
@@ -2700,6 +2720,7 @@
       C.lines = (f.lines || []).map((l, i) => ({ i, ...l, photo: (S.products.find((p) => String(p.id) === l.sku) || {}).photo, aplicar: false, result: l.aplicado ? { ok: true } : null, alta: l.nuevo ? { name: l.nombre, sku: l.upc, photo: '' } : null }));
       C.saved = true; C.applied = true; C.dup = null; C.recibo = null; C.reciboNota = ''; C.savedId = b.closest('.hist-item').dataset.cid;
       C.bodega = f.bodega || null;
+      await ligarNuevosEnQb();
       renderCosteo();
       const conQb = C.lines.filter((l) => qbIdOf(l) || l.sku);
       if (conQb.length) {
