@@ -2392,9 +2392,10 @@
     return Number(it.unidades_por_caja) > 1 ? Number(it.unidades_por_caja) : m ? Number(m[1]) : 0;
   }
   function detectPieza(l) {
-    const n = piezasCaja(l), man = store.get(PZ_KEY, {})[l.sku];
+    const n = piezasCaja(l), local = store.get(PZ_KEY, {})[l.sku], srv = (C.pzMem || {})[String(l.sku || '').replace(/[.#$/[\]\s]+/g, '_')];
+    const man = local != null ? local : srv; // lo que ya se eligió/aprendió en Costeo
     l.pzCaja = n;
-    if (man != null && !l.nuevo) { l.pz = man > 1 ? man : 0; return; }
+    if (man != null && !l.nuevo) { l.pz = man > 1 ? man : 0; l.pzSet = true; return; }
     if (n < 2) { l.pz = 0; return; }
     // Se vende por pieza si en InSitu es "Pieza" o si el costo de QuickBooks es ~ el de la caja entre las piezas
     const r = l.costo_antes > 0 ? l.costo_caja / l.costo_antes : 0;
@@ -2412,7 +2413,7 @@
 
   async function loadInvoice(d) {
     let vmap = {};
-    try { vmap = (await cosCall('map', { proveedor: d.proveedor })).map || {}; } catch (e) { /* sin memoria */ }
+    try { const mm = await cosCall('map', { proveedor: d.proveedor }); vmap = mm.map || {}; C.pzMem = mm.pz || {}; } catch (e) { /* sin memoria */ }
     C.head = { proveedor: d.proveedor, factura: d.factura, fecha: d.fecha, total_factura: d.total_factura, total_calculado: d.total_calculado, mercancia: d.mercancia, cuadra: d.cuadra, flete: d.flete, creditos: d.creditos, otros_cargos: d.otros_cargos, dudas: d.dudas || [], modelo: d.modelo };
     C.lines = (d.items || []).map((it, i) => {
       const m = matchLine(it, vmap);
@@ -2581,7 +2582,7 @@
       if (C.applied) { C.applied = false; $$('#cosList [data-f="aplicar"]').forEach((x) => { x.disabled = false; }); }
     }
     if (f === 'cost') { const v = parseFloat(e.target.value); if (v >= 0) { l.costo_caja = r2(v); decide(l); el.querySelector('[data-f="aplicar"]').checked = l.aplicar; const c = el.querySelector('[data-v="cu"]'); if (c) c.textContent = money(cu(l)) + ' por pieza'; } }
-    else if (f === 'pz') { const v = Math.round(Number(e.target.value)); if (v > 1) { l.pz = v; if (!l.nuevo) { const m = store.get(PZ_KEY, {}); m[l.sku] = v; store.set(PZ_KEY, m); } decide(l); clearTimeout(C.pzT); C.pzT = setTimeout(renderCosteo, 700); } }
+    else if (f === 'pz') { const v = Math.round(Number(e.target.value)); if (v > 1) { l.pz = v; l.pzSet = true; if (!l.nuevo) { const m = store.get(PZ_KEY, {}); m[l.sku] = v; store.set(PZ_KEY, m); } decide(l); clearTimeout(C.pzT); C.pzT = setTimeout(renderCosteo, 700); } }
     else if (f === 'price') { const v = parseFloat(e.target.value); l.precio_nuevo = v > 0 ? r2(v) : null; decide(l); el.querySelector('[data-f="aplicar"]').checked = l.aplicar; }
     else if (f === 'aplicar') { l.aplicar = e.target.checked; }
     else if (a) {
@@ -2599,6 +2600,7 @@
   $('#cosList').addEventListener('click', (e) => {
     const b = e.target.closest('[data-pz]'); if (!b) return;
     const l = C.lines[Number(b.closest('.cos-l').dataset.i)]; if (!l) return;
+    l.pzSet = true;
     if (l.pz > 1) l.pz = 0;
     else {
       const n = l.pzCaja > 1 ? l.pzCaja : Math.round(Number(prompt('¿Cuántas piezas trae la caja?', '12')) || 0);
@@ -2676,7 +2678,7 @@
   });
 
   async function saveCosteo(silent) {
-    const f = { ...C.head, lines: C.lines.map((l) => ({ producto: l.producto, upc: l.upc, codigo_proveedor: l.codigo_proveedor, cantidad: l.cantidad, empaque: l.empaque, costo_caja: l.costo_caja, sku: l.sku || '', qbId: (l.qb && l.qb.qbId) || l.qbId || '', nombre: l.nombre || (l.alta && l.alta.name) || '', costo_antes: l.costo_antes ?? null, precio_antes: l.precio_antes ?? null, precio_nuevo: l.precio_nuevo, pz: l.pz || 0, aplicado: !!(l.result && l.result.ok), nuevo: !!l.nuevo, caducidad: l.caducidad || '' })) };
+    const f = { ...C.head, lines: C.lines.map((l) => ({ producto: l.producto, upc: l.upc, codigo_proveedor: l.codigo_proveedor, cantidad: l.cantidad, empaque: l.empaque, costo_caja: l.costo_caja, sku: l.sku || '', qbId: (l.qb && l.qb.qbId) || l.qbId || '', nombre: l.nombre || (l.alta && l.alta.name) || '', costo_antes: l.costo_antes ?? null, precio_antes: l.precio_antes ?? null, precio_nuevo: l.precio_nuevo, pz: l.pz || 0, pzSet: !!(l.pz > 1 || l.pzSet), aplicado: !!(l.result && l.result.ok), nuevo: !!l.nuevo, caducidad: l.caducidad || '' })) };
     try {
       const d = await cosCall('save', { factura: f, results: C.results, id: C.savedId || '' }); C.saved = true; C.savedId = d.id;
       if (C.recibo) { try { await cosCall('recibo_costeado', { id: C.recibo, costeoId: d.id }); } catch (e) { /* queda en la lista */ } C.recibo = null; loadCosPend(true); }
