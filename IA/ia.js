@@ -2583,16 +2583,28 @@
     decide(l); C.saved = false; renderCosteo();
   });
   // Ligar un "nuevo" a un producto que ya existe
-  $('#cosList').addEventListener('click', (e) => {
+  $('#cosList').addEventListener('click', async (e) => {
     const b = e.target.closest('[data-link]'); if (!b) return;
     const l = C.lines[Number(b.closest('.cos-l').dataset.i)];
     const q = prompt('Escribe parte del nombre, SKU o UPC del producto existente:', l.producto.split(' ').slice(0, 3).join(' '));
     if (!q) return;
     const words = normTxt(q).split(/\s+/).filter(Boolean);
-    const res = S.products.filter((p) => { const t = normTxt(`${p.name} ${p.id} ${p.upc}`); return words.every((w) => t.includes(w)); }).slice(0, 8);
-    if (!res.length) { toast('Sin resultados'); return; }
-    const pickN = prompt(res.map((p, i) => `${i + 1}. ${p.name} (SKU ${p.id}, ${money(p.price)})`).join('\n') + '\n\nEscribe el número:', '1');
-    const p = res[Number(pickN) - 1]; if (!p) return;
+    // En la lista de InSitu y directo en QuickBooks (ahí está el SKU, y los recién dados de alta que aún no llegan a InSitu)
+    const prods = fechProds();
+    const res = prods.filter((p) => { const t = normTxt(`${p.name} ${p.id} ${p.upc || ''} ${p.ean || ''}`); return words.every((w) => t.includes(w)); }).slice(0, 8);
+    try {
+      toast('Buscando en QuickBooks…');
+      const r = await cosCall('qb_buscar', { q });
+      (r.items || []).filter((x) => x.active).forEach((x) => {
+        if (res.some((p) => String(p.id) === x.qbId)) return;
+        const p = prods.find((y) => String(y.id) === x.qbId);
+        res.unshift(p || { id: x.qbId, name: x.name, price: x.price, cost: x.cost, photo: '', pack: '', qbSku: x.sku, soloQb: true });
+      });
+    } catch (e) { /* solo lo de InSitu */ }
+    if (!res.length) { toast('Sin resultados en InSitu ni en QuickBooks'); return; }
+    const lista = res.slice(0, 10);
+    const pickN = prompt(lista.map((p, i) => `${i + 1}. ${p.name} (código ${p.id}${p.qbSku ? ', SKU ' + p.qbSku : ''}, ${money(p.price || 0)})${p.soloQb ? ' — en QuickBooks, aún no llega a InSitu' : ''}`).join('\n') + '\n\nEscribe el número:', '1');
+    const p = lista[Number(pickN) - 1]; if (!p) return;
     Object.assign(l, { nuevo: false, sku: String(p.id), nombre: p.name, photo: p.photo, pack: p.pack, costo_antes: r2(p.cost || 0), precio_antes: r2(p.price || 0), how: 'elegido a mano', review: false });
     delete l.alta;
     cosCall('lookup', { items: [{ sku: l.sku, upc: p.upc, name: p.name }] }).then((r) => { const qd = r.items[l.sku]; if (qd) { l.qb = qd; l.precio_antes = qd.price; if (qd.cost) l.costo_antes = qd.cost; } else l.qbMissing = true; detectPieza(l); decide(l); renderCosteo(); }).catch(() => { detectPieza(l); decide(l); renderCosteo(); });
