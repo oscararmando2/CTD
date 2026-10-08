@@ -2405,8 +2405,10 @@
   const creado = (l) => l.nuevo && !!l.qbId; // ya se dio de alta: los cambios siguientes son de precio/costo
   const effPrice = (l) => (l.precio_nuevo != null ? l.precio_nuevo : l.nuevo ? priceFor(cu(l)) : l.precio_antes);
   const priceChanged = (l) => l.precio_nuevo != null && !same2(l.precio_nuevo, l.precio_antes);
+  // El costo SIEMPRE se actualiza si cambió (salvo que lo desmarques a mano); el precio solo si escribes uno nuevo
   function decide(l) {
-    if (l.nuevo) { l.aplicar = true; return; }
+    if (l.offManual) { l.aplicar = false; return; }
+    if (l.nuevo) { l.aplicar = !creado(l) || priceChanged(l) || !same2(cu(l), l.costo_antes); return; }
     l.aplicar = priceChanged(l) || !same2(cu(l), l.costo_antes);
   }
   const same2 = (a, b) => Math.abs((Number(a) || 0) - (Number(b) || 0)) < 0.005;
@@ -2584,7 +2586,7 @@
     if (f === 'cost') { const v = parseFloat(e.target.value); if (v >= 0) { l.costo_caja = r2(v); decide(l); el.querySelector('[data-f="aplicar"]').checked = l.aplicar; const c = el.querySelector('[data-v="cu"]'); if (c) c.textContent = money(cu(l)) + ' por pieza'; } }
     else if (f === 'pz') { const v = Math.round(Number(e.target.value)); if (v > 1) { l.pz = v; l.pzSet = true; if (!l.nuevo) { const m = store.get(PZ_KEY, {}); m[l.sku] = v; store.set(PZ_KEY, m); } decide(l); clearTimeout(C.pzT); C.pzT = setTimeout(renderCosteo, 700); } }
     else if (f === 'price') { const v = parseFloat(e.target.value); l.precio_nuevo = v > 0 ? r2(v) : null; decide(l); el.querySelector('[data-f="aplicar"]').checked = l.aplicar; }
-    else if (f === 'aplicar') { l.aplicar = e.target.checked; }
+    else if (f === 'aplicar') { l.aplicar = e.target.checked; l.offManual = !e.target.checked; }
     else if (a) {
       l.alta[a] = e.target.value; if (a === 'photo') el.querySelector('.ol-ph').innerHTML = cosImg(cosPhoto(l));
       if (['cat', 'brand', 'vendorId'].includes(a)) e.target.closest('.field').classList.toggle('falta', !String(e.target.value).trim());
@@ -2728,6 +2730,9 @@
       if (conQb.length) {
         cosCall('lookup', { items: [...new Map(conQb.map((l) => [qbIdOf(l) || l.sku, { sku: qbIdOf(l) || l.sku, upc: l.upc, name: l.nombre }])).values()] }).then((r) => {
           conQb.forEach((l) => { const q = r.items[qbIdOf(l) || l.sku]; if (q) { l.qb = q; l.precio_antes = q.price; if (q.cost) l.costo_antes = q.cost; } });
+          // Lo que quedó sin aplicar (ej. el costo que no se mandó) se marca para aplicarse
+          C.lines.forEach((l) => { if (qbIdOf(l) || l.sku) decide(l); if (l.aplicar && l.result && l.result.ok) l.result = null; });
+          if (C.lines.some((l) => l.aplicar)) C.applied = false;
           renderCosteo();
         }).catch(() => {});
       }
