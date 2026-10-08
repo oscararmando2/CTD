@@ -3827,6 +3827,8 @@
       const u = String(x.unidades || '');
       if (/each|pieza|pza|unidad|\bea\b|\bpc\b|^\s*1\s*$/i.test(u)) return 1;
       if (/case|caja|\bcs\b|\bcj\b/i.test(u)) return ppc;
+      const mem = (CR.pz || {})[String(l.skuOrig || '').replace(/[.#$/[\]\s]+/g, '_')]; // lo que aprendió Costeo
+      if (mem != null) return mem > 1 ? 1 : ppc;
       if (o && o.pack === 'Pieza') return 1;
       if (refPz && x.precio > 0 && Math.abs(x.precio - refPz) / refPz < 0.3) return 1;
       return ppc;
@@ -3906,6 +3908,7 @@
   }
   async function crCargarHist(c) {
     const ed = c || CR.ed; if (!ed || !ed.cliente) return;
+    if (!CR.pz) { try { CR.pz = (await cosCall('map', { proveedor: '' })).pz || {}; } catch (e) { CR.pz = {}; } }
     const code = ed.cliente.code;
     const skus = [...new Set(ed.lineas.flatMap((l) => [l.sku, l.skuOrig]).filter(Boolean))];
     try {
