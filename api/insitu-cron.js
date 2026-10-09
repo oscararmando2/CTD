@@ -84,6 +84,29 @@ async function completarAltas(tok, prods) {
   return diag;
 }
 
+// Unit of Measurement que falta en productos dados de alta desde la IA: se saca del nombre (20/145 GRS → Case20, CJ 12 → Case12)
+// o "pieza" si en Costeo se marcó que se vende por pieza. Solo valores que ya existen en InSitu. Se aplican con completarAltas.
+async function autoUnidades(prods) {
+  const [log, pzMem, pend] = await Promise.all([db('GET', 'qbLog'), db('GET', 'costeoPz'), db('GET', 'costeoFotos')]);
+  const altas = new Set(Object.values(log || {}).filter((x) => x && x.action === 'costeo-alta' && x.qbId).map((x) => String(x.qbId)));
+  if (!altas.size) return 0;
+  const units = [...new Set(prods.map((p) => String(p.units || '').trim()).filter(Boolean))];
+  const pieza = units.find((u) => /each|pieza|count/i.test(u)) || '';
+  const caseN = (n) => units.find((u) => u.replace(/\s+/g, '').toLowerCase() === 'case' + n) || '';
+  const up = {};
+  prods.forEach((p) => {
+    const code = String(p.code ?? '').trim();
+    if (!altas.has(code) || String(p.units || '').trim() || (pend && pend[code])) return;
+    const mem = (pzMem || {})[code.replace(/[.#$/[\]\s]+/g, '_')];
+    const s = String(p.name || '');
+    const m = s.match(/\bcj\.?\s*(\d{1,3})\b/i) || s.match(/\b(\d{1,3})\s*(?:unds?|pzas?|piezas|pcs|ct)\b/i) || s.match(/(?:^|\s)(\d{1,3})\s*\/\s*\d/);
+    const u = mem > 1 ? pieza : m ? caseN(Number(m[1])) : '';
+    if (u) up['costeoFotos/' + code] = { units: u, name: s, ts: Date.now(), by: 'auto' };
+  });
+  if (Object.keys(up).length) await db('PATCH', '', up);
+  return Object.keys(up).length;
+}
+
 module.exports = async (req, res) => {
   try {
     const force = req.query && req.query.force === '1';
@@ -125,6 +148,7 @@ module.exports = async (req, res) => {
     if (ajustes) await db('PATCH', '', up);
     // Productos dados de alta en Costeo: cuando ya llegaron de QuickBooks a InSitu se les pone categoría, marca, código de barras y foto
     let altas = 0;
+    try { await autoUnidades(prods); } catch (e) { /* sigue */ }
     try { altas = await completarAltas(tok, prods); } catch (e) { altas = { error: String(e.message || e).slice(0, 200) }; } // no detiene la sincronización
     await db('PUT', 'insitu/lastRun', { at: Date.now(), productos: items.length, ajustes, altas });
     return res.json({ ok: true, productos: items.length, conExistencia: items.filter((p) => p.stock > 0).length, ajustes, altas });
