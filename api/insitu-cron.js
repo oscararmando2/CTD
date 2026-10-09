@@ -48,7 +48,8 @@ async function completarAltas(tok, prods) {
     if (a.barcode) body.barcode = a.barcode;
     if (a.photo) body.photourl = a.photo;
     if (a.units) body.units = a.units;
-    const r = await fetch(`${INSITU}/products`, { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    // El producto ya existe en InSitu (llegó de QuickBooks): se actualiza por código con la operación masiva
+    const r = await fetch(`${INSITU}/products/bulk/operations`, { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify([body]) });
     if (!r.ok) {
       const txt = (await r.text().catch(() => '')).slice(0, 160);
       await db('PUT', `costeoFotos/${qbId}/error`, `InSitu ${r.status} ${txt}`);
@@ -67,6 +68,14 @@ async function completarAltas(tok, prods) {
         }
       } catch (e) { /* queda el link */ }
     }
+    // Comprobar que InSitu sí lo guardó antes de darlo por hecho
+    try {
+      const v = await fetch(`${INSITU}/products?where=${encodeURIComponent(JSON.stringify({ code: String(p.code) }))}`, { headers: auth });
+      const j = v.ok ? await v.json() : {};
+      const q = ((j.products || j.data || []).find((x) => String(x.code) === String(p.code))) || null;
+      const falta = q ? [['cat', 'line_name'], ['brand', 'brand_name'], ['barcode', 'barcode'], ['units', 'units']].filter(([k, f]) => a[k] && String(q[f] || '').trim() !== String(a[k]).trim()).map(([k]) => k) : ['?'];
+      if (falta.length) { const msg = `InSitu no guardó: ${falta.join(', ')}`; await db('PUT', `costeoFotos/${qbId}/error`, msg); diag.errores.push(`${qbId}: ${msg}`); continue; }
+    } catch (e) { /* sin comprobación, se da por hecho */ }
     await db('DELETE', 'costeoFotos/' + qbId);
     await db('PUT', 'qbLog/' + Date.now().toString(36) + qbId, { ts: Date.now(), action: 'insitu-alta', name: p.name, qbId, cat: a.cat || '', brand: a.brand || '', barcode: a.barcode || '', units: a.units || '', photo: !!a.photo, by: a.by || 'auto' });
     n++;
