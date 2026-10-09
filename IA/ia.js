@@ -521,6 +521,7 @@
         cost: Number(p.default_cost) || 0,
         photo: String(p.photourl || '').trim(),
         pack: packLabel(p.units),
+        units: String(p.units || '').trim(), // unidad tal cual en InSitu (Case12, Case24…)
         vendor: '',
         st: s ? {
           last: s.last ? ymd(new Date(s.last)) : null,
@@ -2597,6 +2598,7 @@
         <label class="field${l.alta.cat ? '' : ' falta'}"><span>Categoría</span><select data-a="cat"><option value="">Elige…</option>${altaCats().map((c) => `<option${c === l.alta.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
         <label class="field${l.alta.brand ? '' : ' falta'}"><span>Marca</span><input data-a="brand" list="altaBrands" placeholder="Ej. La Costeña" value="${esc(l.alta.brand || '')}"></label>
         <label class="field${l.alta.vendorId ? '' : ' falta'}"><span>Proveedor (QuickBooks)</span><select data-a="vendorId"><option value="">${ALTA.vendors ? 'Elige…' : 'Cargando proveedores…'}</option>${(ALTA.vendors || []).map((v) => `<option value="${esc(v.id)}"${v.id === l.alta.vendorId ? ' selected' : ''}>${esc(v.name)}</option>`).join('')}</select></label>
+        <label class="field${l.alta.units ? '' : ' falta'}"><span>Unidad (InSitu)</span>${unitSel('data-a="units"', l.alta.units || (l.alta.units = unitGuess(l)))}</label>
         <label class="field"><span>Foto (URL)</span><input data-a="photo" placeholder="https://…" value="${esc(l.alta.photo)}"></label>
         <button class="btn-link" type="button" data-link>¿Ya existe? buscar y ligar</button>
       </div>` : '';
@@ -2619,6 +2621,15 @@
         ${C.applied ? '' : `<button type="button" class="btn-link sm cos-pz" data-pz>${l.pz > 1 ? 'Se vende por caja, no por pieza' : `¿Lo vendes por pieza?${l.pzCaja > 1 ? ` (${l.pzCaja} por caja)` : ''}`}</button>`}
         ${nuevo}
         ${!l.nuevo && !(l.result && l.result.ok) ? '<button class="btn-link sm" type="button" data-link>¿Es otro producto? cambiar</button>' : ''}
+        ${!l.nuevo && qbIdOf(l) || !l.nuevo && l.sku ? `<button class="btn-link sm" type="button" data-comp>${l.comp ? 'Cerrar' : 'Completar categoría, marca y unidad'}</button>` : ''}
+        ${l.comp ? `<div class="cos-alta">
+          <label class="field"><span>Categoría</span><select data-c="cat"><option value="">Elige…</option>${altaCats().map((c) => `<option${c === l.comp.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
+          <label class="field"><span>Marca</span><input data-c="brand" list="altaBrands" value="${esc(l.comp.brand)}"></label>
+          <label class="field"><span>Unidad (InSitu)</span>${unitSel('data-c="units"', l.comp.units)}</label>
+          <label class="field"><span>Código de barras (UPC)</span><input data-c="barcode" inputmode="numeric" value="${esc(l.comp.barcode)}"></label>
+          <label class="field"><span>Foto (URL)</span><input data-c="photo" placeholder="https://…" value="${esc(l.comp.photo)}"></label>
+          <button class="btn btn-oro btn-sm" type="button" data-comp-save>Guardar en QuickBooks e InSitu</button>
+        </div>` : ''}
       </div>
       <label class="cos-apply"><input type="checkbox" data-f="aplicar"${l.aplicar ? ' checked' : ''}${C.applied ? ' disabled' : ''}><span>${l.nuevo ? 'Dar de alta' : 'Aplicar'}</span></label>
     </article>`;
@@ -2639,7 +2650,7 @@
     else if (f === 'aplicar') { l.aplicar = e.target.checked; l.offManual = !e.target.checked; }
     else if (a) {
       l.alta[a] = e.target.value; if (a === 'photo') el.querySelector('.ol-ph').innerHTML = cosImg(cosPhoto(l));
-      if (['cat', 'brand', 'vendorId'].includes(a)) e.target.closest('.field').classList.toggle('falta', !String(e.target.value).trim());
+      if (['cat', 'brand', 'vendorId', 'units'].includes(a)) e.target.closest('.field').classList.toggle('falta', !String(e.target.value).trim());
       if (a === 'vendorId') { const m = store.get('ctdIA.altaVendor', {}); m[normTxt(C.head.proveedor || '')] = e.target.value; store.set('ctdIA.altaVendor', m); }
     }
     const m1 = marginOf(effPrice(l), cu(l)), mv = el.querySelector('[data-v="m"]');
@@ -2648,6 +2659,25 @@
     C.saved = false; $('#cosSave').disabled = false;
     $('#cosApply').disabled = C.applied || !C.lines.some((x) => x.aplicar);
     clearTimeout(C.draftT); C.draftT = setTimeout(cosDraftSave, 800);
+  });
+  // Completar categoría (QuickBooks + InSitu), marca, unidad, código y foto (InSitu) de un producto que ya existe
+  $('#cosList').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-comp],[data-comp-save]'); if (!b) return;
+    const l = C.lines[Number(b.closest('.cos-l').dataset.i)]; if (!l) return;
+    if (b.hasAttribute('data-comp')) {
+      if (l.comp) { l.comp = null; renderCosteo(); return; }
+      const p = fechProds().find((x) => String(x.id) === String(qbIdOf(l) || l.sku)) || {};
+      l.comp = { cat: p.cat && p.cat !== 'Otros' ? p.cat : altaGuess(l.producto).cat, brand: p.brand || altaGuess(l.producto).brand, units: p.units || unitGuess(l), barcode: l.upc || '', photo: '' };
+      renderCosteo(); return;
+    }
+    const box = b.closest('.cos-alta');
+    $$('[data-c]', box).forEach((x) => { l.comp[x.dataset.c] = x.value.trim(); });
+    b.disabled = true;
+    try {
+      const d = await cosCall('alta_completar', { qbId: qbIdOf(l) || l.sku, ...l.comp });
+      toast(`Listo${d.qbCat ? ` · categoría "${d.qbCat}" en QuickBooks` : ''}${d.insitu ? ' · en InSitu se pone en la siguiente sincronización (máx. 1 hora)' : ''}`);
+      l.comp = null; renderCosteo();
+    } catch (err) { toast('No se pudo: ' + err.message); b.disabled = false; }
   });
   // Cambiar entre "por pieza" y "por caja" (se recuerda por producto)
   $('#cosList').addEventListener('click', (e) => {
@@ -2722,7 +2752,7 @@
     const faltan = sel.filter((l) => l.nuevo && !creado(l) && (!l.alta.cat || !String(l.alta.brand || '').trim() || !l.alta.vendorId));
     if (faltan.length) { toast(`Falta categoría, marca o proveedor en ${faltan.length} ${faltan.length === 1 ? 'producto nuevo' : 'productos nuevos'}`); const el = $(`.cos-l[data-i="${faltan[0].i}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
     const creates = sel.filter((l) => l.nuevo && !creado(l)).map((l) => ({ name: l.alta.name, sku: l.alta.sku, price: effPrice(l), cost: cu(l), photo: l.alta.photo, description: l.producto,
-      barcode: String(l.alta.barcode || '').trim(), cat: l.alta.cat, brand: String(l.alta.brand || '').trim(), vendorId: l.alta.vendorId }));
+      barcode: String(l.alta.barcode || '').trim(), cat: l.alta.cat, brand: String(l.alta.brand || '').trim(), vendorId: l.alta.vendorId, units: l.alta.units || '' }));
     const sinPrecio = sel.filter((l) => l.nuevo && !creado(l) && l.precio_nuevo == null).length;
     const nP = changes.filter((c) => c.price != null).length, nC = changes.filter((c) => c.cost != null).length;
     if (!changes.length && !creates.length) { toast('No hay cambios que aplicar'); return; }
@@ -2857,6 +2887,24 @@
 
   // ---- Alta de productos: categoría y marca (de InSitu) y proveedor (de QuickBooks) ----
   const altaCats = () => [...new Set(fechProds().map((p) => p.cat).filter((c) => c && c !== 'Otros'))].sort((a, b) => a.localeCompare(b));
+  // Unidades que ya existen en InSitu (de los productos de este dispositivo o de la copia del catálogo del servidor)
+  async function loadUnits() {
+    if (ALTA.units || ALTA.unitsBusy) return;
+    if (fechProds().some((p) => p.units)) { ALTA.units = []; return; }
+    ALTA.unitsBusy = true;
+    try { ALTA.units = [...new Set(((await cosCall('catalogo')).items || []).map((p) => String(p.units || '').trim()).filter(Boolean))]; } catch (e) { ALTA.units = []; }
+    ALTA.unitsBusy = false; renderCosteo();
+  }
+  const altaUnits = () => [...new Set([...fechProds().map((p) => String(p.units || '').trim()), ...(ALTA.units || [])].filter(Boolean))]
+    .sort((a, b) => (parseInt(a.replace(/\D/g, ''), 10) || 0) - (parseInt(b.replace(/\D/g, ''), 10) || 0) || a.localeCompare(b));
+  // Unidad de InSitu: por pieza → la de "each/pieza"; por caja → CaseN con las piezas de la factura
+  function unitGuess(l) {
+    const us = altaUnits();
+    if (l.pz > 1) return us.find((u) => /each|pieza|unit|count/i.test(u)) || '';
+    const n = l.pzCaja || piezasCaja(l);
+    return n > 1 ? (us.find((u) => u.replace(/\s+/g, '').toLowerCase() === 'case' + n) || us.find((u) => /case|caja/i.test(u) && parseInt(u.replace(/\D/g, ''), 10) === n) || '') : '';
+  }
+  const unitSel = (attr, val) => `<select ${attr}><option value="">Elige…</option>${altaUnits().map((u) => `<option${u === val ? ' selected' : ''}>${esc(u)}</option>`).join('')}${val && !altaUnits().includes(val) ? `<option selected>${esc(val)}</option>` : ''}</select>`;
   const altaBrands = () => [...new Set(fechProds().map((p) => String(p.brand || '').trim()).filter(Boolean))];
   // Adivina marca y categoría por el nombre de la factura (marca que ya existe en el catálogo)
   function altaGuess(producto) {
@@ -2889,7 +2937,7 @@
   async function renderCosPhotos() {
     if (!$('#altaBrands')) document.body.insertAdjacentHTML('beforeend', '<datalist id="altaBrands"></datalist>');
     $('#altaBrands').innerHTML = altaBrands().slice(0, 800).map((b) => `<option value="${esc(b)}">`).join('');
-    altaVendors();
+    altaVendors(); if (C.lines.length) loadUnits();
     return; // lo de abajo ya lo hace solo el servidor cada hora
     if (!Insitu.token()) return; // poner fotos en InSitu necesita la sesión de InSitu
     if (cosPhotos === null) { cosPhotos = {}; try { cosPhotos = (await cosCall('photos')).photos || {}; } catch (e) { cosPhotos = {}; } }

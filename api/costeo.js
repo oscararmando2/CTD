@@ -103,6 +103,23 @@ async function itemTemplate() {
   return items.find((i) => i.Type === type && (type !== 'Inventory' || i.AssetAccountRef));
 }
 
+// Categoría de QuickBooks con ese nombre (la misma de InSitu); si no existe se crea
+let CAT_CACHE = null;
+async function qbCategoria(nombre) {
+  const n = norm(nombre || ''); if (!n) return null;
+  if (!CAT_CACHE || Date.now() - CAT_CACHE.at > 10 * 60000) {
+    const r = await qbQuery("select * from Item where Type = 'Category' maxresults 1000");
+    CAT_CACHE = { at: Date.now(), list: (r.Item || []).filter((c) => c.Active !== false) };
+  }
+  let c = CAT_CACHE.list.find((x) => norm(x.Name) === n || norm(x.FullyQualifiedName || '') === n);
+  if (!c) {
+    const d = await qb('POST', 'item', { Name: String(nombre).trim().slice(0, 100), Type: 'Category' });
+    c = d.Item; CAT_CACHE.list.push(c);
+    await log({ action: 'qb-categoria', name: c.Name, qbId: c.Id });
+  }
+  return c;
+}
+
 async function activeSpecial(qbId) {
   const all = (await db('GET', 'qbEspeciales')) || {};
   const hit = Object.entries(all).find(([, e]) => e.qbId === String(qbId) && e.status === 'activo');
@@ -194,12 +211,13 @@ module.exports = async (req, res) => {
               IncomeAccountRef: tpl.IncomeAccountRef, ExpenseAccountRef: tpl.ExpenseAccountRef,
             };
             if (/^\d+$/.test(String(c.vendorId || ''))) item.PrefVendorRef = { value: String(c.vendorId) };
+            if (c.cat) { try { const cat = await qbCategoria(c.cat); if (cat) Object.assign(item, { SubItem: true, ParentRef: { value: cat.Id } }); } catch (e) { /* sin categoría */ } }
             if (tpl.Type === 'Inventory') Object.assign(item, { AssetAccountRef: tpl.AssetAccountRef, TrackQtyOnHand: true, QtyOnHand: 0, InvStartDate: todayCT() });
             const d = await qb('POST', 'item', item);
             await log({ action: 'costeo-alta', name, qbId: d.Item.Id, price: item.UnitPrice, cost: item.PurchaseCost, factura: body.factura || '', by: who });
             // Lo que QuickBooks no guarda (categoría, marca, código de barras, foto) se pone en InSitu cuando el producto llegue (cron de cada hora)
-            const extra = { photo: /^https?:\/\//.test(String(c.photo || '')) ? String(c.photo).trim().slice(0, 1000) : '', barcode: str(c.barcode, 40), cat: str(c.cat, 80), brand: str(c.brand, 80) };
-            if (extra.photo || extra.barcode || extra.cat || extra.brand) await db('PUT', 'costeoFotos/' + d.Item.Id, { ...extra, name, sku: item.Sku || '', ts: Date.now(), by: who });
+            const extra = { photo: /^https?:\/\//.test(String(c.photo || '')) ? String(c.photo).trim().slice(0, 1000) : '', barcode: str(c.barcode, 40), cat: str(c.cat, 80), brand: str(c.brand, 80), units: str(c.units, 40) };
+            if (extra.photo || extra.barcode || extra.cat || extra.brand || extra.units) await db('PUT', 'costeoFotos/' + d.Item.Id, { ...extra, name, sku: item.Sku || '', ts: Date.now(), by: who });
             results.push({ create: name, ok: true, qbId: d.Item.Id, type: tpl.Type });
           } catch (err) {
             results.push({ create: c.name, ok: false, error: String(err.message || err) });
@@ -284,6 +302,25 @@ module.exports = async (req, res) => {
         const words = norm(s).split(' ').filter((w) => w.length > 1).slice(0, 3).join('%');
         if (words) { try { add(await qbQuery(`select * from Item where Name like '%${words.replace(/'/g, "\\'")}%' maxresults 15`)); } catch (e) { /* ok */ } }
         return res.json({ items: [...found.values()].slice(0, 12).map((it) => ({ qbId: String(it.Id), name: it.Name, sku: it.Sku || '', price: r2(it.UnitPrice || 0), cost: r2(it.PurchaseCost || 0), active: it.Active !== false })) });
+      }
+      case 'alta_completar': {
+        // Producto ya dado de alta: categoría en QuickBooks ahora; categoría, marca, unidad, código y foto en InSitu (cron de cada hora)
+        const id = String(body.qbId || '');
+        if (!/^\d+$/.test(id)) return res.status(400).json({ error: 'Falta el producto' });
+        const it = await qbItem(id);
+        let qbCat = '';
+        if (body.cat) {
+          const cat = await qbCategoria(str(body.cat, 80));
+          if (cat && !(it.ParentRef && it.ParentRef.value === cat.Id)) {
+            await qb('POST', 'item', { Id: it.Id, SyncToken: it.SyncToken, sparse: true, SubItem: true, ParentRef: { value: cat.Id } });
+            qbCat = cat.Name;
+          }
+        }
+        const extra = { photo: /^https?:\/\//.test(String(body.photo || '')) ? String(body.photo).trim().slice(0, 1000) : '', barcode: str(body.barcode, 40), cat: str(body.cat, 80), brand: str(body.brand, 80), units: str(body.units, 40) };
+        Object.keys(extra).forEach((k) => { if (!extra[k]) delete extra[k]; });
+        if (Object.keys(extra).length) await db('PUT', 'costeoFotos/' + id, { ...extra, name: it.Name, sku: it.Sku || '', ts: Date.now(), by: who });
+        await log({ action: 'costeo-completar', name: it.Name, qbId: id, ...extra, qbCat, by: who });
+        return res.json({ ok: true, qbCat, insitu: Object.keys(extra).length > 0 });
       }
       case 'qb_vendors': {
         const r = await qbQuery('select Id, DisplayName from Vendor where Active = true maxresults 1000');
