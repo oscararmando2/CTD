@@ -2346,6 +2346,11 @@
   const STOPW = new Set(['oz', 'ml', 'lt', 'lts', 'lb', 'lbs', 'gr', 'grs', 'kg', 'ct', 'cj', 'cs', 'pk', 'pz', 'pcs', 'unds', 'und', 'caja', 'case', 'de', 'la', 'el', 'los', 'las', 'con', 'y', 'en', 'cr', 'lf']);
   const tokens = (s) => new Set(normTxt(s).replace(/[^a-z0-9]+/g, ' ').split(' ').filter((w) => w.length > 1 && !/\d/.test(w) && !STOPW.has(w)));
   // Dice: 2·comunes / (total A + total B) — penaliza nombres con muchas palabras distintas
+  // Cada nombre trae una palabra que el otro no (MANZANA vs MANGO, FRESA vs PIÑA): son productos distintos
+  function otroProducto(a, b) {
+    const A = tokens(a), B = tokens(b);
+    return [...A].some((w) => !B.has(w)) && [...B].some((w) => !A.has(w)) && nameScore(a, b) < 0.95;
+  }
   function nameScore(a, b) { const A = tokens(a), B = tokens(b); if (A.size < 2 || B.size < 2) return 0; let n = 0; A.forEach((w) => { if (B.has(w)) n++; }); return (2 * n) / (A.size + B.size); }
   // Tamaño/presentación: números del nombre (24/7OZ → 24, 7). Si los dos traen números, los del más
   // corto deben estar en el otro; si no, son presentaciones distintas (ej. 12/12 OZ vs 24/7 OZ)
@@ -2371,7 +2376,7 @@
     const lineUpc = upcCore(l.upc).length >= 8;
     S.products.forEach((p) => {
       if (lineUpc && upcCore(p.upc).length >= 8) return; // los dos traen UPC y no coincide: es otro producto
-      if (!sameSize(l.producto, p.name)) return;
+      if (!sameSize(l.producto, p.name) || otroProducto(l.producto, p.name)) return;
       const s = nameScore(l.producto, p.name);
       if (s >= 0.7 && (!best || s > best.s)) best = { p, s };
     });
@@ -2423,6 +2428,17 @@
       if (m) Object.assign(l, { sku: String(m.p.id), nombre: m.p.name, photo: m.p.photo, pack: m.p.pack, costo_antes: r2(m.p.cost || 0), precio_antes: r2(m.p.price || 0), how: m.how, review: !!m.review, nuevo: false });
       else Object.assign(l, { nuevo: true, alta: { name: cleanTitle(it.producto), sku: it.upc || '', barcode: it.upc || '', photo: '', ...altaGuess(it.producto) } });
       return l;
+    });
+    // Un producto ligado a dos renglones: se queda con el que coincide por código/UPC o el nombre más parecido; el otro queda para revisar
+    const porSku = {};
+    C.lines.filter((l) => !l.nuevo).forEach((l) => { (porSku[l.sku] = porSku[l.sku] || []).push(l); });
+    Object.values(porSku).filter((g) => g.length > 1).forEach((g) => {
+      const fuerte = (l) => !['nombre', 'parecido'].includes(l.how);
+      const best = g.slice().sort((a, b) => fuerte(b) - fuerte(a) || nameScore(b.producto, b.nombre) - nameScore(a.producto, a.nombre))[0];
+      g.filter((l) => l !== best && !fuerte(l)).forEach((l) => {
+        const sk = l.sku, nm = l.nombre;
+        Object.assign(l, { nuevo: true, sku: '', nombre: '', how: '', review: false, costo_antes: null, precio_antes: null, duda: `se parecía a ${nm} (SKU ${sk}), pero ese ya está en otro renglón: búscalo y lígalo`, alta: { name: cleanTitle(l.producto), sku: l.upc || '', barcode: l.upc || '', photo: '', ...altaGuess(l.producto) } });
+      });
     });
     C.saved = false; C.applied = false; C.results = []; C.dup = null; C.busy = false; C.savedId = null;
     // UPC de la factura contra el SKU de QuickBooks (en InSitu muchos traen código interno, no UPC)
@@ -2482,7 +2498,21 @@
   const cleanTitle = (s) => String(s || '').replace(/\s+/g, ' ').trim().toUpperCase().slice(0, 100);
 
   // ---- Pantalla ----
+  const K_DRAFT = 'ctdIA.cosDraft';
+  function cosDraftSave() {
+    if (!C.lines.length) return;
+    store.set(K_DRAFT, { at: Date.now(), who: S.who, c: { head: C.head, lines: C.lines, saved: C.saved, applied: C.applied, results: C.results, recibo: C.recibo, savedId: C.savedId, bodega: C.bodega, pzMem: C.pzMem } });
+  }
+  function cosDraftRestore() {
+    if (C.lines.length || C.draftChecked) return;
+    C.draftChecked = true;
+    const d = store.get(K_DRAFT, null);
+    if (!d || d.who !== S.who || !d.c || !Array.isArray(d.c.lines) || !d.c.lines.length || Date.now() - d.at > 3 * 864e5) return;
+    Object.assign(C, d.c, { busy: false, dup: null });
+    toast(`Recuperé la factura que tenías abierta (${(C.head && C.head.proveedor) || ''} #${(C.head && C.head.factura) || ''})`);
+  }
   function renderCosteo(busyMsg) {
+    cosDraftRestore();
     $('#cosTarget').value = CS.target; $('#cosRound').checked = CS.round;
     if (busyMsg) { $('#cosInfo').innerHTML = `<span class="age old">⟳ ${esc(busyMsg)}</span>`; return; }
     $('#cosInfo').textContent = C.lines.length ? '' : 'Sube la factura del proveedor: se lee sola, se compara con tu costo y precio, y aplicas los cambios en QuickBooks.';
@@ -2493,6 +2523,7 @@
     $('#cosSave').disabled = !has || C.saved;
     loadCosPend();
     if (!has) { $('#cosList').innerHTML = ''; loadCosRecent(); return; }
+    cosDraftSave();
     const h = C.head;
     const cuadra = h.cuadra === true ? '<span class="pill ok">Cuadra</span>' : h.cuadra === false ? `<span class="pill bad">No cuadra: factura ${money(h.total_factura)} vs calculado ${money(h.total_calculado)}</span>` : '';
     $('#cosHead').innerHTML = `
@@ -2569,6 +2600,7 @@
         </div>
         ${C.applied ? '' : `<button type="button" class="btn-link sm cos-pz" data-pz>${l.pz > 1 ? 'Se vende por caja, no por pieza' : `¿Lo vendes por pieza?${l.pzCaja > 1 ? ` (${l.pzCaja} por caja)` : ''}`}</button>`}
         ${nuevo}
+        ${!l.nuevo && !C.applied ? '<button class="btn-link sm" type="button" data-link>¿Es otro producto? cambiar</button>' : ''}
       </div>
       <label class="cos-apply"><input type="checkbox" data-f="aplicar"${l.aplicar ? ' checked' : ''}${C.applied ? ' disabled' : ''}><span>${l.nuevo ? 'Dar de alta' : 'Aplicar'}</span></label>
     </article>`;
@@ -2597,6 +2629,7 @@
     el.classList.toggle('is-off', !l.aplicar);
     C.saved = false; $('#cosSave').disabled = false;
     $('#cosApply').disabled = C.applied || !C.lines.some((x) => x.aplicar);
+    clearTimeout(C.draftT); C.draftT = setTimeout(cosDraftSave, 800);
   });
   // Cambiar entre "por pieza" y "por caja" (se recuerda por producto)
   $('#cosList').addEventListener('click', (e) => {
@@ -2635,7 +2668,7 @@
     const lista = res.slice(0, 10);
     const pickN = prompt(lista.map((p, i) => `${i + 1}. ${p.name} (código ${p.id}${p.qbSku ? ', SKU ' + p.qbSku : ''}, ${money(p.price || 0)})${p.soloQb ? ' — en QuickBooks, aún no llega a InSitu' : ''}`).join('\n') + '\n\nEscribe el número:', '1');
     const p = lista[Number(pickN) - 1]; if (!p) return;
-    Object.assign(l, { nuevo: false, sku: String(p.id), nombre: p.name, photo: p.photo, pack: p.pack, costo_antes: r2(p.cost || 0), precio_antes: r2(p.price || 0), how: 'elegido a mano', review: false });
+    Object.assign(l, { nuevo: false, sku: String(p.id), nombre: p.name, photo: p.photo, pack: p.pack, costo_antes: r2(p.cost || 0), precio_antes: r2(p.price || 0), how: 'elegido a mano', review: false, qb: null, qbId: '', qbMissing: false, duda: '', result: null });
     delete l.alta;
     cosCall('lookup', { items: [{ sku: l.sku, upc: p.upc, name: p.name }] }).then((r) => { const qd = r.items[l.sku]; if (qd) { l.qb = qd; l.precio_antes = qd.price; if (qd.cost) l.costo_antes = qd.cost; } else l.qbMissing = true; detectPieza(l); decide(l); renderCosteo(); }).catch(() => { detectPieza(l); decide(l); renderCosteo(); });
   });
@@ -2712,7 +2745,7 @@
       try {
         const d = await cosCall('borrar', { id: row.dataset.cid });
         toast(`Factura borrada${d.recibos ? ' · también su recibo' : ''}${d.aplicados ? ` · ojo: ${d.aplicados} cambios ya estaban en QuickBooks` : ''}`);
-        if (C.head && C.lines.length && C.saved) { C.head = null; C.lines = []; }
+        if (C.head && C.lines.length && C.saved) { C.head = null; C.lines = []; store.del(K_DRAFT); }
         cosPendAt = 0; loadCosRecent(); renderCosteo();
       } catch (err) { toast('No se pudo borrar: ' + err.message); }
       return;
@@ -2919,7 +2952,7 @@
     if (l.upc) { const p = list.find((x) => sameUpc(x.upc, l.upc)); if (p) return { p, how: 'UPC' }; }
     let best = null;
     list.forEach((p) => {
-      if (!sameSize(l.producto, p.name)) return;
+      if (!sameSize(l.producto, p.name) || otroProducto(l.producto, p.name)) return;
       const s = nameScore(l.producto, p.name);
       if (s >= 0.7 && (!best || s > best.s)) best = { p, s };
     });
