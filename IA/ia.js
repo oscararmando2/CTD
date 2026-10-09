@@ -2339,6 +2339,12 @@
     }
   });
   $('#cosNew').addEventListener('click', () => $('#cosFile').click());
+  $('#cosHead').addEventListener('click', (e) => {
+    if (!e.target.closest('#cosClose')) return;
+    if (!C.saved && !confirm('Esta factura tiene cambios sin guardar. ¿Cerrarla de todos modos?\n\n(Cancelar y dale Guardar si los quieres conservar)')) return;
+    Object.assign(C, { head: null, lines: [], saved: false, applied: false, results: [], dup: null, recibo: null, bodega: null, savedId: null });
+    store.del(K_DRAFT); renderCosteo(); window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
 
   // ---- Emparejar renglones con tus productos ----
   const upcCore = (u) => String(u || '').replace(/\D/g, '').replace(/^0+/, '');
@@ -2526,6 +2532,7 @@
     C.draftChecked = true;
     const d = store.get(K_DRAFT, null);
     if (!d || d.who !== S.who || !d.c || !Array.isArray(d.c.lines) || !d.c.lines.length || Date.now() - d.at > 3 * 864e5) return;
+    if (d.c.saved) { store.del(K_DRAFT); return; } // ya está guardada: se abre desde la lista si se quiere
     Object.assign(C, d.c, { busy: false, dup: null });
     if (C.lines.some((l) => l.nuevo)) ligarNuevosEnQb().then(() => renderCosteo());
     toast(`Recuperé la factura que tenías abierta (${(C.head && C.head.proveedor) || ''} #${(C.head && C.head.factura) || ''})`);
@@ -2543,11 +2550,13 @@
     loadCosPend();
     if (!has) { $('#cosList').innerHTML = ''; loadCosRecent(); return; }
     cosDraftSave();
+    if (!C.recentShown) { C.recentShown = true; loadCosRecent(); } // las facturas guardadas siempre se ven abajo
     const h = C.head;
     const cuadra = h.cuadra === true ? '<span class="pill ok">Cuadra</span>' : h.cuadra === false ? `<span class="pill bad">No cuadra: factura ${money(h.total_factura)} vs calculado ${money(h.total_calculado)}</span>` : '';
     $('#cosHead').innerHTML = `
       <div class="cos-h1"><div><p class="hud">Factura</p><h2>${esc(h.proveedor || 'Proveedor')}</h2>
-        <p class="status">#${esc(h.factura || '—')} · ${esc(h.fecha || 'sin fecha')} · ${C.lines.length} renglones · total ${h.total_factura != null ? money(h.total_factura) : '—'}${h.flete ? ` · flete ${money(h.flete)}` : ''}${h.creditos ? ` · créditos ${money(h.creditos)}` : ''}</p></div>${cuadra}</div>
+        <p class="status">#${esc(h.factura || '—')} · ${esc(h.fecha || 'sin fecha')} · ${C.lines.length} renglones · total ${h.total_factura != null ? money(h.total_factura) : '—'}${h.flete ? ` · flete ${money(h.flete)}` : ''}${h.creditos ? ` · créditos ${money(h.creditos)}` : ''}</p>
+        <button id="cosClose" class="btn btn-ghost btn-sm" type="button">✕ Cerrar factura</button></div>${cuadra}</div>
       ${C.dup ? `<p class="qb-warn">⚠ Esta factura ya se guardó el ${fmtTs(C.dup.ts)} por ${esc(C.dup.by || '')}. Revisa antes de aplicar otra vez.</p>` : ''}
       ${C.bodega && !C.recibo ? `<div class="cos-bod"><p class="status">Revisada en bodega por <b>${esc(C.bodega.by || '')}</b> · ${fmtTs(C.bodega.at)}${C.bodega.nota ? ' · Nota: <b>' + esc(C.bodega.nota) + '</b>' : ''}</p>${(C.bodega.dif || []).length ? `<ul class="rec-falt">${C.bodega.dif.map((x) => `<li><b>${esc(EST[x.estado] || x.estado)}</b> · ${esc(x.producto)}${x.estado === 'parcial' ? ` — llegaron ${nfmt(x.recibido || 0)} de ${nfmt(x.cantidad)}` : ''}${x.nota ? ` · <i>${esc(x.nota)}</i>` : ''}</li>`).join('')}</ul>` : '<p class="status">Todo llegó completo.</p>'}</div>` : ''}
       ${C.recibo ? `<p class="status">Revisada en bodega${C.reciboBy ? ' por ' + esc(C.reciboBy) : ''}.${C.reciboNota ? ' Nota: <b>' + esc(C.reciboNota) + '</b>' : ''}</p>` : ''}
