@@ -2573,7 +2573,7 @@
   }
 
   // Foto: la del producto; si es nuevo, la del link que se escribió para darlo de alta
-  const cosPhoto = (l) => (l.nuevo ? (l.alta && /^https?:\/\//.test(l.alta.photo || '') ? l.alta.photo.trim() : '') : l.photo);
+  const cosPhoto = (l) => (l.nuevo ? (l.alta && /^https?:\/\//.test(l.alta.photo || '') ? l.alta.photo.trim() : '') : l.photo || prodSrv(l).photo || '');
   const cosImg = (src) => (src ? `<img src="${esc(src)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '');
   function lineCosHTML(l) {
     const img = cosImg(cosPhoto(l));
@@ -2685,6 +2685,7 @@
     b.disabled = true;
     try {
       const d = await cosCall('alta_completar', { qbId: qbIdOf(l) || l.sku, ...l.comp });
+      if (/^https?:\/\//.test(l.comp.photo || '')) l.photo = l.comp.photo; // se ve ya; en InSitu queda en la siguiente sincronización
       toast(`Listo${d.qbCat ? ` · categoría "${d.qbCat}" en QuickBooks` : ''}${d.insitu ? ' · en InSitu se pone en la siguiente sincronización (máx. 1 hora)' : ''}`);
       l.comp = null; renderCosteo();
     } catch (err) { toast('No se pudo: ' + err.message); b.disabled = false; }
