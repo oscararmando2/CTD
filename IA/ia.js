@@ -235,6 +235,8 @@
     if (unHist) { unHist(); unHist = null; }
     if (unOrd) { unOrd(); unOrd = null; }
     if (auth) await auth.signOut();
+    // Página limpia para el siguiente usuario (no quedan datos en memoria del anterior, ej. el catálogo sin ventas de Rocío)
+    setTimeout(() => location.reload(), 50);
   });
 
   function showGate() {
@@ -272,6 +274,8 @@
     }
     listenHist();
     listenOrders();
+    // Si quedó en memoria el catálogo de un usuario de una sola sección (sin ventas ni proveedores), se carga el completo
+    if (S.products.some((p) => p.fromCat)) { S.products = []; S.sales = null; S.meta = null; }
     if (S.products.length) return;
     const data = store.get(K_DATA, null);
     if (data && Array.isArray(data.items) && data.items.length) {
