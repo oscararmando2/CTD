@@ -36,9 +36,10 @@ async function completarAltas(tok, prods) {
   const pend = (await db('GET', 'costeoFotos')) || {};
   const auth = { Authorization: (tok.scheme ?? 'Bearer ') + tok.token };
   let n = 0;
+  const diag = { pendientes: Object.keys(pend).length, sinLlegar: 0, errores: [] };
   for (const [qbId, a] of Object.entries(pend)) {
     const p = prods.find((x) => String(x.code ?? '').trim() === String(qbId));
-    if (!p) { if (Date.now() - (a.ts || 0) > 14 * 864e5) await db('DELETE', 'costeoFotos/' + qbId); continue; } // aún no llega de QuickBooks
+    if (!p) { diag.sinLlegar++; if (Date.now() - (a.ts || 0) > 14 * 864e5) await db('DELETE', 'costeoFotos/' + qbId); continue; } // aún no llega de QuickBooks
     // Se manda el producto completo como está en InSitu, cambiando solo lo que se capturó (no se toca precio ni costo)
     const body = {};
     PROD_KEYS.forEach((k) => { if (p[k] !== undefined && p[k] !== null) body[k] = p[k]; });
@@ -46,8 +47,14 @@ async function completarAltas(tok, prods) {
     if (a.brand) body.brand_name = a.brand;
     if (a.barcode) body.barcode = a.barcode;
     if (a.photo) body.photourl = a.photo;
+    if (a.units) body.units = a.units;
     const r = await fetch(`${INSITU}/products`, { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    if (!r.ok) { await db('PUT', `costeoFotos/${qbId}/error`, `InSitu ${r.status}`); continue; }
+    if (!r.ok) {
+      const txt = (await r.text().catch(() => '')).slice(0, 160);
+      await db('PUT', `costeoFotos/${qbId}/error`, `InSitu ${r.status} ${txt}`);
+      diag.errores.push(`${qbId}: InSitu ${r.status} ${txt}`);
+      continue;
+    }
     // La foto también como imagen del producto (InSitu no siempre muestra solo el link)
     if (a.photo) {
       try {
@@ -61,10 +68,11 @@ async function completarAltas(tok, prods) {
       } catch (e) { /* queda el link */ }
     }
     await db('DELETE', 'costeoFotos/' + qbId);
-    await db('PUT', 'qbLog/' + Date.now().toString(36) + qbId, { ts: Date.now(), action: 'insitu-alta', name: p.name, qbId, cat: a.cat || '', brand: a.brand || '', barcode: a.barcode || '', photo: !!a.photo, by: a.by || 'auto' });
+    await db('PUT', 'qbLog/' + Date.now().toString(36) + qbId, { ts: Date.now(), action: 'insitu-alta', name: p.name, qbId, cat: a.cat || '', brand: a.brand || '', barcode: a.barcode || '', units: a.units || '', photo: !!a.photo, by: a.by || 'auto' });
     n++;
   }
-  return n;
+  diag.hechas = n;
+  return diag;
 }
 
 module.exports = async (req, res) => {
@@ -83,7 +91,7 @@ module.exports = async (req, res) => {
       upc: String(p.barcode || '').trim(), ean: String(p.ean || '').trim(),
       photo: /^https:\/\//.test(p.photourl || '') ? String(p.photourl).trim() : '',
       price: Number(p.default_price) || 0, cat: String(p.line_name || p.group_name || 'Otros').trim(),
-      pack: packLabel(p.units), brand: String(p.brand_name || '').trim(), stock: r2(stockBy[p.id] || 0),
+      pack: packLabel(p.units), units: String(p.units || '').trim(), brand: String(p.brand_name || '').trim(), stock: r2(stockBy[p.id] || 0),
     }));
     if (!items.length || !stocks.length) throw new Error('InSitu regresó sin productos o sin inventario');
     await db('PUT', 'catalogo', { at: Date.now(), by: 'auto', items });
@@ -108,7 +116,7 @@ module.exports = async (req, res) => {
     if (ajustes) await db('PATCH', '', up);
     // Productos dados de alta en Costeo: cuando ya llegaron de QuickBooks a InSitu se les pone categoría, marca, código de barras y foto
     let altas = 0;
-    try { altas = await completarAltas(tok, prods); } catch (e) { /* no detiene la sincronización */ }
+    try { altas = await completarAltas(tok, prods); } catch (e) { altas = { error: String(e.message || e).slice(0, 200) }; } // no detiene la sincronización
     await db('PUT', 'insitu/lastRun', { at: Date.now(), productos: items.length, ajustes, altas });
     return res.json({ ok: true, productos: items.length, conExistencia: items.filter((p) => p.stock > 0).length, ajustes, altas });
   } catch (e) {
