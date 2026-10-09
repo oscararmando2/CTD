@@ -2664,9 +2664,17 @@
         res.unshift(p || { id: x.qbId, name: x.name, price: x.price, cost: x.cost, photo: '', pack: '', qbSku: x.sku, soloQb: true });
       });
     } catch (e) { /* solo lo de InSitu */ }
-    if (!res.length) { toast('Sin resultados en InSitu ni en QuickBooks'); return; }
+    // "0" = no existe: se da de alta como producto nuevo (ej. se ligó a otro sabor por error)
+    const comoNuevo = () => {
+      Object.assign(l, { nuevo: true, sku: '', nombre: '', how: '', review: false, qb: null, qbId: '', qbMissing: false, duda: '', result: null, pz: 0, costo_antes: null, precio_antes: null, precio_nuevo: null, offManual: false,
+        alta: { name: cleanTitle(l.producto), sku: l.upc || '', barcode: l.upc || '', photo: '', ...altaGuess(l.producto) } });
+      altaVendorDefault(); decide(l); C.applied = false; C.saved = false; renderCosteo();
+      toast('Queda como producto nuevo: llena categoría, marca y proveedor y dale Aplicar');
+    };
+    if (!res.length) { if (confirm('No lo encontré en InSitu ni en QuickBooks.\n\n¿Darlo de alta como producto nuevo?')) comoNuevo(); return; }
     const lista = res.slice(0, 10);
-    const pickN = prompt(lista.map((p, i) => `${i + 1}. ${p.name} (código ${p.id}${p.qbSku ? ', SKU ' + p.qbSku : ''}, ${money(p.price || 0)})${p.soloQb ? ' — en QuickBooks, aún no llega a InSitu' : ''}`).join('\n') + '\n\nEscribe el número:', '1');
+    const pickN = prompt(lista.map((p, i) => `${i + 1}. ${p.name} (código ${p.id}${p.qbSku ? ', SKU ' + p.qbSku : ''}, ${money(p.price || 0)})${p.soloQb ? ' — en QuickBooks, aún no llega a InSitu' : ''}`).join('\n') + '\n0. No existe: darlo de alta como producto NUEVO\n\nEscribe el número:', '1');
+    if (pickN != null && String(pickN).trim() === '0') { comoNuevo(); return; }
     const p = lista[Number(pickN) - 1]; if (!p) return;
     Object.assign(l, { nuevo: false, sku: String(p.id), nombre: p.name, photo: p.photo, pack: p.pack, costo_antes: r2(p.cost || 0), precio_antes: r2(p.price || 0), how: 'elegido a mano', review: false, qb: null, qbId: '', qbMissing: false, duda: '', result: null });
     delete l.alta;
@@ -2837,13 +2845,17 @@
     ALTA.busy = true;
     try { ALTA.vendors = (await cosCall('qb_vendors')).vendors || []; } catch (e) { ALTA.vendors = []; toast('No pude bajar los proveedores de QuickBooks: ' + e.message); }
     ALTA.busy = false;
-    // Proveedor de la factura: el último que se eligió para ese proveedor, o el que se llame igual
+    altaVendorDefault();
+    renderCosteo();
+  }
+  // Proveedor de la factura: el último que se eligió para ese proveedor, o el que se llame igual
+  function altaVendorDefault() {
+    if (!ALTA.vendors || !C.head) return;
     const prov = normTxt(C.head.proveedor || ''), w = prov.split(/\s+/)[0] || '';
     const last = store.get('ctdIA.altaVendor', {})[prov];
     const v = (last && ALTA.vendors.find((x) => x.id === last))
       || ALTA.vendors.find((x) => normTxt(x.name) === prov) || (w.length > 2 && ALTA.vendors.find((x) => normTxt(x.name).split(/\s+/)[0] === w));
     if (v) C.lines.forEach((l) => { if (l.nuevo && l.alta && !l.alta.vendorId) l.alta.vendorId = v.id; });
-    renderCosteo();
   }
   // ---- Productos dados de alta: el servidor les pone categoría, marca, código y foto en InSitu cuando llegan de QuickBooks ----
   let cosPhotos = null;
