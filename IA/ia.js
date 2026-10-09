@@ -2600,7 +2600,7 @@
         </div>
         ${C.applied ? '' : `<button type="button" class="btn-link sm cos-pz" data-pz>${l.pz > 1 ? 'Se vende por caja, no por pieza' : `¿Lo vendes por pieza?${l.pzCaja > 1 ? ` (${l.pzCaja} por caja)` : ''}`}</button>`}
         ${nuevo}
-        ${!l.nuevo && !C.applied ? '<button class="btn-link sm" type="button" data-link>¿Es otro producto? cambiar</button>' : ''}
+        ${!l.nuevo && !(l.result && l.result.ok) ? '<button class="btn-link sm" type="button" data-link>¿Es otro producto? cambiar</button>' : ''}
       </div>
       <label class="cos-apply"><input type="checkbox" data-f="aplicar"${l.aplicar ? ' checked' : ''}${C.applied ? ' disabled' : ''}><span>${l.nuevo ? 'Dar de alta' : 'Aplicar'}</span></label>
     </article>`;
@@ -2670,7 +2670,7 @@
     const p = lista[Number(pickN) - 1]; if (!p) return;
     Object.assign(l, { nuevo: false, sku: String(p.id), nombre: p.name, photo: p.photo, pack: p.pack, costo_antes: r2(p.cost || 0), precio_antes: r2(p.price || 0), how: 'elegido a mano', review: false, qb: null, qbId: '', qbMissing: false, duda: '', result: null });
     delete l.alta;
-    cosCall('lookup', { items: [{ sku: l.sku, upc: p.upc, name: p.name }] }).then((r) => { const qd = r.items[l.sku]; if (qd) { l.qb = qd; l.precio_antes = qd.price; if (qd.cost) l.costo_antes = qd.cost; } else l.qbMissing = true; detectPieza(l); decide(l); renderCosteo(); }).catch(() => { detectPieza(l); decide(l); renderCosteo(); });
+    cosCall('lookup', { items: [{ sku: l.sku, upc: p.upc, name: p.name }] }).then((r) => { const qd = r.items[l.sku]; if (qd) { l.qb = qd; l.precio_antes = qd.price; if (qd.cost) l.costo_antes = qd.cost; } else l.qbMissing = true; detectPieza(l); decide(l); if (l.aplicar) C.applied = false; C.saved = false; renderCosteo(); }).catch(() => { detectPieza(l); decide(l); if (l.aplicar) C.applied = false; renderCosteo(); });
   });
 
   ['#cosTarget', '#cosRound'].forEach((id) => $(id).addEventListener('change', () => {
