@@ -3401,7 +3401,9 @@
       b.disabled = true;
       try {
         const st = await saveRecibo(true);
-        toast(st && st.costeoId ? 'Recibo listo ✓ · ya estaba costeada: le avisamos a Costeo las diferencias' : 'Recibo listo ✓ · ya lo ve Costeo');
+        const iv = st && st.inv;
+        const invTxt = iv ? (iv.errores && iv.errores.length ? ` · inventario: ${Object.keys(iv.aplicado || {}).length} productos, ${iv.errores.length} con problema (ver en la lista)` : ` · inventario actualizado en InSitu (${Object.keys(iv.aplicado || {}).length} productos)`) : '';
+        toast((st && st.costeoId ? 'Recibo listo ✓ · ya estaba costeada: le avisamos a Costeo las diferencias' : 'Recibo listo ✓ · ya lo ve Costeo') + invTxt);
         R.rec = null; store.del(K_REC); await loadLotes(true);
       } catch (err) { toast('No se pudo guardar: ' + err.message); b.disabled = false; return; }
       renderRecibo(); window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -3435,10 +3437,22 @@
       <div class="hist-item" data-rid="${esc(f.id)}"><div class="hi-txt"><b>${esc(f.proveedor)} · #${esc(f.factura)}</b>
         ${f.lines} productos${f.parcial ? ` · ${f.parcial} llegaron menos` : ''}${f.no ? ` · ${f.no} no llegaron` : ''}${f.pendiente ? ` · ${f.pendiente} pendientes` : ''} · ${f.fechas} con fecha · ${f.origen === 'costeo' ? 'subió ' + esc(f.by || '') + ' en Costeo' : esc(f.by || '')} · ${fmtTs(f.updated || f.ts)}</div>
         <span class="st${f.status === 'costeado' ? ' sent' : ''}">${ST[f.status] || f.status}</span>
+        ${f.inv ? (f.inv.errores.length ? `<span class="pill warn" title="${esc(f.inv.errores.join('\n'))}">inventario: ${f.inv.errores.length} con problema</span><button class="btn btn-ghost btn-sm" data-c="inv" type="button">Reintentar inventario</button>` : `<span class="pill ok">inventario ✓ ${f.inv.hechos}</span>`) : ''}
         ${f.status !== 'costeado' ? `<button class="btn ${f.status === 'borrador' ? 'btn-oro' : 'btn-ghost'} btn-sm" data-c="open" type="button">${f.status === 'borrador' ? 'Revisar' : 'Abrir'}</button>` : ''}</div>`).join('')
       : '<p class="data-info">Todavía no hay recibos.</p>';
   }
   $('#recRecent').addEventListener('click', async (e) => {
+    const bi = e.target.closest('[data-c="inv"]');
+    if (bi) {
+      const row = bi.closest('.hist-item'), f = (R.list || []).find((x) => x.id === row.dataset.rid);
+      if (f && f.inv && f.inv.errores.length) alert('Lo que no entró al inventario:\n\n' + f.inv.errores.join('\n'));
+      bi.disabled = true;
+      try {
+        const { inv } = await cosCall('recibo_inventario', { id: row.dataset.rid });
+        toast(inv && inv.errores && inv.errores.length ? `Todavía ${inv.errores.length} con problema` : 'Inventario actualizado en InSitu ✓');
+      } catch (err) { toast(err.message); }
+      R.list = null; renderRecList(); return;
+    }
     const b = e.target.closest('[data-c="open"]'); if (!b) return;
     try {
       const { recibo } = await cosCall('recibo_get', { id: b.closest('.hist-item').dataset.rid });

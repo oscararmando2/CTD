@@ -257,8 +257,18 @@ async function insituGet(path, params = {}, all = false) {
   return out;
 }
 
+async function insituPost(path, payload) {
+  const tok = await db('GET', 'insitu/token');
+  if (!tok || !tok.token) throw Object.assign(new Error('Falta la sesión de InSitu: que Oscar, Luis o Diego abran la IA'), { code: 'no_insitu' });
+  const r = await fetch(`https://app.b2bmobilesales.com/api/v1${path}`, { method: 'POST', headers: { Authorization: (tok.scheme ?? 'Bearer ') + tok.token, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  const txt = await r.text();
+  if (r.status === 401 || r.status === 403) throw Object.assign(new Error('InSitu rechazó la sesión guardada; abran la IA otra vez'), { code: 'no_insitu' });
+  if (!r.ok) throw new Error(`InSitu ${r.status}: ${txt.slice(0, 160)}`);
+  try { return JSON.parse(txt); } catch (e) { return {}; }
+}
+
 module.exports = {
-  loteQueda, insituGet,
+  loteQueda, insituGet, insituPost,
   cors, verifyUser, bearer, db, qbTokenRequest, tokenRecord, qbAuth, qb, qbQuery, qbItem, qbSetPrice, tick, log,
   todayCT, r2, same, QB_ENV, IA_URL, REDIRECT_URI, env, matchOne, similar, norm, RECIBO_ONLY, COSTEO_ONLY,
 };
