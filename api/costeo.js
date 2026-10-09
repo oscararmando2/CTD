@@ -10,7 +10,7 @@
 //   recibo_costeado → la factura ya pasó por Costeo;  lotes → caducidades por producto (lote = fecha)
 // QuickBooks es el dueño de productos y precios: InSitu recibe los cambios en su sincronización (cada hora).
 const crypto = require('crypto');
-const { insituGet, RECIBO_ONLY, COSTEO_ONLY, cors, verifyUser, bearer, db, qb, qbQuery, qbItem, log, todayCT, r2, same, env, matchOne, norm } = require('./_lib');
+const { insituGet, insituPost, RECIBO_ONLY, COSTEO_ONLY, cors, verifyUser, bearer, db, qb, qbQuery, qbItem, log, todayCT, r2, same, env, matchOne, norm } = require('./_lib');
 
 const MODEL = 'claude-opus-5';
 const MAX_IMAGES = 12;
@@ -397,15 +397,31 @@ module.exports = async (req, res) => {
           status: final ? (costeoId ? 'costeado' : 'revisado') : 'borrador',
           by: (prev && prev.by) || who, ts: (prev && prev.ts) || now, updated: now, updatedBy: who,
           doneAt: final ? ((prev && prev.doneAt) || now) : null,
+          inv: (prev && prev.inv) || null,
         };
         await db('PUT', 'recibos/' + id, rec);
         if (final) await syncLotes(id, prev, rec);
+        // Inventario: lo que llegó entra a InSitu (ajuste), en piezas o cajas según se venda el producto
+        let inv = rec.inv;
+        if (final) {
+          try { inv = await recInventario(rec); } catch (e) { inv = { ...(rec.inv || {}), errores: [String(e.message || e)], at: Date.now() }; }
+          if (inv) await db('PATCH', 'recibos/' + id, { inv });
+        }
         if (final && costeoId) {
           // Aviso para Costeo: lo que bodega encontró distinto a la factura
           const dif = rec.lines.filter((l) => l.estado !== 'ok' || l.nota).map((l) => ({ producto: l.nombre || l.producto, estado: l.estado || 'sin revisar', recibido: l.recibido, cantidad: l.cantidad, nota: l.nota }));
           await db('PATCH', 'costeoFacturas/' + costeoId, { bodega: { reciboId: id, by: rec.updatedBy, at: now, nota: rec.nota, dif } });
         }
-        return res.json({ id, status: rec.status, costeoId });
+        return res.json({ id, status: rec.status, costeoId, inv });
+      }
+      case 'recibo_inventario': {
+        // Reintentar meter el inventario de un recibo ya terminado (ej. faltaba la sesión de InSitu)
+        const rid = codeKey(body.id);
+        const rec = await db('GET', 'recibos/' + rid);
+        if (!rec || !['revisado', 'costeado'].includes(rec.status)) return res.status(400).json({ error: 'Ese recibo no está terminado' });
+        const inv = await recInventario(rec);
+        if (inv) await db('PATCH', 'recibos/' + rid, { inv });
+        return res.json({ inv });
       }
       case 'recibo_list': {
         const all = (await db('GET', 'recibos')) || {};
@@ -414,7 +430,8 @@ module.exports = async (req, res) => {
           const c = (e) => L.filter((l) => l.estado === e).length;
           return { id: f.id, proveedor: f.proveedor, factura: f.factura, fecha: f.fecha, status: f.status, by: f.by, ts: f.ts, updated: f.updated, doneAt: f.doneAt || null,
             lines: L.length, ok: c('ok'), parcial: c('parcial'), no: c('no'), pendiente: c('pendiente'), sinRevisar: c(''),
-            fechas: L.filter((l) => l.caducidad).length, costeoId: f.costeoId || null, origen: f.origen || 'bodega', updatedBy: f.updatedBy || '' };
+            fechas: L.filter((l) => l.caducidad).length, costeoId: f.costeoId || null, origen: f.origen || 'bodega', updatedBy: f.updatedBy || '',
+            inv: f.inv ? { hechos: Object.keys(f.inv.aplicado || {}).length, errores: (f.inv.errores || []).slice(0, 8) } : null };
         }).sort((a, b) => (b.updated || b.ts) - (a.updated || a.ts)).slice(0, 60);
         return res.json({ list });
       }
@@ -662,7 +679,7 @@ async function avisosTienda() {
   });
   return out.sort((a, b) => a.dias - b.dias || a.tienda.localeCompare(b.tienda)).slice(0, 300);
 }
-const RECIBO_ACTIONS = ['parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'lote_add', 'lote_del', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
+const RECIBO_ACTIONS = ['recibo_inventario', 'parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'lote_add', 'lote_del', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
 const ESTADOS = ['', 'ok', 'parcial', 'no', 'pendiente'];
 const ymdOk = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '');
 
@@ -675,6 +692,71 @@ async function findRecibo(key) {
 // Lotes = producto + fecha de caducidad. Cada recibo deja su entrada (lotes/{sku}/f/{fecha}/e/{recibo_renglón}):
 // la misma fecha suma, otra fecha es otro lote. Al volver a guardar un recibo se reemplazan sus entradas.
 // No toca el inventario de InSitu ni de QuickBooks.
+// ---- Inventario desde Recibo ----
+// Solo recibos terminados desde que existe esto (los de antes ya se metieron a mano).
+// Se guarda lo aplicado por producto: si Jona corrige después, solo se ajusta la diferencia (nunca se duplica).
+const INV_DESDE = Date.parse('2026-10-09T20:00:00Z');
+function piezasDe(l) {
+  if (Number(l.unidades_por_caja) > 1) return Number(l.unidades_por_caja);
+  const s = `${l.producto || ''} ${l.empaque || ''} ${l.nombre || ''}`;
+  const m = s.match(/\bcj\.?\s*(\d{1,3})\b/i) || s.match(/\bcaja\s*(?:de\s*)?(\d{1,3})\b/i) || s.match(/\b(\d{1,3})\s*(?:unds?|pzas?|piezas|pcs|ct)\b/i) || s.match(/(?:^|\s)(\d{1,3})\s*\/\s*\d/);
+  return m ? Number(m[1]) : 0;
+}
+async function recInventario(rec) {
+  if (!rec.doneAt || rec.doneAt < INV_DESDE) return rec.inv || null;
+  const inv = { ...(rec.inv || {}), aplicado: { ...((rec.inv && rec.inv.aplicado) || {}) }, detalle: { ...((rec.inv && rec.inv.detalle) || {}) }, errores: [], at: Date.now() };
+  const [pzMem, cat] = await Promise.all([db('GET', 'costeoPz'), db('GET', 'catalogo')]);
+  const units = {};
+  ((cat && cat.items) || []).forEach((p) => { units[String(p.id)] = String(p.units || ''); });
+  const target = {}, cajasBy = {};
+  rec.lines.forEach((l) => {
+    if (!l.sku) return;
+    const cajas = l.estado === 'ok' ? l.cantidad : l.estado === 'parcial' ? l.recibido : 0; // solo lo que llegó
+    if (!(cajas > 0)) return;
+    const mem = (pzMem || {})[codeKey(l.sku)];
+    const porPieza = mem > 1 || (mem == null && /each|count|pieza|unit/i.test(units[l.sku] || ''));
+    const n = mem > 1 ? mem : piezasDe(l);
+    if (porPieza && !(n > 1)) { inv.errores.push(`${l.nombre || l.producto}: se vende por pieza pero no sé cuántas trae la caja`); return; }
+    const q = porPieza ? cajas * n : cajas;
+    target[l.sku] = r2((target[l.sku] || 0) + q);
+    cajasBy[l.sku] = r2((cajasBy[l.sku] || 0) + cajas);
+    inv.detalle[l.sku] = { nombre: l.nombre || l.producto, cajas: cajasBy[l.sku], unidad: porPieza ? `piezas (${n} por caja)` : 'cajas', cantidad: target[l.sku] };
+  });
+  const deltas = [...new Set([...Object.keys(target), ...Object.keys(inv.aplicado)])]
+    .map((s) => [s, r2((target[s] || 0) - (inv.aplicado[s] || 0))]).filter(([, d]) => Math.abs(d) > 0.001);
+  if (!deltas.length) return inv;
+  const stocks = await insituGet('/inventory_stock', {}, true);
+  const wc = {};
+  stocks.forEach((w) => { wc[w.warehouse_id] = (wc[w.warehouse_id] || 0) + 1; });
+  const defW = Number(Object.keys(wc).sort((a, b) => wc[b] - wc[a])[0]);
+  let hechos = 0;
+  for (const [sku, d] of deltas) {
+    const nom = (inv.detalle[sku] || {}).nombre || sku;
+    try {
+      const pr = await insituGet('/products', { where: JSON.stringify({ code: sku }) });
+      const p = (Object.values(pr).find(Array.isArray) || []).find((x) => String(x.code).trim() === sku);
+      if (!p) throw new Error('no está en InSitu todavía');
+      const mine = stocks.filter((x) => x.product_id === p.id);
+      const wid = mine.length ? mine.sort((a, b) => (Number(b.stock) || 0) - (Number(a.stock) || 0))[0].warehouse_id : defW;
+      const cur = mine.filter((x) => x.warehouse_id === wid).reduce((a, x) => a + (Number(x.stock) || 0), 0);
+      await insituPost('/inventory_adjustment', { warehouse_id: wid, product_id: p.id, quantity: d, new_quantity: r2(cur + d), remark: `Recibo IA: ${rec.proveedor} #${rec.factura}`.slice(0, 200), ref_number: String(rec.factura || '').slice(0, 60), approved: 1 });
+      inv.aplicado[sku] = r2((inv.aplicado[sku] || 0) + d);
+      hechos++;
+      // Comprobar que la existencia sí cambió
+      try {
+        const v = await insituGet('/inventory_stock', { where: JSON.stringify({ product_id: p.id }) });
+        const now = (Object.values(v).find(Array.isArray) || []).filter((x) => x.product_id === p.id && x.warehouse_id === wid).reduce((a, x) => a + (Number(x.stock) || 0), 0);
+        if (Math.abs(now - (cur + d)) > 0.01) inv.errores.push(`${nom}: se mandó +${d} pero InSitu muestra ${now} (antes ${cur}); revisa si el ajuste necesita aprobación`);
+      } catch (e) { /* sin comprobación */ }
+      await log({ action: 'recibo-inventario', name: nom, sku, qty: d, antes: cur, factura: rec.factura, proveedor: rec.proveedor, by: rec.updatedBy || '' });
+    } catch (e) {
+      inv.errores.push(`${nom}: ${e.message || e}`);
+    }
+  }
+  inv.hechos = hechos;
+  return inv;
+}
+
 async function syncLotes(id, prev, rec) {
   const up = {};
   ((prev && prev.lines) || []).forEach((l, i) => {
@@ -692,3 +774,4 @@ async function syncLotes(id, prev, rec) {
 function str(v, n) { return String(v == null ? '' : v).slice(0, n); }
 function num(v) { return typeof v === 'number' && isFinite(v) ? Math.round(v * 100) / 100 : null; }
 module.exports.avisosTienda = avisosTienda; // para pruebas
+module.exports.recInventario = recInventario;
