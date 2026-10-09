@@ -58,15 +58,22 @@ async function completarAltas(tok, prods) {
     }
     // La foto también como imagen del producto (InSitu no siempre muestra solo el link)
     if (a.photo) {
+      let fotoMsg = '';
       try {
-        const img = await fetch(a.photo);
-        if (img.ok) {
-          const type = img.headers.get('content-type') || 'image/jpeg';
+        const img = await fetch(a.photo, { headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124 Safari/537.36', Accept: 'image/*,*/*' } });
+        const type = (img.headers.get('content-type') || '').split(';')[0].trim();
+        if (!img.ok) fotoMsg = `el link de la foto respondió ${img.status}`;
+        else if (!/^image\//.test(type)) fotoMsg = `el link no es una imagen (${type || 'sin tipo'}): copia la dirección de la IMAGEN, no de la página`;
+        else {
           const fd = new FormData();
           fd.append('file', new Blob([await img.arrayBuffer()], { type }), 'foto.' + (type.includes('png') ? 'png' : type.includes('webp') ? 'webp' : 'jpg'));
-          await fetch(`${INSITU}/products/${p.id}/images`, { method: 'PUT', headers: auth, body: fd });
+          const up = await fetch(`${INSITU}/products/${p.id}/images`, { method: 'PUT', headers: auth, body: fd });
+          if (!up.ok) fotoMsg = `InSitu no aceptó la imagen (${up.status} ${(await up.text().catch(() => '')).slice(0, 120)})`;
         }
-      } catch (e) { /* queda el link */ }
+      } catch (e) { fotoMsg = 'no se pudo bajar la foto: ' + String(e.message || e).slice(0, 100); }
+      if (fotoMsg) diag.errores.push(`${qbId} foto: ${fotoMsg}`);
+      diag.fotos = (diag.fotos || 0) + (fotoMsg ? 0 : 1);
+      await db('PUT', 'qbLog/' + Date.now().toString(36) + 'f' + qbId, { ts: Date.now(), action: 'insitu-foto', qbId, name: p.name, ok: !fotoMsg, msg: fotoMsg, url: a.photo.slice(0, 300) });
     }
     // Comprobar que InSitu sí lo guardó antes de darlo por hecho
     try {
