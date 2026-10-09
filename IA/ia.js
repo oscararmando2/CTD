@@ -2494,6 +2494,23 @@
         delete l.alta; detectPieza(l);
       });
     } catch (e) { /* se quedan como nuevos */ }
+    // Mismo producto con el nombre escrito un poco distinto (ej. sin "500 ML"): mismas palabras y misma presentación
+    const mismo = (a, b) => { const A = tokens(a), B = tokens(b); return A.size >= 2 && A.size === B.size && [...A].every((w) => B.has(w)) && sameSize(a, b); };
+    for (const l of C.lines.filter((x) => x.nuevo).slice(0, 15)) {
+      const nm = (l.alta && l.alta.name) || l.producto;
+      let hit = S.products.find((p) => !isCredito(p) && mismo(nm, p.name)), q = null;
+      try {
+        const r = await cosCall('qb_buscar', { q: [...tokens(nm)].slice(0, 3).join(' ') });
+        const its = (r.items || []).filter((x) => x.active);
+        q = its.find((x) => (hit ? x.qbId === String(hit.id) : mismo(nm, x.name))) || null;
+        if (!hit && !q) { const par = its.find((x) => !otroProducto(nm, x.name) && nameScore(nm, x.name) >= 0.6); l.parecidoQb = par ? par.name : ''; }
+      } catch (e) { /* sin QuickBooks: solo lo de InSitu */ }
+      if (!hit && !q) continue;
+      const id = String(q ? q.qbId : hit.id), p = hit || S.products.find((x) => String(x.id) === id);
+      Object.assign(l, { nuevo: false, sku: id, nombre: q ? q.name : hit.name, photo: p ? p.photo : '', pack: p ? p.pack : '', how: 'ya estaba en QuickBooks', review: false, parecidoQb: '',
+        qb: q ? { qbId: id, qbName: q.name, price: q.price, cost: q.cost, active: true, how: 'nombre' } : null, costo_antes: q ? q.cost : r2((p && p.cost) || 0), precio_antes: q ? q.price : r2((p && p.price) || 0) });
+      delete l.alta; detectPieza(l); decide(l);
+    }
   }
   const cleanTitle = (s) => String(s || '').replace(/\s+/g, ' ').trim().toUpperCase().slice(0, 100);
 
@@ -2509,6 +2526,7 @@
     const d = store.get(K_DRAFT, null);
     if (!d || d.who !== S.who || !d.c || !Array.isArray(d.c.lines) || !d.c.lines.length || Date.now() - d.at > 3 * 864e5) return;
     Object.assign(C, d.c, { busy: false, dup: null });
+    if (C.lines.some((l) => l.nuevo)) ligarNuevosEnQb().then(() => renderCosteo());
     toast(`Recuperé la factura que tenías abierta (${(C.head && C.head.proveedor) || ''} #${(C.head && C.head.factura) || ''})`);
   }
   function renderCosteo(busyMsg) {
@@ -2692,6 +2710,15 @@
   $('#cosApply').addEventListener('click', async () => {
     const sel = C.lines.filter((l) => l.aplicar);
     const changes = sel.filter((l) => (!l.nuevo || creado(l)) && qbIdOf(l) && !(l.result && l.result.ok)).map((l) => ({ qbId: qbIdOf(l), price: priceChanged(l) ? l.precio_nuevo : null, cost: same2(cu(l), l.costo_antes) ? null : cu(l) })).filter((c) => c.price != null || c.cost != null);
+    const nNuevos = sel.filter((l) => l.nuevo && !creado(l)).length;
+    if (nNuevos) {
+      toast('Revisando que los nuevos no existan ya en QuickBooks…');
+      await ligarNuevosEnQb();
+      const ya = nNuevos - C.lines.filter((l) => l.aplicar && l.nuevo && !creado(l)).length;
+      if (ya > 0) { C.saved = false; renderCosteo(); toast(`${ya} ${ya === 1 ? 'producto ya existía' : 'productos ya existían'} en QuickBooks: ${ya === 1 ? 'lo ligué' : 'los ligué'}. Revisa y dale Aplicar otra vez.`); return; }
+      const dud = C.lines.filter((l) => l.aplicar && l.nuevo && !creado(l) && l.parecidoQb);
+      if (dud.length && !confirm(`Ojo: en QuickBooks ya hay productos parecidos:\n\n${dud.map((l) => `• ${l.alta.name}\n   parecido a: ${l.parecidoQb}`).join('\n')}\n\n¿Darlos de alta de todos modos? (Cancelar para revisarlos con "¿Ya existe? buscar y ligar")`)) return;
+    }
     const faltan = sel.filter((l) => l.nuevo && !creado(l) && (!l.alta.cat || !String(l.alta.brand || '').trim() || !l.alta.vendorId));
     if (faltan.length) { toast(`Falta categoría, marca o proveedor en ${faltan.length} ${faltan.length === 1 ? 'producto nuevo' : 'productos nuevos'}`); const el = $(`.cos-l[data-i="${faltan[0].i}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
     const creates = sel.filter((l) => l.nuevo && !creado(l)).map((l) => ({ name: l.alta.name, sku: l.alta.sku, price: effPrice(l), cost: cu(l), photo: l.alta.photo, description: l.producto,
