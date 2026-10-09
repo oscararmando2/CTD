@@ -2525,7 +2525,7 @@
   const K_DRAFT = 'ctdIA.cosDraft';
   function cosDraftSave() {
     if (!C.lines.length) return;
-    store.set(K_DRAFT, { at: Date.now(), who: S.who, c: { head: C.head, lines: C.lines, saved: C.saved, applied: C.applied, results: C.results, recibo: C.recibo, savedId: C.savedId, bodega: C.bodega, pzMem: C.pzMem } });
+    store.set(K_DRAFT, { at: Date.now(), who: S.who, c: { head: C.head, lines: C.lines.map((l) => ({ ...l, comp: null })), saved: C.saved, applied: C.applied, results: C.results, recibo: C.recibo, savedId: C.savedId, bodega: C.bodega, pzMem: C.pzMem } });
   }
   function cosDraftRestore() {
     if (C.lines.length || C.draftChecked) return;
@@ -2675,6 +2675,7 @@
     const l = C.lines[Number(b.closest('.cos-l').dataset.i)]; if (!l) return;
     if (b.hasAttribute('data-comp')) {
       if (l.comp) { l.comp = null; renderCosteo(); return; }
+      b.disabled = true; await loadUnits(true); // lo más reciente del servidor
       const p = prodSrv(l);
       l.comp = { cat: p.cat && p.cat !== 'Otros' ? p.cat : altaGuess(l.producto).cat, brand: p.brand || altaGuess(l.producto).brand, units: p.units || unitGuess(l), barcode: l.upc || '', photo: '' };
       renderCosteo(); return;
