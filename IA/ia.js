@@ -2621,7 +2621,7 @@
         ${C.applied ? '' : `<button type="button" class="btn-link sm cos-pz" data-pz>${l.pz > 1 ? 'Se vende por caja, no por pieza' : `¿Lo vendes por pieza?${l.pzCaja > 1 ? ` (${l.pzCaja} por caja)` : ''}`}</button>`}
         ${nuevo}
         ${!l.nuevo && !(l.result && l.result.ok) ? '<button class="btn-link sm" type="button" data-link>¿Es otro producto? cambiar</button>' : ''}
-        ${!l.nuevo && qbIdOf(l) || !l.nuevo && l.sku ? `<button class="btn-link sm" type="button" data-comp>${l.comp ? 'Cerrar' : 'Completar categoría, marca y unidad'}</button>` : ''}
+        ${!l.nuevo && qbIdOf(l) || !l.nuevo && l.sku ? `<button class="btn-link sm" type="button" data-comp>${l.comp ? 'Cerrar' : datosCompletos(l) ? `✓ ${esc(prodSrv(l).cat)} · ${esc(prodSrv(l).brand)} · ${esc(prodSrv(l).units)} (editar)` : 'Completar categoría, marca y unidad'}</button>` : ''}
         ${l.comp ? `<div class="cos-alta">
           <label class="field"><span>Categoría</span><select data-c="cat"><option value="">Elige…</option>${altaCats().map((c) => `<option${c === l.comp.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
           <label class="field"><span>Marca</span><input data-c="brand" list="altaBrands" value="${esc(l.comp.brand)}"></label>
@@ -2666,7 +2666,7 @@
     const l = C.lines[Number(b.closest('.cos-l').dataset.i)]; if (!l) return;
     if (b.hasAttribute('data-comp')) {
       if (l.comp) { l.comp = null; renderCosteo(); return; }
-      const p = fechProds().find((x) => String(x.id) === String(qbIdOf(l) || l.sku)) || {};
+      const p = prodSrv(l);
       l.comp = { cat: p.cat && p.cat !== 'Otros' ? p.cat : altaGuess(l.producto).cat, brand: p.brand || altaGuess(l.producto).brand, units: p.units || unitGuess(l), barcode: l.upc || '', photo: '' };
       renderCosteo(); return;
     }
@@ -2888,13 +2888,19 @@
   // ---- Alta de productos: categoría y marca (de InSitu) y proveedor (de QuickBooks) ----
   const altaCats = () => [...new Set(fechProds().map((p) => p.cat).filter((c) => c && c !== 'Otros'))].sort((a, b) => a.localeCompare(b));
   // Unidades que ya existen en InSitu (de los productos de este dispositivo o de la copia del catálogo del servidor)
-  async function loadUnits() {
-    if (ALTA.units || ALTA.unitsBusy) return;
-    if (fechProds().some((p) => p.units)) { ALTA.units = []; return; }
+  // Copia del catálogo del servidor (se renueva cada hora desde InSitu): unidades y lo que ya tiene cada producto
+  async function loadUnits(force) {
+    if ((ALTA.units && !force) || ALTA.unitsBusy) return;
     ALTA.unitsBusy = true;
-    try { ALTA.units = [...new Set(((await cosCall('catalogo')).items || []).map((p) => String(p.units || '').trim()).filter(Boolean))]; } catch (e) { ALTA.units = []; }
+    try {
+      const items = (await cosCall('catalogo')).items || [];
+      ALTA.units = [...new Set(items.map((p) => String(p.units || '').trim()).filter(Boolean))];
+      ALTA.cat = {}; items.forEach((p) => { ALTA.cat[String(p.id)] = p; });
+    } catch (e) { ALTA.units = ALTA.units || []; }
     ALTA.unitsBusy = false; renderCosteo();
   }
+  const prodSrv = (l) => (ALTA.cat || {})[String(qbIdOf(l) || l.sku)] || fechProds().find((x) => String(x.id) === String(qbIdOf(l) || l.sku)) || {};
+  const datosCompletos = (l) => { const p = prodSrv(l); return !!(p.cat && p.cat !== 'Otros' && p.brand && p.units); };
   const altaUnits = () => [...new Set([...fechProds().map((p) => String(p.units || '').trim()), ...(ALTA.units || [])].filter(Boolean))]
     .sort((a, b) => (parseInt(a.replace(/\D/g, ''), 10) || 0) - (parseInt(b.replace(/\D/g, ''), 10) || 0) || a.localeCompare(b));
   // Unidad de InSitu: por pieza → la de "each/pieza"; por caja → CaseN con las piezas de la factura
