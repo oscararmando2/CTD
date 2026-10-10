@@ -2641,7 +2641,7 @@
         ${C.applied ? '' : `<button type="button" class="btn-link sm cos-pz" data-pz>${l.pz > 1 ? 'Se vende por caja, no por pieza' : `¿Lo vendes por pieza?${l.pzCaja > 1 ? ` (${l.pzCaja} por caja)` : ''}`}</button>`}
         ${nuevo}
         ${!l.nuevo && !(l.result && l.result.ok) ? '<button class="btn-link sm" type="button" data-link>¿Es otro producto? cambiar</button>' : ''}
-        ${!l.nuevo && qbIdOf(l) || !l.nuevo && l.sku ? `<button class="btn-link sm" type="button" data-comp>${l.comp ? 'Cerrar' : datosCompletos(l) ? `✓ ${esc(prodSrv(l).upc)} · ${esc(prodSrv(l).cat)} · ${esc(prodSrv(l).brand)} · ${esc(prodSrv(l).units)} (editar)` : 'Completar categoría, marca y unidad'}</button>` : ''}
+        ${!l.nuevo && qbIdOf(l) || !l.nuevo && l.sku ? `<button class="btn-link sm" type="button" data-comp>${l.comp ? 'Cerrar' : datosCompletos(l) ? `✓ ${esc(skuDe(prodSrv(l)))} · ${esc(prodSrv(l).cat)} · ${esc(prodSrv(l).brand)} · ${esc(prodSrv(l).units)} (editar)` : 'Completar categoría, marca y unidad'}</button>` : ''}
         ${l.comp ? `<div class="cos-alta">
           <label class="field"><span>Categoría</span><select data-c="cat"><option value="">Elige…</option>${altaCats().map((c) => `<option${c === l.comp.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
           <label class="field"><span>Marca</span><input data-c="brand" list="altaBrands" value="${esc(l.comp.brand)}"></label>
@@ -2688,9 +2688,9 @@
     const l = C.lines[Number(b.closest('.cos-l').dataset.i)]; if (!l) return;
     if (b.hasAttribute('data-comp')) {
       if (l.comp) { l.comp = null; renderCosteo(); return; }
-      b.disabled = true; await Promise.all([loadUnits(true), loadCtdNext()]); // lo más reciente del servidor y el siguiente CTD de QuickBooks
+      b.disabled = true; await Promise.all([loadUnits(true), loadCtdNext(), loadVivo([qbIdOf(l) || l.sku], true)]); // InSitu y QuickBooks al momento
       const p = prodSrv(l);
-      const ctdYa = /^CTD-\d+$/i.test(p.upc || '') ? p.upc : '';
+      const ctdYa = ctdOk(p.qbSku) ? ctdFmt(p.qbSku) : ctdOk(p.upc) ? ctdFmt(p.upc) : ''; // el que ya tiene en QuickBooks (o en InSitu)
       const upcYa = p.ean || (!ctdYa && /^\d{8,14}$/.test(p.upc || '') ? p.upc : '');
       l.comp = { cat: p.cat && p.cat !== 'Otros' ? p.cat : altaGuess(l.producto).cat, brand: p.brand || altaGuess(l.producto).brand, units: p.units || unitGuess(l), sku: ctdYa || nextCtd(ctdUsados()), barcode: upcYa || l.upc || '', photo: '' };
       renderCosteo(); return;
@@ -2703,6 +2703,7 @@
     try {
       const d = await cosCall('alta_completar', { qbId: qbIdOf(l) || l.sku, ...l.comp });
       if (/^https?:\/\//.test(l.comp.photo || '')) l.photo = l.comp.photo; // se ve ya; en InSitu queda en la siguiente sincronización
+      const k = String(qbIdOf(l) || l.sku); ALTA.vivo = ALTA.vivo || {}; ALTA.vivo[k] = { ...(ALTA.vivo[k] || {}), qbSku: l.comp.sku || (ALTA.vivo[k] || {}).qbSku, cat: l.comp.cat, brand: l.comp.brand, units: l.comp.units }; // lo recién guardado
       alert(`Listo ✓${d.qbSku ? ` · SKU ${d.qbSku} en QuickBooks` : ''}${d.qbCat ? ` · categoría "${d.qbCat}" en QuickBooks` : ''}${d.insitu ? ' · en InSitu se pone en la siguiente sincronización (máx. 1 hora)' : ''}`);
       l.comp = null; renderCosteo();
     } catch (err) { alert('No se pudo guardar:\n\n' + err.message); b.disabled = false; b.textContent = 'Guardar en QuickBooks e InSitu'; }
@@ -2917,6 +2918,11 @@
   const altaCats = () => [...new Set(fechProds().map((p) => p.cat).filter((c) => c && c !== 'Otros'))].sort((a, b) => a.localeCompare(b));
   // Unidades que ya existen en InSitu (de los productos de este dispositivo o de la copia del catálogo del servidor)
   // Copia del catálogo del servidor (se renueva cada hora desde InSitu): unidades y lo que ya tiene cada producto
+  async function loadVivo(codes, qb) {
+    codes = [...new Set(codes.filter(Boolean).map(String))];
+    if (!codes.length) return;
+    try { const d = await cosCall('insitu_vivo', { codes, qb: !!qb }); ALTA.vivo = { ...(ALTA.vivo || {}), ...(d.items || {}) }; } catch (e) { /* se queda la copia */ }
+  }
   async function loadUnits(force) {
     if ((ALTA.units && !force) || ALTA.unitsBusy) return;
     ALTA.unitsBusy = true;
@@ -2927,8 +2933,10 @@
     } catch (e) { ALTA.units = ALTA.units || []; }
     ALTA.unitsBusy = false; renderCosteo();
   }
-  const prodSrv = (l) => (ALTA.cat || {})[String(qbIdOf(l) || l.sku)] || fechProds().find((x) => String(x.id) === String(qbIdOf(l) || l.sku)) || {};
-  const datosCompletos = (l) => { const p = prodSrv(l); return !!(p.cat && p.cat !== 'Otros' && p.brand && p.units && /^CTD-\d+$/i.test(p.upc || '')); };
+  const prodSrv = (l) => { const k = String(qbIdOf(l) || l.sku), v = (ALTA.vivo || {})[k], c = (ALTA.cat || {})[k]; return v ? { ...(c || {}), ...Object.fromEntries(Object.entries(v).filter(([, x]) => x)) } : c || prodSrvLocal(l); };
+  const prodSrvLocal = (l) => fechProds().find((x) => String(x.id) === String(qbIdOf(l) || l.sku)) || {};
+  const skuDe = (p) => (ctdOk(p.qbSku) ? ctdFmt(p.qbSku) : ctdOk(p.upc) ? ctdFmt(p.upc) : '');
+  const datosCompletos = (l) => { const p = prodSrv(l); return !!(p.cat && p.cat !== 'Otros' && p.brand && p.units && skuDe(p)); };
   const altaUnits = () => [...new Set([...fechProds().map((p) => String(p.units || '').trim()), ...(ALTA.units || [])].filter(Boolean))]
     .sort((a, b) => (parseInt(a.replace(/\D/g, ''), 10) || 0) - (parseInt(b.replace(/\D/g, ''), 10) || 0) || a.localeCompare(b));
   // Unidad de InSitu: por pieza → la de "each/pieza"; por caja → CaseN con las piezas de la factura
@@ -2987,6 +2995,11 @@
     if (!$('#altaBrands')) document.body.insertAdjacentHTML('beforeend', '<datalist id="altaBrands"></datalist>');
     $('#altaBrands').innerHTML = altaBrands().slice(0, 800).map((b) => `<option value="${esc(b)}">`).join('');
     altaVendors(); if (C.lines.length) loadUnits();
+    // Fotos y datos de InSitu al momento para los renglones ya ligados (una vez por factura)
+    if (C.lines.length && C.vivoFor !== (C.savedId || (C.head && C.head.factura))) {
+      C.vivoFor = C.savedId || (C.head && C.head.factura);
+      loadVivo(C.lines.filter((l) => !l.nuevo).map((l) => qbIdOf(l) || l.sku)).then(() => renderCosteo());
+    }
     return; // lo de abajo ya lo hace solo el servidor cada hora
     if (!Insitu.token()) return; // poner fotos en InSitu necesita la sesión de InSitu
     if (cosPhotos === null) { cosPhotos = {}; try { cosPhotos = (await cosCall('photos')).photos || {}; } catch (e) { cosPhotos = {}; } }
