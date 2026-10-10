@@ -119,29 +119,7 @@ async function autoUnidades(prods) {
   return Object.keys(up).length;
 }
 
-// TEMPORAL (10 oct 2026, autorizado por Oscar): cancelar la recepción de prueba de Castillo en InSitu (#350604)
-async function cancelarPrueba(res) {
-  const tok = await db('GET', 'insitu/token');
-  const auth = { Authorization: (tok.scheme ?? 'Bearer ') + tok.token };
-  const W = (o) => encodeURIComponent(JSON.stringify(o));
-  const get = async (path) => (await fetch(INSITU + path, { headers: auth })).json();
-  const stocks = async () => { const o = {}; for (const code of ['760', '703', '621']) { const p = ((await get(`/products?where=${W({ code })}`)).products || []).find((x) => String(x.code) === code); o[code] = p ? ((await get(`/inventory_stock?where=${W({ product_id: p.id })}`)).warehouse_stocks || []).filter((x) => x.product_id === p.id).map((x) => x.stock) : null; } return o; };
-  const antes = await stocks();
-  const d = await fetch(`${INSITU}/item_receipt/350604`, { method: 'DELETE', headers: auth });
-  const resp = `${d.status} ${(await d.text()).slice(0, 200)}`;
-  await new Promise((r) => setTimeout(r, 3000));
-  const despues = await stocks();
-  const out = { antes, cancelar: resp, despues };
-  await db('PUT', 'fixes/cancelar350604', { at: Date.now(), out });
-  return res.json(out);
-}
-
 module.exports = async (req, res) => {
-  if (req.query && req.query.fix === '2f1d783fa87c9c08') {
-    const done = await db('GET', 'fixes/cancelar350604');
-    if (done) return res.json({ yaHecho: true, ...done });
-    try { return await cancelarPrueba(res); } catch (e) { return res.json({ error: String(e.message || e) }); }
-  }
   try {
     const force = req.query && req.query.force === '1';
     const last = (await db('GET', 'insitu/lastRun')) || {};
