@@ -3284,6 +3284,12 @@
         ${c('') ? `<p class="qb-warn">Faltan ${c('')} productos por revisar.</p>` : ''}
         ${sinFecha ? `<p class="status">${sinFecha} de lo que llegó no tiene fecha de caducidad.</p>` : ''}
         ${falt.length ? `<ul class="rec-falt">${falt.map((l) => `<li><b>${esc(EST[l.estado])}</b> · ${esc(l.producto)}${l.estado === 'parcial' ? ` — llegaron ${nfmt(l.recibido || 0)} de ${nfmt(l.cantidad)}` : ''}${l.nota ? ` · <i>${esc(l.nota)}</i>` : ''}</li>`).join('')}</ul>` : ''}
+        <div class="rec-recv">
+          <label class="field"><span># Pallets total</span><input data-recv="pallets" inputmode="numeric" value="${esc((R.rec.recv || {}).pallets || '')}"></label>
+          <label class="field"><span># Pallets combinados</span><input data-recv="combinados" inputmode="numeric" value="${esc((R.rec.recv || {}).combinados || '')}"></label>
+          <label class="field"><span>Temperatura</span><input data-recv="temp" placeholder="ej. 36°F" value="${esc((R.rec.recv || {}).temp || '')}"></label>
+          <label class="field"><span>Descargado por</span><input data-recv="por" value="${esc((R.rec.recv || {}).por || label(S.who))}"></label>
+        </div>
         <label class="rec-invman"><input type="checkbox" id="recInvMan"${R.rec.invManual ? ' checked' : ''}> <span><b>El inventario de esta factura ya se metió a mano en InSitu</b><small>Márcalo para que la IA no lo vuelva a meter (si ya lo había metido, lo regresa).</small></span></label>
         <label class="field"><span>Notas del recibo</span><textarea id="recNotaGen" rows="3" maxlength="1500" placeholder="Algo que regresó, que faltó, que venía dañado…">${esc(R.rec.nota || '')}</textarea></label>
         <div class="rec-nav">
@@ -3454,7 +3460,9 @@
         const iv = st && st.inv;
         const invTxt = iv ? (iv.errores && iv.errores.length ? ` · inventario: ${Object.keys(iv.aplicado || {}).length} productos, ${iv.errores.length} con problema (ver en la lista)` : ` · inventario actualizado en InSitu (${Object.keys(iv.aplicado || {}).length} productos)`) : '';
         toast((st && st.costeoId ? 'Recibo listo ✓ · ya estaba costeada: le avisamos a Costeo las diferencias' : 'Recibo listo ✓ · ya lo ve Costeo') + invTxt);
+        const hecho = { ...R.rec, doneAt: R.rec.doneAt || Date.now(), updatedBy: S.who };
         R.rec = null; store.del(K_REC); await loadLotes(true);
+        if (confirm('¿Descargar el formato de Receiving en Excel?')) formatoReceiving(hecho).catch((err) => toast('No se pudo: ' + err.message));
       } catch (err) { toast('No se pudo guardar: ' + err.message); b.disabled = false; return; }
       renderRecibo(); window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -3487,13 +3495,72 @@
       <div class="hist-item" data-rid="${esc(f.id)}"><div class="hi-txt"><b>${esc(f.proveedor)} · #${esc(f.factura)}</b>
         ${f.lines} productos${f.parcial ? ` · ${f.parcial} llegaron menos` : ''}${f.no ? ` · ${f.no} no llegaron` : ''}${f.pendiente ? ` · ${f.pendiente} pendientes` : ''} · ${f.fechas} con fecha · ${f.origen === 'costeo' ? 'subió ' + esc(f.by || '') + ' en Costeo' : esc(f.by || '')} · ${fmtTs(f.updated || f.ts)}</div>
         <span class="st${f.status === 'costeado' ? ' sent' : ''}">${ST[f.status] || f.status}</span>
+        ${['revisado', 'costeado'].includes(f.status) ? `<button class="btn btn-ghost btn-sm" data-c="xls" type="button">${icon('download')}Formato Excel</button>` : ''}
         ${f.invManual ? '<span class="pill">inventario: metido a mano</span>' : ['revisado', 'costeado'].includes(f.status) ? '<button class="btn-link sm" data-c="invman" type="button">¿Ya se metió a mano?</button>' : ''}
         ${f.invManual ? '' : f.inv ? (f.inv.errores.length ? `<span class="pill warn" title="${esc(f.inv.errores.join('\n'))}">inventario: ${f.inv.errores.length} con problema</span><button class="btn btn-ghost btn-sm" data-c="inv" type="button">Reintentar inventario</button>` : `<span class="pill ok">inventario ✓ ${f.inv.hechos}</span>`) : ''}
         ${f.status !== 'costeado' ? `<button class="btn ${f.status === 'borrador' ? 'btn-oro' : 'btn-ghost'} btn-sm" data-c="open" type="button">${f.status === 'borrador' ? 'Revisar' : 'Abrir'}</button>` : ''}</div>`).join('')
       : '<p class="data-info">Todavía no hay recibos.</p>';
   }
   document.addEventListener('change', (e) => { if (e.target.id === 'recInvMan' && R.rec) { R.rec.invManual = e.target.checked; touchRec(); } });
+  document.addEventListener('input', (e) => { const k = e.target.dataset && e.target.dataset.recv; if (k && R.rec) { R.rec.recv = { ...(R.rec.recv || {}), [k]: e.target.value }; touchRec(); } });
+
+  /* ---- Formato de control y verificación de productos (Receiving), en Excel con el formato de CTD ---- */
+  const FRIO = /refriger|congel|frio|frío|frozen|dairy|lacte|lácte|queso|crema|chilled/i;
+  async function formatoReceiving(rec) {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
+    const prods = await recProducts();
+    const pOf = (l) => prods.find((x) => String(x.id) === String(l.sku)) || {};
+    // Un renglón por fecha (si un producto trae varias fechas, va con sus cajas)
+    const filas = [];
+    (rec.lines || []).forEach((l) => {
+      const cajas = l.estado === 'ok' ? Number(l.recibido ?? l.cantidad) || 0 : l.estado === 'parcial' ? Number(l.recibido) || 0 : 0;
+      const sku = l.upcSis || pOf(l).upc || l.sku || l.codigo_proveedor || '';
+      const desc = (l.nombre || l.producto || '') + (l.estado === 'no' ? '  (NO LLEGÓ)' : l.estado === 'parcial' ? `  (llegaron ${cajas} de ${l.cantidad})` : l.estado === 'pendiente' ? '  (PENDIENTE)' : '');
+      const fds = Array.isArray(l.fechas) && l.fechas.length > 1 ? l.fechas : [{ f: l.caducidad || '', q: cajas }];
+      fds.forEach((x) => filas.push({ sku, desc, q: x.q, f: x.f ? (() => { const d = parseYmd(x.f); return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`; })() : '' }));
+    });
+    const frio = (rec.lines || []).some((l) => FRIO.test(`${pOf(l).cat || ''} ${l.nombre || l.producto || ''}`));
+    const seco = (rec.lines || []).some((l) => !FRIO.test(`${pOf(l).cat || ''} ${l.nombre || l.producto || ''}`));
+    const totalCajas = filas.reduce((a, x) => a + (Number(x.q) || 0), 0);
+    const rv = rec.recv || {};
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Receiving', { pageSetup: { paperSize: 1, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.4, right: 0.4, top: 0.4, bottom: 0.4, header: 0, footer: 0 } } });
+    ws.columns = [{ width: 7 }, { width: 16 }, { width: 52 }, { width: 11 }, { width: 22 }];
+    const thin = { style: 'thin', color: { argb: 'FF000000' } }, box = { top: thin, left: thin, bottom: thin, right: thin };
+    ws.getCell('E1').value = `Receipt no. ${rec.factura || ''}`; ws.getCell('E1').font = { size: 11 };
+    ws.mergeCells('B2:D2'); ws.getCell('B2').value = 'FORMATO DE CONTROL Y VERIFICACION DE PRODUCTOS RECIVING'; ws.getCell('B2').font = { size: 12 };
+    const logo = await logoData();
+    if (logo) ws.addImage(wb.addImage({ base64: logo, extension: 'png' }), { tl: { col: 0.3, row: 2.2 }, ext: { width: 150, height: 80 } });
+    for (let r = 3; r <= 7; r++) ws.getRow(r).height = 16;
+    const H = 8;
+    ['ITEM', 'SKU', 'DESCIPCION DE  LOS PRODUCTOS', 'CANTIDAD', 'FECHA DE EXPIRACION'].forEach((h, k) => {
+      const c = ws.getRow(H).getCell(k + 1); c.value = h; c.border = box; c.alignment = { horizontal: 'center', vertical: 'middle' }; c.font = { size: 11 };
+    });
+    const n = Math.max(30, filas.length);
+    for (let k = 0; k < n; k++) {
+      const row = ws.getRow(H + 1 + k), x = filas[k] || {};
+      [k + 1, x.sku || '', x.desc || '', x.q != null && x.desc ? x.q : '', x.f || ''].forEach((v, j) => { const c = row.getCell(j + 1); c.value = v; c.border = box; c.font = { size: 10 }; c.alignment = { horizontal: j === 0 || j === 3 || j === 4 ? (j === 0 ? 'right' : 'center') : 'left', vertical: 'middle', wrapText: j === 2 }; });
+    }
+    let r = H + n + 2;
+    const put = (addr, v, opts = {}) => { const c = ws.getCell(addr); c.value = v; c.font = { size: 11, ...(opts.font || {}) }; if (opts.align) c.alignment = opts.align; };
+    const chk = (on) => (on ? '☒' : '☐');
+    put(`A${r}`, chk(seco)); put(`B${r}`, 'PRODUCTO SECO'); put(`C${r}`, `DESCARGADO POR :  ${rv.por || label(rec.updatedBy || rec.by || '')}`, { align: { horizontal: 'center' } }); put(`E${r}`, `# PALLET´S TOTAL :  ${rv.pallets || ''}`, { align: { horizontal: 'right' } });
+    r++; put(`A${r}`, chk(frio)); put(`B${r}`, 'PRODUCTO FRIO O CONGELADO'); put(`E${r}`, `# PALLET´S  COMBINADOS:  ${rv.combinados || ''}`, { align: { horizontal: 'right' } });
+    r++; put(`E${r}`, `TEMPERATURA:  ${rv.temp || ''}`, { align: { horizontal: 'right' } });
+    const fr = rec.doneAt ? new Date(rec.doneAt) : new Date();
+    r++; put(`B${r}`, `FECHA DE RECIVING :  ${String(fr.getMonth() + 1).padStart(2, '0')}/${String(fr.getDate()).padStart(2, '0')}/${fr.getFullYear()}`); put(`E${r}`, `# DE CAJAS:  ${nfmt(totalCajas)}`, { align: { horizontal: 'right' } });
+    r++; put(`B${r}`, `PROOVEDOR :  ${rec.proveedor || ''}`); put(`E${r}`, 'FIRMA Y SELLO', { align: { horizontal: 'right' } });
+    if (rec.nota) { r += 2; put(`B${r}`, `NOTAS: ${rec.nota}`, { align: { wrapText: true } }); ws.mergeCells(`B${r}:E${r}`); ws.getRow(r).height = 30; }
+    const buf = await wb.xlsx.writeBuffer();
+    download(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Receiving-${normTxt(rec.proveedor || '').replace(/[^a-z0-9]+/g, '-').slice(0, 24)}-${String(rec.factura || '').replace(/[^\w-]+/g, '')}.xlsx`);
+  }
   $('#recRecent').addEventListener('click', async (e) => {
+    const bx = e.target.closest('[data-c="xls"]');
+    if (bx) {
+      bx.disabled = true;
+      try { const { recibo } = await cosCall('recibo_get', { id: bx.closest('.hist-item').dataset.rid }); await formatoReceiving(recibo); toast('Formato de Receiving descargado'); } catch (err) { toast('No se pudo: ' + err.message); }
+      bx.disabled = false; return;
+    }
     const bm = e.target.closest('[data-c="invman"]');
     if (bm) {
       if (!confirm('¿El inventario de esta factura ya se había metido a mano en InSitu?\n\nLa IA no lo meterá, y si ya lo metió, lo regresa (para que no quede doble).')) return;
