@@ -2613,7 +2613,7 @@
     const nuevo = l.nuevo ? `
       <div class="cos-alta">
         <label class="field alta-n"><span>Nombre en QuickBooks</span><input data-a="name" value="${esc(l.alta.name)}"></label>
-        <label class="field${/^CTD-\d+$/i.test(l.alta.sku || '') ? '' : ' falta'}"><span>SKU (CTD-####)</span><input data-a="sku" value="${esc(/^CTD-\d+$/i.test(l.alta.sku || '') ? l.alta.sku : (l.alta.sku = nextCtd(ctdUsados())))}"></label>
+        <label class="field${ctdOk(l.alta.sku) ? '' : ' falta'}"><span>SKU (CTD-####)</span><input data-a="sku" value="${esc(ctdOk(l.alta.sku) ? l.alta.sku : (l.alta.sku = nextCtd(ctdUsados())))}"></label>
         <label class="field"><span>Código de barras (UPC) → Barcode 2</span><input data-a="barcode" inputmode="numeric" value="${esc(l.alta.barcode || '')}"></label>
         <label class="field${l.alta.cat ? '' : ' falta'}"><span>Categoría</span><select data-a="cat"><option value="">Elige…</option>${altaCats().map((c) => `<option${c === l.alta.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
         <label class="field${l.alta.brand ? '' : ' falta'}"><span>Marca</span><input data-a="brand" list="altaBrands" placeholder="Ej. La Costeña" value="${esc(l.alta.brand || '')}"></label>
@@ -2671,7 +2671,7 @@
     else if (f === 'aplicar') { l.aplicar = e.target.checked; l.offManual = !e.target.checked; }
     else if (a) {
       l.alta[a] = e.target.value; if (a === 'photo') el.querySelector('.ol-ph').innerHTML = cosImg(cosPhoto(l));
-      if (a === 'sku') e.target.closest('.field').classList.toggle('falta', !/^CTD-\d+$/i.test(e.target.value.trim()));
+      if (a === 'sku') e.target.closest('.field').classList.toggle('falta', !ctdOk(e.target.value));
       if (['cat', 'brand', 'vendorId', 'units'].includes(a)) e.target.closest('.field').classList.toggle('falta', !String(e.target.value).trim());
       if (a === 'vendorId') { const m = store.get('ctdIA.altaVendor', {}); m[normTxt(C.head.proveedor || '')] = e.target.value; store.set('ctdIA.altaVendor', m); }
     }
@@ -2688,7 +2688,7 @@
     const l = C.lines[Number(b.closest('.cos-l').dataset.i)]; if (!l) return;
     if (b.hasAttribute('data-comp')) {
       if (l.comp) { l.comp = null; renderCosteo(); return; }
-      b.disabled = true; await loadUnits(true); // lo más reciente del servidor
+      b.disabled = true; await Promise.all([loadUnits(true), loadCtdNext()]); // lo más reciente del servidor y el siguiente CTD de QuickBooks
       const p = prodSrv(l);
       const ctdYa = /^CTD-\d+$/i.test(p.upc || '') ? p.upc : '';
       const upcYa = p.ean || (!ctdYa && /^\d{8,14}$/.test(p.upc || '') ? p.upc : '');
@@ -2697,13 +2697,15 @@
     }
     const box = b.closest('.cos-alta');
     $$('[data-c]', box).forEach((x) => { l.comp[x.dataset.c] = x.value.trim(); });
-    b.disabled = true;
+    if (l.comp.sku && !ctdOk(l.comp.sku)) { alert(`"${l.comp.sku}" no es un SKU de CTD. Escríbelo así: CTD-1345`); return; }
+    l.comp.sku = l.comp.sku ? ctdFmt(l.comp.sku) : '';
+    b.disabled = true; b.textContent = 'Guardando…';
     try {
       const d = await cosCall('alta_completar', { qbId: qbIdOf(l) || l.sku, ...l.comp });
       if (/^https?:\/\//.test(l.comp.photo || '')) l.photo = l.comp.photo; // se ve ya; en InSitu queda en la siguiente sincronización
-      toast(`Listo${d.qbSku ? ` · SKU ${d.qbSku} en QuickBooks` : ''}${d.qbCat ? ` · categoría "${d.qbCat}" en QuickBooks` : ''}${d.insitu ? ' · en InSitu se pone en la siguiente sincronización (máx. 1 hora)' : ''}`);
+      alert(`Listo ✓${d.qbSku ? ` · SKU ${d.qbSku} en QuickBooks` : ''}${d.qbCat ? ` · categoría "${d.qbCat}" en QuickBooks` : ''}${d.insitu ? ' · en InSitu se pone en la siguiente sincronización (máx. 1 hora)' : ''}`);
       l.comp = null; renderCosteo();
-    } catch (err) { toast('No se pudo: ' + err.message); b.disabled = false; }
+    } catch (err) { alert('No se pudo guardar:\n\n' + err.message); b.disabled = false; b.textContent = 'Guardar en QuickBooks e InSitu'; }
   });
   // Cambiar entre "por pieza" y "por caja" (se recuerda por producto)
   $('#cosList').addEventListener('click', (e) => {
@@ -2775,7 +2777,7 @@
       const dud = C.lines.filter((l) => l.aplicar && l.nuevo && !creado(l) && l.parecidoQb);
       if (dud.length && !confirm(`Ojo: en QuickBooks ya hay productos parecidos:\n\n${dud.map((l) => `• ${l.alta.name}\n   parecido a: ${l.parecidoQb}`).join('\n')}\n\n¿Darlos de alta de todos modos? (Cancelar para revisarlos con "¿Ya existe? buscar y ligar")`)) return;
     }
-    const faltan = sel.filter((l) => l.nuevo && !creado(l) && (!/^CTD-\d+$/i.test(l.alta.sku || '') || !l.alta.cat || !String(l.alta.brand || '').trim() || !l.alta.vendorId));
+    const faltan = sel.filter((l) => l.nuevo && !creado(l) && (!ctdOk(l.alta.sku) || !l.alta.cat || !String(l.alta.brand || '').trim() || !l.alta.vendorId));
     if (faltan.length) { toast(`Falta SKU (CTD-####), categoría, marca o proveedor en ${faltan.length} ${faltan.length === 1 ? 'producto nuevo' : 'productos nuevos'}`); const el = $(`.cos-l[data-i="${faltan[0].i}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
     const creates = sel.filter((l) => l.nuevo && !creado(l)).map((l) => ({ name: l.alta.name, sku: l.alta.sku, price: effPrice(l), cost: cu(l), photo: l.alta.photo, description: l.producto,
       barcode: String(l.alta.barcode || '').trim(), cat: l.alta.cat, brand: String(l.alta.brand || '').trim(), vendorId: l.alta.vendorId, units: l.alta.units || '' }));
@@ -2941,8 +2943,15 @@
   function nextCtd(extraUsados) {
     let max = 0;
     [...fechProds(), ...Object.values(ALTA.cat || {})].forEach((p) => [p.upc, p.sku].forEach((v) => { const m = String(v || '').match(/^CTD-(\d+)$/i); if (m) max = Math.max(max, +m[1]); }));
-    (extraUsados || []).forEach((v) => { const m = String(v || '').match(/^CTD-(\d+)$/i); if (m) max = Math.max(max, +m[1]); });
+    [ALTA.ctdQb ? 'CTD-' + (+(ALTA.ctdQb.match(/\d+/) || [0])[0] - 1) : '', ...(extraUsados || [])].forEach((v) => { const m = String(v || '').match(/^CTD-?(\d+)$/i); if (m) max = Math.max(max, +m[1]); });
     return max ? 'CTD-' + (max + 1) : '';
+  }
+  const ctdOk = (v) => /^CTD\s*-?\s*\d{1,6}$/i.test(String(v || '').trim());
+  const ctdFmt = (v) => { const m = String(v || '').trim().match(/^CTD\s*-?\s*(\d{1,6})$/i); return m ? 'CTD-' + m[1] : String(v || '').trim(); };
+  // Siguiente CTD según QuickBooks (más seguro que la copia de InSitu); se guarda unos minutos
+  async function loadCtdNext() {
+    if (ALTA.ctdAt && Date.now() - ALTA.ctdAt < 120000) return;
+    try { const d = await cosCall('ctd_next'); ALTA.ctdQb = d.next || ''; ALTA.ctdAt = Date.now(); } catch (e) { /* se usa la copia */ }
   }
   const ctdUsados = () => C.lines.map((l) => (l.alta && l.alta.sku) || (l.comp && l.comp.sku)).filter(Boolean);
   const altaBrands = () => [...new Set(fechProds().map((p) => String(p.brand || '').trim()).filter(Boolean))];
