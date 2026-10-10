@@ -2152,7 +2152,7 @@
       body: JSON.stringify({ action, ...extra }),
     });
     const d = await r.json().catch(() => ({}));
-    if (!r.ok || d.error) throw Object.assign(new Error(d.error || `Error ${r.status}`), { code: d.code });
+    if (!r.ok || d.error) throw Object.assign(new Error(d.error || `Error ${r.status}`), { code: d.code, data: d });
     return d;
   }
 
@@ -2295,7 +2295,7 @@
     const token = await auth.currentUser.getIdToken();
     const r = await fetch(COS_API, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ action, ...extra }) });
     const d = await r.json().catch(() => ({}));
-    if (!r.ok || d.error) throw Object.assign(new Error(d.error || `Error ${r.status}`), { code: d.code });
+    if (!r.ok || d.error) throw Object.assign(new Error(d.error || `Error ${r.status}`), { code: d.code, data: d });
     return d;
   }
 
@@ -2344,6 +2344,11 @@
   });
   $('#cosNew').addEventListener('click', () => $('#cosFile').click());
   $('#cosHead').addEventListener('click', (e) => {
+    if (e.target.closest('#cosBill')) {
+      const b = e.target.closest('#cosBill'); b.disabled = true;
+      crearBill({ costeoId: C.savedId }).then((r) => { if (r) { C.bill = r; renderCosteo(); } else b.disabled = false; });
+      return;
+    }
     if (!e.target.closest('#cosClose')) return;
     if (!C.saved && !confirm('Esta factura tiene cambios sin guardar. ¿Cerrarla de todos modos?\n\n(Cancelar y dale Guardar si los quieres conservar)')) return;
     Object.assign(C, { head: null, lines: [], saved: false, applied: false, results: [], dup: null, recibo: null, bodega: null, savedId: null });
@@ -2451,7 +2456,7 @@
         Object.assign(l, { nuevo: true, sku: '', nombre: '', how: '', review: false, costo_antes: null, precio_antes: null, duda: `se parecía a ${nm} (SKU ${sk}), pero ese ya está en otro renglón: búscalo y lígalo`, alta: { name: cleanTitle(l.producto), sku: l.upc || '', barcode: l.upc || '', photo: '', ...altaGuess(l.producto) } });
       });
     });
-    C.saved = false; C.applied = false; C.results = []; C.dup = null; C.busy = false; C.savedId = null;
+    C.saved = false; C.applied = false; C.results = []; C.dup = null; C.busy = false; C.savedId = null; C.bill = null;
     // UPC de la factura contra el SKU de QuickBooks (en InSitu muchos traen código interno, no UPC)
     const byUpc = C.lines.filter((l) => upcCore(l.upc).length >= 8 && (l.nuevo || l.how === 'nombre'));
     if (byUpc.length) {
@@ -2560,7 +2565,8 @@
     $('#cosHead').innerHTML = `
       <div class="cos-h1"><div><p class="hud">Factura</p><h2>${esc(h.proveedor || 'Proveedor')}</h2>
         <p class="status">#${esc(h.factura || '—')} · ${esc(h.fecha || 'sin fecha')} · ${C.lines.length} renglones · total ${h.total_factura != null ? money(h.total_factura) : '—'}${h.flete ? ` · flete ${money(h.flete)}` : ''}${h.creditos ? ` · créditos ${money(h.creditos)}` : ''}</p>
-        <button id="cosClose" class="btn btn-ghost btn-sm" type="button">✕ Cerrar factura</button></div>${cuadra}</div>
+        <button id="cosClose" class="btn btn-ghost btn-sm" type="button">✕ Cerrar factura</button>
+        ${C.bill ? `<span class="pill ok">QuickBooks: factura ${esc(C.bill.doc || C.bill.id)} ✓</span>` : C.savedId ? '<button id="cosBill" class="btn btn-oro btn-sm" type="button">Crear factura en QuickBooks</button>' : ''}</div>${cuadra}</div>
       ${C.dup ? `<p class="qb-warn">⚠ Esta factura ya se guardó el ${fmtTs(C.dup.ts)} por ${esc(C.dup.by || '')}. Revisa antes de aplicar otra vez.</p>` : ''}
       ${C.bodega && !C.recibo ? `<div class="cos-bod"><p class="status">Revisada en bodega por <b>${esc(C.bodega.by || '')}</b> · ${fmtTs(C.bodega.at)}${C.bodega.nota ? ' · Nota: <b>' + esc(C.bodega.nota) + '</b>' : ''}</p>${(C.bodega.dif || []).length ? `<ul class="rec-falt">${C.bodega.dif.map((x) => `<li><b>${esc(EST[x.estado] || x.estado)}</b> · ${esc(x.producto)}${x.estado === 'parcial' ? ` — llegaron ${nfmt(x.recibido || 0)} de ${nfmt(x.cantidad)}` : ''}${x.nota ? ` · <i>${esc(x.nota)}</i>` : ''}</li>`).join('')}</ul>` : '<p class="status">Todo llegó completo.</p>'}</div>` : ''}
       ${C.recibo ? `<p class="status">Revisada en bodega${C.reciboBy ? ' por ' + esc(C.reciboBy) : ''}.${C.reciboNota ? ' Nota: <b>' + esc(C.reciboNota) + '</b>' : ''}</p>` : ''}
@@ -2836,7 +2842,7 @@
       C.head = { ...f, dudas: [] };
       C.lines = (f.lines || []).map((l, i) => ({ i, ...l, photo: (S.products.find((p) => String(p.id) === l.sku) || {}).photo, aplicar: false, result: l.aplicado ? { ok: true } : null, alta: l.nuevo ? { name: l.nombre, sku: l.upc, photo: '' } : null }));
       C.saved = true; C.applied = true; C.dup = null; C.recibo = null; C.reciboNota = ''; C.savedId = b.closest('.hist-item').dataset.cid;
-      C.bodega = f.bodega || null;
+      C.bodega = f.bodega || null; C.bill = f.bill || null;
       await ligarNuevosEnQb();
       renderCosteo();
       const conQb = C.lines.filter((l) => qbIdOf(l) || l.sku);
@@ -3495,6 +3501,7 @@
       <div class="hist-item" data-rid="${esc(f.id)}"><div class="hi-txt"><b>${esc(f.proveedor)} · #${esc(f.factura)}</b>
         ${f.lines} productos${f.parcial ? ` · ${f.parcial} llegaron menos` : ''}${f.no ? ` · ${f.no} no llegaron` : ''}${f.pendiente ? ` · ${f.pendiente} pendientes` : ''} · ${f.fechas} con fecha · ${f.origen === 'costeo' ? 'subió ' + esc(f.by || '') + ' en Costeo' : esc(f.by || '')} · ${fmtTs(f.updated || f.ts)}</div>
         <span class="st${f.status === 'costeado' ? ' sent' : ''}">${ST[f.status] || f.status}</span>
+        ${f.bill ? `<span class="pill ok">QuickBooks: factura ${esc(f.bill.doc || f.bill.id)} ✓</span>` : ['revisado', 'costeado'].includes(f.status) ? `<button class="btn btn-oro btn-sm" data-c="bill" type="button">Crear factura en QuickBooks</button>` : ''}
         ${['revisado', 'costeado'].includes(f.status) ? `<button class="btn btn-ghost btn-sm" data-c="xls" type="button">${icon('download')}Formato Excel</button>` : ''}
         ${f.invManual ? '<span class="pill">inventario: metido a mano</span>' : ['revisado', 'costeado'].includes(f.status) ? '<button class="btn-link sm" data-c="invman" type="button">¿Ya se metió a mano?</button>' : ''}
         ${f.invManual ? '' : f.inv ? (f.inv.errores.length ? `<span class="pill warn" title="${esc(f.inv.errores.join('\n'))}">inventario: ${f.inv.errores.length} con problema</span><button class="btn btn-ghost btn-sm" data-c="inv" type="button">Reintentar inventario</button>` : `<span class="pill ok">inventario ✓ ${f.inv.hechos}</span>`) : ''}
@@ -3503,6 +3510,32 @@
   }
   document.addEventListener('change', (e) => { if (e.target.id === 'recInvMan' && R.rec) { R.rec.invManual = e.target.checked; touchRec(); } });
   document.addEventListener('input', (e) => { const k = e.target.dataset && e.target.dataset.recv; if (k && R.rec) { R.rec.recv = { ...(R.rec.recv || {}), [k]: e.target.value }; touchRec(); } });
+
+  /* ---- Factura del proveedor (Bill) en QuickBooks desde la IA: mete el inventario (InSitu lo toma de QB) ---- */
+  async function crearBill(ids) {
+    if (!confirm('¿Crear la factura del proveedor (Bill) en QuickBooks?\n\nSe mete el inventario de lo que se recibió y queda la cuenta por pagar. Si ya existe una con ese número para ese proveedor, no se crea otra.')) return null;
+    let extra = {};
+    for (let intento = 0; intento < 2; intento++) {
+      try {
+        const d = await cosCall('qb_bill', { ...ids, ...extra });
+        if (d.ya) { toast(`Ya existe en QuickBooks (Bill ${d.bill.id}${d.bill.total != null ? ' · ' + money(d.bill.total) : ''}): no se creó otra`); return d.bill; }
+        toast(`Factura creada en QuickBooks ✓ · ${d.bill.lineas} productos · ${money(d.bill.total)}${d.bill.recibido ? '' : ' (con cantidades de la factura)'}`);
+        return d.bill;
+      } catch (e) {
+        if (e.code === 'no_vendor' && e.data && e.data.vendors) {
+          const vs = e.data.vendors, q = normTxt(prompt(`${e.message}\n\nEscribe parte del nombre del proveedor en QuickBooks:`, '') || '');
+          if (!q) return null;
+          const res = vs.filter((v) => normTxt(v.name).includes(q)).slice(0, 12);
+          if (!res.length) { toast('No encontré ese proveedor'); return null; }
+          const k = Number(prompt(res.map((v, i) => `${i + 1}. ${v.name}`).join('\n') + '\n\nEscribe el número:', '1'));
+          if (!res[k - 1]) return null;
+          extra = { vendorId: res[k - 1].id }; continue;
+        }
+        alert('No se pudo crear la factura en QuickBooks:\n\n' + e.message); return null;
+      }
+    }
+    return null;
+  }
 
   /* ---- Formato de control y verificación de productos (Receiving), en Excel con el formato de CTD ---- */
   const FRIO = /refriger|congel|frio|frío|frozen|dairy|lacte|lácte|queso|crema|chilled/i;
@@ -3555,6 +3588,8 @@
     download(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Receiving-${normTxt(rec.proveedor || '').replace(/[^a-z0-9]+/g, '-').slice(0, 24)}-${String(rec.factura || '').replace(/[^\w-]+/g, '')}.xlsx`);
   }
   $('#recRecent').addEventListener('click', async (e) => {
+    const bb = e.target.closest('[data-c="bill"]');
+    if (bb) { bb.disabled = true; const r = await crearBill({ reciboId: bb.closest('.hist-item').dataset.rid }); if (r) { R.list = null; renderRecList(); } else bb.disabled = false; return; }
     const bx = e.target.closest('[data-c="xls"]');
     if (bx) {
       bx.disabled = true;
