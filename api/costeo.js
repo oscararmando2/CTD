@@ -729,6 +729,20 @@ async function recInventario(rec) {
   const wc = {};
   stocks.forEach((w) => { wc[w.warehouse_id] = (wc[w.warehouse_id] || 0) + 1; });
   const defW = Number(Object.keys(wc).sort((a, b) => wc[b] - wc[a])[0]);
+  // Ubicación (bin) dentro del almacén: InSitu la exige en los ajustes. La del producto, o la más usada del almacén.
+  const binOf = (x) => (x && (x.bin_location_id || (Array.isArray(x.bin_locations) && x.bin_locations[0] && x.bin_locations[0].bin_location_id) || (Array.isArray(x.bins) && x.bins[0] && x.bins[0].bin_location_id))) || null;
+  const bc = {};
+  stocks.forEach((w) => { const b = binOf(w); if (b) { const k = w.warehouse_id + '|' + b; bc[k] = (bc[k] || 0) + 1; } });
+  // Las existencias no traen la ubicación: se toma de los ajustes y recepciones que ya se hicieron en InSitu
+  for (const [path, key] of [['/inventory_adjustment', 'lines'], ['/item_receipt', 'lines']]) {
+    if (Object.keys(bc).length) break;
+    try {
+      const j = await insituGet(path, { limit: 200, order: JSON.stringify([['id', 'DESC']]) });
+      const arr = Object.values(j).find(Array.isArray) || [];
+      arr.forEach((x) => [x, ...(Array.isArray(x[key]) ? x[key] : [])].forEach((y) => { const b = binOf(y); if (b && y.warehouse_id) { const k = y.warehouse_id + '|' + b; bc[k] = (bc[k] || 0) + 1; } }));
+    } catch (e) { /* sigue */ }
+  }
+  const defBin = (wid) => { const k = Object.keys(bc).filter((x) => x.startsWith(wid + '|')).sort((a, b) => bc[b] - bc[a])[0] || Object.keys(bc).sort((a, b) => bc[b] - bc[a])[0]; return k ? Number(k.split('|')[1]) : null; };
   let hechos = 0;
   for (const [sku, d] of deltas) {
     const nom = (inv.detalle[sku] || {}).nombre || sku;
@@ -739,7 +753,9 @@ async function recInventario(rec) {
       const mine = stocks.filter((x) => x.product_id === p.id);
       const wid = mine.length ? mine.sort((a, b) => (Number(b.stock) || 0) - (Number(a.stock) || 0))[0].warehouse_id : defW;
       const cur = mine.filter((x) => x.warehouse_id === wid).reduce((a, x) => a + (Number(x.stock) || 0), 0);
-      await insituPost('/inventory_adjustment', { warehouse_id: wid, product_id: p.id, quantity: d, new_quantity: r2(cur + d), remark: `Recibo IA: ${rec.proveedor} #${rec.factura}`.slice(0, 200), ref_number: String(rec.factura || '').slice(0, 60), approved: 1 });
+      const bin = binOf(mine.find((x) => x.warehouse_id === wid && binOf(x))) || defBin(wid);
+      if (!bin) throw new Error(`InSitu no dice la ubicación (bin) del almacén${stocks[0] ? ' · campos: ' + Object.keys(stocks[0]).join(',').slice(0, 120) : ''}`);
+      await insituPost('/inventory_adjustment', { warehouse_id: wid, bin_location_id: bin, product_id: p.id, quantity: d, new_quantity: r2(cur + d), remark: `Recibo IA: ${rec.proveedor} #${rec.factura}`.slice(0, 200), ref_number: String(rec.factura || '').slice(0, 60), approved: 1 });
       inv.aplicado[sku] = r2((inv.aplicado[sku] || 0) + d);
       hechos++;
       // Comprobar que la existencia sí cambió
