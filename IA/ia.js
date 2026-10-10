@@ -3947,11 +3947,16 @@
       // 3) Parado: con fecha y sin venderse en 60+ días
       rows.filter((r) => r.dias >= 0).forEach((r) => {
         const p = S.products.find((x) => skuKey(x.id) === r.sku);
-        if (!p || !p.st || rk[r.sku] || tips.some((x) => x.sku === r.sku)) return;
+        if (!p || !p.st || rk[r.sku] || tips.some((x) => x.sku === r.sku) || esNuevo(p, r.sku)) return;
         const sin = p.st.days == null ? 365 : p.st.days;
         if (sin >= 60) tips.push({ lvl: 'warm', sku: r.sku, t: `${esc(p.name)}: parado`, d: `Lleva ${p.st.days == null ? 'más de un año' : sin + ' días'} sin venderse y vence en ${r.dias} días. Especial fuerte o pregunta al proveedor si lo cambia.`,
           act: `<button type="button" class="btn btn-ghost btn-sm" data-tesp="${esc(r.sku)}">${icon('sparkles')}Mandar a especial</button>` });
       });
+    }
+    // Productos nuevos: todavía no hay ventas para calcular
+    if (full) {
+      const nuevos = [...new Set(rows.filter((r) => r.dias >= 0).map((r) => r.sku))].map((sku) => S.products.find((x) => skuKey(x.id) === sku)).filter((p) => p && esNuevo(p, skuKey(p.id)));
+      if (nuevos.length) tips.push({ lvl: '', t: `${nuevos.length} ${nuevos.length === 1 ? 'producto nuevo' : 'productos nuevos'}: todavía sin ventas para calcular`, d: `Llegaron hace poco, así que aún no se sabe si alcanzan a venderse antes de su fecha: ${nuevos.slice(0, 5).map((p) => esc(p.name)).join(', ')}${nuevos.length > 5 ? '…' : ''}. La IA lo empieza a medir cuando tengan unas semanas de ventas.` });
     }
     // 4) Dos fechas del mismo producto: sacar primero la más próxima
     const bySku = {};
@@ -4066,6 +4071,16 @@
   // Riesgo por producto: el lote más próximo que no alcanza a venderse antes de su fecha (vendiendo primero lo más viejo).
   // { d, dias, quedan, sobran, rate (cajas/semana) } — solo si hay ventas y stock para estimarlo
   let riskMemo = null;
+  // Producto nuevo: llegó hace poco y todavía no tiene historia de ventas (no se puede saber si alcanza a venderse)
+  function esNuevo(p, sku) {
+    const lot = (R.lotes || {})[sku];
+    const llego = lot ? Math.max(0, ...Object.values(lot.fechas || {}).map((x) => x.ts || 0)) : 0;
+    if (!llego || Date.now() - llego > 60 * DAY) return false;
+    const st = p && p.st;
+    if (!st || !(st.u365 > 0)) return true; // nunca se ha vendido
+    const dias = Object.keys(st.d || {}).sort();
+    return dias.length > 0 && daysTo(dias[0]) > -45; // empezó a venderse hace menos de 45 días
+  }
   function riskMap() {
     const key = `${R.lotesV || 0}|${S.products.length}|${S.meta ? S.meta.at : ''}`;
     if (riskMemo && riskMemo.key === key) return riskMemo.val;
@@ -4073,7 +4088,7 @@
     rows.forEach((r) => {
       if (r.dias < 0 || out[r.sku]) return;
       const p = S.products.find((x) => skuKey(x.id) === r.sku);
-      if (!p || !p.st || r.quedan == null) return;
+      if (!p || !p.st || r.quedan == null || esNuevo(p, r.sku)) return;
       const rate = (p.st.u90 || 0) / 13, sold = (rate / 7) * r.dias;
       const sobran = Math.round(r.quedan - sold);
       if (sobran > 0) out[r.sku] = { d: r.d, dias: r.dias, quedan: r.quedan, sobran, rate: r2(rate) };
