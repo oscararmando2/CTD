@@ -45,7 +45,11 @@ async function completarAltas(tok, prods) {
     PROD_KEYS.forEach((k) => { if (p[k] !== undefined && p[k] !== null) body[k] = p[k]; });
     if (a.cat) body.line_name = a.cat;
     if (a.brand) body.brand_name = a.brand;
-    if (a.barcode) body.barcode = a.barcode;
+    // Como lo tiene CTD: Barcode = SKU de CTD (CTD-####) y Barcode 2 (ean) = UPC del producto
+    const skuCtd = /^CTD-\d+$/i.test(String(a.sku || '')) ? String(a.sku).toUpperCase() : '';
+    const upc = String(a.upc || a.barcode || '').trim();
+    if (skuCtd) body.barcode = skuCtd;
+    if (upc) body.ean = upc;
     if (a.photo) body.photourl = a.photo;
     if (a.units) body.units = a.units;
     // El producto ya existe en InSitu (llegó de QuickBooks): se actualiza por código con la operación masiva
@@ -80,7 +84,8 @@ async function completarAltas(tok, prods) {
       const v = await fetch(`${INSITU}/products?where=${encodeURIComponent(JSON.stringify({ code: String(p.code) }))}`, { headers: auth });
       const j = v.ok ? await v.json() : {};
       const q = ((j.products || j.data || []).find((x) => String(x.code) === String(p.code))) || null;
-      const falta = q ? [['cat', 'line_name'], ['brand', 'brand_name'], ['barcode', 'barcode'], ['units', 'units']].filter(([k, f]) => a[k] && String(q[f] || '').trim() !== String(a[k]).trim()).map(([k]) => k) : ['?'];
+      const want = { cat: a.cat, brand: a.brand, units: a.units, sku: skuCtd, upc };
+      const falta = q ? [['cat', 'line_name'], ['brand', 'brand_name'], ['units', 'units'], ['sku', 'barcode'], ['upc', 'ean']].filter(([k, f]) => want[k] && (k !== 'upc' || q.ean !== undefined) && String(q[f] || '').trim().toUpperCase() !== String(want[k]).trim().toUpperCase()).map(([k]) => k) : ['?'];
       if (falta.length) { const msg = `InSitu no guardó: ${falta.join(', ')}`; await db('PUT', `costeoFotos/${qbId}/error`, msg); diag.errores.push(`${qbId}: ${msg}`); continue; }
     } catch (e) { /* sin comprobación, se da por hecho */ }
     await db('DELETE', 'costeoFotos/' + qbId);
