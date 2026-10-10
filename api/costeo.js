@@ -392,6 +392,7 @@ module.exports = async (req, res) => {
             photo: /^https:\/\//.test(l.photo || '') ? str(l.photo, 500) : '', upcSis: str(l.upcSis, 40),
             estado: ESTADOS.includes(l.estado) ? l.estado : '', recibido: num(l.recibido),
             caducidad: ymdOk(l.caducidad), leida: ymdOk(l.leida), nota: str(l.nota, 300),
+            fechas: Array.isArray(l.fechas) && l.fechas.length > 1 ? l.fechas.slice(0, 6).map((x) => ({ f: ymdOk(x && x.f), q: num(Number(x && x.q)) })).filter((x) => x.f && x.q > 0) : null,
           })),
           nota: str(r.nota, 1500),
           status: final ? (costeoId ? 'costeado' : 'revisado') : 'borrador',
@@ -780,11 +781,15 @@ async function syncLotes(id, prev, rec) {
   const up = {};
   ((prev && prev.lines) || []).forEach((l, i) => {
     if (l.sku && l.caducidad) up[`lotes/${codeKey(l.sku)}/f/${l.caducidad}/e/${id}_${i}`] = null;
+    if (l.sku && Array.isArray(l.fechas)) l.fechas.forEach((x, k) => { if (x.f) up[`lotes/${codeKey(l.sku)}/f/${x.f}/e/${id}_${i}_${k}`] = null; });
   });
   rec.lines.forEach((l, i) => {
     const q = l.estado === 'ok' ? (l.recibido ?? l.cantidad) : l.estado === 'parcial' ? l.recibido : 0;
     if (!l.sku || !l.caducidad || !(q > 0)) return;
-    up[`lotes/${codeKey(l.sku)}/f/${l.caducidad}/e/${id}_${i}`] = { q, f: rec.factura, p: rec.proveedor, ts: Date.now() };
+    if (Array.isArray(l.fechas) && l.fechas.length > 1) {
+      // Varias fechas en el mismo renglón: un lote por fecha con sus cajas
+      l.fechas.forEach((x, k) => { up[`lotes/${codeKey(l.sku)}/f/${x.f}/e/${id}_${i}_${k}`] = { q: x.q, f: rec.factura, p: rec.proveedor, ts: Date.now() }; });
+    } else up[`lotes/${codeKey(l.sku)}/f/${l.caducidad}/e/${id}_${i}`] = { q, f: rec.factura, p: rec.proveedor, ts: Date.now() };
     up[`lotes/${codeKey(l.sku)}/n`] = l.nombre || l.producto;
   });
   if (Object.keys(up).length) await db('PATCH', '', up);
