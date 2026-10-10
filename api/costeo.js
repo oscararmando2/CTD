@@ -216,8 +216,8 @@ module.exports = async (req, res) => {
             const d = await qb('POST', 'item', item);
             await log({ action: 'costeo-alta', name, qbId: d.Item.Id, price: item.UnitPrice, cost: item.PurchaseCost, factura: body.factura || '', by: who });
             // Lo que QuickBooks no guarda (categoría, marca, código de barras, foto) se pone en InSitu cuando el producto llegue (cron de cada hora)
-            const extra = { photo: /^https?:\/\//.test(String(c.photo || '')) ? String(c.photo).trim().slice(0, 1000) : '', barcode: str(c.barcode, 40), cat: str(c.cat, 80), brand: str(c.brand, 80), units: str(c.units, 40) };
-            if (extra.photo || extra.barcode || extra.cat || extra.brand || extra.units) await db('PUT', 'costeoFotos/' + d.Item.Id, { ...extra, name, sku: item.Sku || '', ts: Date.now(), by: who });
+            const extra = { photo: /^https?:\/\//.test(String(c.photo || '')) ? String(c.photo).trim().slice(0, 1000) : '', upc: str(c.barcode, 40), cat: str(c.cat, 80), brand: str(c.brand, 80), units: str(c.units, 40) };
+            if (extra.photo || extra.upc || extra.cat || extra.brand || extra.units) await db('PUT', 'costeoFotos/' + d.Item.Id, { ...extra, name, sku: item.Sku || '', ts: Date.now(), by: who });
             results.push({ create: name, ok: true, qbId: d.Item.Id, type: tpl.Type });
           } catch (err) {
             results.push({ create: c.name, ok: false, error: String(err.message || err) });
@@ -317,11 +317,21 @@ module.exports = async (req, res) => {
             qbCat = cat.Name;
           }
         }
-        const extra = { photo: /^https?:\/\//.test(String(body.photo || '')) ? String(body.photo).trim().slice(0, 1000) : '', barcode: str(body.barcode, 40), cat: str(body.cat, 80), brand: str(body.brand, 80), units: str(body.units, 40) };
+        // SKU de CTD (CTD-####) en QuickBooks: de ahí InSitu lo pone en Barcode
+        let qbSku = '';
+        const sku = String(body.sku || '').trim().toUpperCase();
+        if (/^CTD-\d+$/.test(sku) && sku !== String(it.Sku || '').toUpperCase()) {
+          const dupe = ((await qbQuery(`select Id, Name from Item where Sku = '${sku}'`)).Item || []).filter((x) => x.Id !== it.Id);
+          if (dupe.length) return res.status(409).json({ error: `El SKU ${sku} ya lo tiene "${dupe[0].Name}" en QuickBooks` });
+          const fresh = await qbItem(id);
+          await qb('POST', 'item', { Id: fresh.Id, SyncToken: fresh.SyncToken, sparse: true, Sku: sku });
+          qbSku = sku;
+        }
+        const extra = { photo: /^https?:\/\//.test(String(body.photo || '')) ? String(body.photo).trim().slice(0, 1000) : '', upc: str(body.barcode, 40), cat: str(body.cat, 80), brand: str(body.brand, 80), units: str(body.units, 40), sku: /^CTD-\d+$/.test(sku) ? sku : '' };
         Object.keys(extra).forEach((k) => { if (!extra[k]) delete extra[k]; });
-        if (Object.keys(extra).length) await db('PUT', 'costeoFotos/' + id, { ...extra, name: it.Name, sku: it.Sku || '', ts: Date.now(), by: who });
+        if (Object.keys(extra).length) await db('PUT', 'costeoFotos/' + id, { ...extra, name: it.Name, ts: Date.now(), by: who });
         await log({ action: 'costeo-completar', name: it.Name, qbId: id, ...extra, qbCat, by: who });
-        return res.json({ ok: true, qbCat, insitu: Object.keys(extra).length > 0 });
+        return res.json({ ok: true, qbCat, qbSku, insitu: Object.keys(extra).length > 0 });
       }
       case 'qb_vendors': {
         const r = await qbQuery('select Id, DisplayName from Vendor where Active = true maxresults 1000');

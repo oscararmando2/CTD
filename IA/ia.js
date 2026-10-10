@@ -2613,8 +2613,8 @@
     const nuevo = l.nuevo ? `
       <div class="cos-alta">
         <label class="field alta-n"><span>Nombre en QuickBooks</span><input data-a="name" value="${esc(l.alta.name)}"></label>
-        <label class="field"><span>SKU</span><input data-a="sku" value="${esc(l.alta.sku)}"></label>
-        <label class="field"><span>Código de barras (UPC)</span><input data-a="barcode" inputmode="numeric" value="${esc(l.alta.barcode || '')}"></label>
+        <label class="field${/^CTD-\d+$/i.test(l.alta.sku || '') ? '' : ' falta'}"><span>SKU (CTD-####)</span><input data-a="sku" value="${esc(/^CTD-\d+$/i.test(l.alta.sku || '') ? l.alta.sku : (l.alta.sku = nextCtd(ctdUsados())))}"></label>
+        <label class="field"><span>Código de barras (UPC) → Barcode 2</span><input data-a="barcode" inputmode="numeric" value="${esc(l.alta.barcode || '')}"></label>
         <label class="field${l.alta.cat ? '' : ' falta'}"><span>Categoría</span><select data-a="cat"><option value="">Elige…</option>${altaCats().map((c) => `<option${c === l.alta.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
         <label class="field${l.alta.brand ? '' : ' falta'}"><span>Marca</span><input data-a="brand" list="altaBrands" placeholder="Ej. La Costeña" value="${esc(l.alta.brand || '')}"></label>
         <label class="field${l.alta.vendorId ? '' : ' falta'}"><span>Proveedor (QuickBooks)</span><select data-a="vendorId"><option value="">${ALTA.vendors ? 'Elige…' : 'Cargando proveedores…'}</option>${(ALTA.vendors || []).map((v) => `<option value="${esc(v.id)}"${v.id === l.alta.vendorId ? ' selected' : ''}>${esc(v.name)}</option>`).join('')}</select></label>
@@ -2641,12 +2641,13 @@
         ${C.applied ? '' : `<button type="button" class="btn-link sm cos-pz" data-pz>${l.pz > 1 ? 'Se vende por caja, no por pieza' : `¿Lo vendes por pieza?${l.pzCaja > 1 ? ` (${l.pzCaja} por caja)` : ''}`}</button>`}
         ${nuevo}
         ${!l.nuevo && !(l.result && l.result.ok) ? '<button class="btn-link sm" type="button" data-link>¿Es otro producto? cambiar</button>' : ''}
-        ${!l.nuevo && qbIdOf(l) || !l.nuevo && l.sku ? `<button class="btn-link sm" type="button" data-comp>${l.comp ? 'Cerrar' : datosCompletos(l) ? `✓ ${esc(prodSrv(l).cat)} · ${esc(prodSrv(l).brand)} · ${esc(prodSrv(l).units)} (editar)` : 'Completar categoría, marca y unidad'}</button>` : ''}
+        ${!l.nuevo && qbIdOf(l) || !l.nuevo && l.sku ? `<button class="btn-link sm" type="button" data-comp>${l.comp ? 'Cerrar' : datosCompletos(l) ? `✓ ${esc(prodSrv(l).upc)} · ${esc(prodSrv(l).cat)} · ${esc(prodSrv(l).brand)} · ${esc(prodSrv(l).units)} (editar)` : 'Completar categoría, marca y unidad'}</button>` : ''}
         ${l.comp ? `<div class="cos-alta">
           <label class="field"><span>Categoría</span><select data-c="cat"><option value="">Elige…</option>${altaCats().map((c) => `<option${c === l.comp.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
           <label class="field"><span>Marca</span><input data-c="brand" list="altaBrands" value="${esc(l.comp.brand)}"></label>
           <label class="field"><span>Unidad (InSitu)</span>${unitSel('data-c="units"', l.comp.units)}</label>
-          <label class="field"><span>Código de barras (UPC)</span><input data-c="barcode" inputmode="numeric" value="${esc(l.comp.barcode)}"></label>
+          <label class="field"><span>SKU (CTD-####)</span><input data-c="sku" value="${esc(l.comp.sku)}"></label>
+          <label class="field"><span>UPC → Barcode 2</span><input data-c="barcode" inputmode="numeric" value="${esc(l.comp.barcode)}"></label>
           <label class="field"><span>Foto (URL)</span><input data-c="photo" placeholder="https://…" value="${esc(l.comp.photo)}"></label>
           <button class="btn btn-oro btn-sm" type="button" data-comp-save>Guardar en QuickBooks e InSitu</button>
         </div>` : ''}
@@ -2670,6 +2671,7 @@
     else if (f === 'aplicar') { l.aplicar = e.target.checked; l.offManual = !e.target.checked; }
     else if (a) {
       l.alta[a] = e.target.value; if (a === 'photo') el.querySelector('.ol-ph').innerHTML = cosImg(cosPhoto(l));
+      if (a === 'sku') e.target.closest('.field').classList.toggle('falta', !/^CTD-\d+$/i.test(e.target.value.trim()));
       if (['cat', 'brand', 'vendorId', 'units'].includes(a)) e.target.closest('.field').classList.toggle('falta', !String(e.target.value).trim());
       if (a === 'vendorId') { const m = store.get('ctdIA.altaVendor', {}); m[normTxt(C.head.proveedor || '')] = e.target.value; store.set('ctdIA.altaVendor', m); }
     }
@@ -2688,7 +2690,9 @@
       if (l.comp) { l.comp = null; renderCosteo(); return; }
       b.disabled = true; await loadUnits(true); // lo más reciente del servidor
       const p = prodSrv(l);
-      l.comp = { cat: p.cat && p.cat !== 'Otros' ? p.cat : altaGuess(l.producto).cat, brand: p.brand || altaGuess(l.producto).brand, units: p.units || unitGuess(l), barcode: l.upc || '', photo: '' };
+      const ctdYa = /^CTD-\d+$/i.test(p.upc || '') ? p.upc : '';
+      const upcYa = p.ean || (!ctdYa && /^\d{8,14}$/.test(p.upc || '') ? p.upc : '');
+      l.comp = { cat: p.cat && p.cat !== 'Otros' ? p.cat : altaGuess(l.producto).cat, brand: p.brand || altaGuess(l.producto).brand, units: p.units || unitGuess(l), sku: ctdYa || nextCtd(ctdUsados()), barcode: upcYa || l.upc || '', photo: '' };
       renderCosteo(); return;
     }
     const box = b.closest('.cos-alta');
@@ -2697,7 +2701,7 @@
     try {
       const d = await cosCall('alta_completar', { qbId: qbIdOf(l) || l.sku, ...l.comp });
       if (/^https?:\/\//.test(l.comp.photo || '')) l.photo = l.comp.photo; // se ve ya; en InSitu queda en la siguiente sincronización
-      toast(`Listo${d.qbCat ? ` · categoría "${d.qbCat}" en QuickBooks` : ''}${d.insitu ? ' · en InSitu se pone en la siguiente sincronización (máx. 1 hora)' : ''}`);
+      toast(`Listo${d.qbSku ? ` · SKU ${d.qbSku} en QuickBooks` : ''}${d.qbCat ? ` · categoría "${d.qbCat}" en QuickBooks` : ''}${d.insitu ? ' · en InSitu se pone en la siguiente sincronización (máx. 1 hora)' : ''}`);
       l.comp = null; renderCosteo();
     } catch (err) { toast('No se pudo: ' + err.message); b.disabled = false; }
   });
@@ -2771,8 +2775,8 @@
       const dud = C.lines.filter((l) => l.aplicar && l.nuevo && !creado(l) && l.parecidoQb);
       if (dud.length && !confirm(`Ojo: en QuickBooks ya hay productos parecidos:\n\n${dud.map((l) => `• ${l.alta.name}\n   parecido a: ${l.parecidoQb}`).join('\n')}\n\n¿Darlos de alta de todos modos? (Cancelar para revisarlos con "¿Ya existe? buscar y ligar")`)) return;
     }
-    const faltan = sel.filter((l) => l.nuevo && !creado(l) && (!l.alta.cat || !String(l.alta.brand || '').trim() || !l.alta.vendorId));
-    if (faltan.length) { toast(`Falta categoría, marca o proveedor en ${faltan.length} ${faltan.length === 1 ? 'producto nuevo' : 'productos nuevos'}`); const el = $(`.cos-l[data-i="${faltan[0].i}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+    const faltan = sel.filter((l) => l.nuevo && !creado(l) && (!/^CTD-\d+$/i.test(l.alta.sku || '') || !l.alta.cat || !String(l.alta.brand || '').trim() || !l.alta.vendorId));
+    if (faltan.length) { toast(`Falta SKU (CTD-####), categoría, marca o proveedor en ${faltan.length} ${faltan.length === 1 ? 'producto nuevo' : 'productos nuevos'}`); const el = $(`.cos-l[data-i="${faltan[0].i}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
     const creates = sel.filter((l) => l.nuevo && !creado(l)).map((l) => ({ name: l.alta.name, sku: l.alta.sku, price: effPrice(l), cost: cu(l), photo: l.alta.photo, description: l.producto,
       barcode: String(l.alta.barcode || '').trim(), cat: l.alta.cat, brand: String(l.alta.brand || '').trim(), vendorId: l.alta.vendorId, units: l.alta.units || '' }));
     const sinPrecio = sel.filter((l) => l.nuevo && !creado(l) && l.precio_nuevo == null).length;
@@ -2922,7 +2926,7 @@
     ALTA.unitsBusy = false; renderCosteo();
   }
   const prodSrv = (l) => (ALTA.cat || {})[String(qbIdOf(l) || l.sku)] || fechProds().find((x) => String(x.id) === String(qbIdOf(l) || l.sku)) || {};
-  const datosCompletos = (l) => { const p = prodSrv(l); return !!(p.cat && p.cat !== 'Otros' && p.brand && p.units); };
+  const datosCompletos = (l) => { const p = prodSrv(l); return !!(p.cat && p.cat !== 'Otros' && p.brand && p.units && /^CTD-\d+$/i.test(p.upc || '')); };
   const altaUnits = () => [...new Set([...fechProds().map((p) => String(p.units || '').trim()), ...(ALTA.units || [])].filter(Boolean))]
     .sort((a, b) => (parseInt(a.replace(/\D/g, ''), 10) || 0) - (parseInt(b.replace(/\D/g, ''), 10) || 0) || a.localeCompare(b));
   // Unidad de InSitu: por pieza → la de "each/pieza"; por caja → CaseN con las piezas de la factura
@@ -2933,6 +2937,14 @@
     return n > 1 ? (us.find((u) => u.replace(/\s+/g, '').toLowerCase() === 'case' + n) || us.find((u) => /case|caja/i.test(u) && parseInt(u.replace(/\D/g, ''), 10) === n) || '') : '';
   }
   const unitSel = (attr, val) => `<select ${attr}><option value="">Elige…</option>${altaUnits().map((u) => `<option${u === val ? ' selected' : ''}>${esc(u)}</option>`).join('')}${val && !altaUnits().includes(val) ? `<option selected>${esc(val)}</option>` : ''}</select>`;
+  // Siguiente SKU de CTD (CTD-####): el mayor que ya existe + 1 (sin repetir los que se están dando de alta)
+  function nextCtd(extraUsados) {
+    let max = 0;
+    [...fechProds(), ...Object.values(ALTA.cat || {})].forEach((p) => [p.upc, p.sku].forEach((v) => { const m = String(v || '').match(/^CTD-(\d+)$/i); if (m) max = Math.max(max, +m[1]); }));
+    (extraUsados || []).forEach((v) => { const m = String(v || '').match(/^CTD-(\d+)$/i); if (m) max = Math.max(max, +m[1]); });
+    return max ? 'CTD-' + (max + 1) : '';
+  }
+  const ctdUsados = () => C.lines.map((l) => (l.alta && l.alta.sku) || (l.comp && l.comp.sku)).filter(Boolean);
   const altaBrands = () => [...new Set(fechProds().map((p) => String(p.brand || '').trim()).filter(Boolean))];
   // Adivina marca y categoría por el nombre de la factura (marca que ya existe en el catálogo)
   function altaGuess(producto) {
