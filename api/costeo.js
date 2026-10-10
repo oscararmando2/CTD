@@ -400,6 +400,7 @@ module.exports = async (req, res) => {
           doneAt: final ? ((prev && prev.doneAt) || now) : null,
           inv: (prev && prev.inv) || null,
           invManual: r.invManual != null ? !!r.invManual : !!(prev && prev.invManual),
+          recv: r.recv && typeof r.recv === 'object' ? { pallets: str(r.recv.pallets, 10), combinados: str(r.recv.combinados, 10), temp: str(r.recv.temp, 20), por: str(r.recv.por, 80) } : (prev && prev.recv) || null,
         };
         await db('PUT', 'recibos/' + id, rec);
         if (final) await syncLotes(id, prev, rec);
