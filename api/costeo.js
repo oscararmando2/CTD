@@ -421,7 +421,8 @@ module.exports = async (req, res) => {
       }
       case 'qb_bill': {
         // PAUSADO (10 oct 2026, Oscar): nada se manda a QuickBooks/InSitu desde Recibo hasta decidir el proceso
-        if (PAUSA_RECIBO_QB) return res.status(403).json({ error: 'Pausado por ahora: el recibo se hace a mano en QuickBooks.' });
+        // Solo la Orden de compra está activa; Bill y recepción en InSitu siguen pausados
+        if (PAUSA_RECIBO_QB && (body.tipo === 'bill' || body.tipo === 'insitu')) return res.status(403).json({ error: 'Pausado por ahora: solo se puede crear la Orden de compra.' });
         // Factura del proveedor (Bill) en QuickBooks con lo que se recibió: mete el inventario y la cuenta por pagar.
         // No duplica: si ya hay un Bill con ese número para ese proveedor, no crea otro.
         let rec = body.reciboId ? await db('GET', 'recibos/' + codeKey(body.reciboId)) : null;

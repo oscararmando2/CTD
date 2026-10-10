@@ -2566,6 +2566,7 @@
       <div class="cos-h1"><div><p class="hud">Factura</p><h2>${esc(h.proveedor || 'Proveedor')}</h2>
         <p class="status">#${esc(h.factura || '—')} · ${esc(h.fecha || 'sin fecha')} · ${C.lines.length} renglones · total ${h.total_factura != null ? money(h.total_factura) : '—'}${h.flete ? ` · flete ${money(h.flete)}` : ''}${h.creditos ? ` · créditos ${money(h.creditos)}` : ''}</p>
         <button id="cosClose" class="btn btn-ghost btn-sm" type="button">✕ Cerrar factura</button>
+        ${C.bill && C.bill.tipo !== 'bill' ? `<span class="pill ok">Orden QB ${esc(C.bill.doc || C.bill.id)} creada</span>` : C.savedId && !C.bill ? '<button id="cosBill" class="btn btn-oro btn-sm" type="button">Crear Orden QB</button>' : ''}
         ${PAUSA_QB ? '' : C.bill ? `<span class="pill ok">QuickBooks: ${C.bill.tipo === 'bill' ? 'Bill' : 'orden'} ${esc(C.bill.doc || C.bill.id)} ✓</span>` : C.savedId ? '<button id="cosBill" class="btn btn-oro btn-sm" type="button">Mandar a QuickBooks para recibir</button>' : ''}</div>${cuadra}</div>
       ${C.dup ? `<p class="qb-warn">⚠ Esta factura ya se guardó el ${fmtTs(C.dup.ts)} por ${esc(C.dup.by || '')}. Revisa antes de aplicar otra vez.</p>` : ''}
       ${C.bodega && !C.recibo ? `<div class="cos-bod"><p class="status">Revisada en bodega por <b>${esc(C.bodega.by || '')}</b> · ${fmtTs(C.bodega.at)}${C.bodega.nota ? ' · Nota: <b>' + esc(C.bodega.nota) + '</b>' : ''}</p>${(C.bodega.dif || []).length ? `<ul class="rec-falt">${C.bodega.dif.map((x) => `<li><b>${esc(EST[x.estado] || x.estado)}</b> · ${esc(x.producto)}${x.estado === 'parcial' ? ` — llegaron ${nfmt(x.recibido || 0)} de ${nfmt(x.cantidad)}` : ''}${x.nota ? ` · <i>${esc(x.nota)}</i>` : ''}</li>`).join('')}</ul>` : '<p class="status">Todo llegó completo.</p>'}</div>` : ''}
@@ -3501,6 +3502,7 @@
       <div class="hist-item" data-rid="${esc(f.id)}"><div class="hi-txt"><b>${esc(f.proveedor)} · #${esc(f.factura)}</b>
         ${f.lines} productos${f.parcial ? ` · ${f.parcial} llegaron menos` : ''}${f.no ? ` · ${f.no} no llegaron` : ''}${f.pendiente ? ` · ${f.pendiente} pendientes` : ''} · ${f.fechas} con fecha · ${f.origen === 'costeo' ? 'subió ' + esc(f.by || '') + ' en Costeo' : esc(f.by || '')} · ${fmtTs(f.updated || f.ts)}</div>
         <span class="st${f.status === 'costeado' ? ' sent' : ''}">${ST[f.status] || f.status}</span>
+        ${f.po ? `<span class="pill ok">Orden QB ${esc(f.po.doc || f.po.id)} creada · agrégala en Recibo de artículo</span>` : ['revisado', 'costeado'].includes(f.status) ? '<button class="btn btn-oro btn-sm" data-c="bill" type="button">Crear Orden QB</button>' : ''}
         ${PAUSA_QB ? '' : f.po ? `<span class="pill ok">QuickBooks: orden ${esc(f.po.doc || f.po.id)} lista para recibir</span>` : `${f.bill ? `<span class="pill warn">QuickBooks: Bill ${esc(f.bill.doc || f.bill.id)}</span>` : ''}${['revisado', 'costeado'].includes(f.status) ? `<button class="btn btn-oro btn-sm" data-c="bill" data-tenia="${f.bill ? 1 : ''}" type="button">Mandar a QuickBooks para recibir</button>` : ''}`}
         ${PAUSA_QB ? '' : f.insitu ? `<span class="pill ok">InSitu: recepción ${esc(f.insitu.id || '')} ✓</span>` : ['revisado', 'costeado'].includes(f.status) ? '<button class="btn btn-ghost btn-sm" data-c="insitu" type="button">Recepción en InSitu (prueba)</button>' : ''}
         ${['revisado', 'costeado'].includes(f.status) ? `<button class="btn btn-ghost btn-sm" data-c="xls" type="button">${icon('download')}Formato Excel</button>` : ''}
@@ -3513,7 +3515,7 @@
   document.addEventListener('input', (e) => { const k = e.target.dataset && e.target.dataset.recv; if (k && R.rec) { R.rec.recv = { ...(R.rec.recv || {}), [k]: e.target.value }; touchRec(); } });
 
   /* ---- Factura del proveedor (Bill) en QuickBooks desde la IA: mete el inventario (InSitu lo toma de QB) ---- */
-  const PAUSA_QB = true; // pausado (10 oct 2026): no se manda nada a QuickBooks/InSitu desde Recibo/Costeo
+  const PAUSA_QB = true; // pausado (10 oct 2026): recepción en InSitu, Bill y ajustes de inventario. Solo queda "Crear Orden QB".
   async function crearBill(ids, tipo) {
     if (tipo === 'insitu') {
       if (!confirm('PRUEBA: ¿Crear la recepción de mercancía de esta factura en InSitu?\n\nSi InSitu la manda a QuickBooks, aparecerá como "Recibo de artículo". Asegúrate de que en QuickBooks NO haya ya un Recibo de artículo ni una orden de compra de esta factura.')) return null;
