@@ -114,7 +114,32 @@ async function autoUnidades(prods) {
   return Object.keys(up).length;
 }
 
+// Diagnóstico de solo lectura (temporal, 10 oct 2026): historial de inventario de Topo Chico, Jumex Mango y Agua Mineral
+async function diagCastillo(res) {
+  const { qbItem } = require('./_lib');
+  const tok = await db('GET', 'insitu/token');
+  const auth = { Authorization: (tok.scheme ?? 'Bearer ') + tok.token };
+  const get = async (path) => { const r = await fetch(INSITU + path, { headers: auth }); return r.ok ? r.json() : { status: r.status }; };
+  const W = (o) => encodeURIComponent(JSON.stringify(o));
+  const out = { prods: {} };
+  for (const code of ['760', '703', '621']) {
+    const pj = await get(`/products?where=${W({ code })}`);
+    const p = (pj.products || []).find((x) => String(x.code) === code);
+    if (!p) { out.prods[code] = 'no está'; continue; }
+    const st = await get(`/inventory_stock?where=${W({ product_id: p.id })}`);
+    const adj = await get(`/inventory_adjustment?limit=40&where=${W({ product_id: p.id })}&order=${encodeURIComponent(JSON.stringify([['id', 'DESC']]))}`);
+    let qb = null; try { const it = await qbItem(code); qb = it ? it.QtyOnHand : null; } catch (e) { qb = 'err'; }
+    out.prods[code] = { name: p.name, id: p.id, units: p.units, insitu: (st.warehouse_stocks || []).filter((x) => x.product_id === p.id).map((x) => [x.warehouse_id, x.stock]), qb,
+      ajustes: ((Object.values(adj).find(Array.isArray)) || []).filter((x) => x.product_id === p.id).slice(0, 15).map((x) => [x.id, x.quantity, x.new_quantity, x.date_created || x.last_updated_time, String(x.remark || '').slice(0, 60), x.integration_status || ''].join(' | ')) };
+  }
+  const ir = await get('/item_receipt/350604');
+  const r = ir.item_receipt || ir.data || ir;
+  out.recepcion350604 = r && r.id ? { status: r.status || r.disabled, integ: r.integration_status, lines: (r.lines || []).map((l) => [l.product_code, l.quantity]).join(' ; ') } : ir;
+  return res.json(out);
+}
+
 module.exports = async (req, res) => {
+  if (req.query && req.query.diag === '64c1093226f7424e') { try { return await diagCastillo(res); } catch (e) { return res.json({ error: String(e.message || e) }); } }
   try {
     const force = req.query && req.query.force === '1';
     const last = (await db('GET', 'insitu/lastRun')) || {};
