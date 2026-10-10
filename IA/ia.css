@@ -910,3 +910,6 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .cos-alta .field.falta select,.cos-alta .field.falta input{box-shadow:inset 0 0 0 1.5px rgba(242,163,30,.7)}
 .cos-alta select{width:100%}
 .cos-pz{margin-top:8px}
+.rec-invman{display:flex;gap:10px;align-items:flex-start;margin:14px 0;padding:12px 14px;border-radius:14px;background:rgba(242,163,30,.08);cursor:pointer}
+.rec-invman input{margin-top:3px;width:18px;height:18px;accent-color:var(--oro)}
+.rec-invman small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}

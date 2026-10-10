@@ -3284,6 +3284,7 @@
         ${c('') ? `<p class="qb-warn">Faltan ${c('')} productos por revisar.</p>` : ''}
         ${sinFecha ? `<p class="status">${sinFecha} de lo que llegó no tiene fecha de caducidad.</p>` : ''}
         ${falt.length ? `<ul class="rec-falt">${falt.map((l) => `<li><b>${esc(EST[l.estado])}</b> · ${esc(l.producto)}${l.estado === 'parcial' ? ` — llegaron ${nfmt(l.recibido || 0)} de ${nfmt(l.cantidad)}` : ''}${l.nota ? ` · <i>${esc(l.nota)}</i>` : ''}</li>`).join('')}</ul>` : ''}
+        <label class="rec-invman"><input type="checkbox" id="recInvMan"${R.rec.invManual ? ' checked' : ''}> <span><b>El inventario de esta factura ya se metió a mano en InSitu</b><small>Márcalo para que la IA no lo vuelva a meter (si ya lo había metido, lo regresa).</small></span></label>
         <label class="field"><span>Notas del recibo</span><textarea id="recNotaGen" rows="3" maxlength="1500" placeholder="Algo que regresó, que faltó, que venía dañado…">${esc(R.rec.nota || '')}</textarea></label>
         <div class="rec-nav">
           <button type="button" class="btn btn-ghost" data-r="prev">← Revisar</button>
@@ -3458,11 +3459,20 @@
       <div class="hist-item" data-rid="${esc(f.id)}"><div class="hi-txt"><b>${esc(f.proveedor)} · #${esc(f.factura)}</b>
         ${f.lines} productos${f.parcial ? ` · ${f.parcial} llegaron menos` : ''}${f.no ? ` · ${f.no} no llegaron` : ''}${f.pendiente ? ` · ${f.pendiente} pendientes` : ''} · ${f.fechas} con fecha · ${f.origen === 'costeo' ? 'subió ' + esc(f.by || '') + ' en Costeo' : esc(f.by || '')} · ${fmtTs(f.updated || f.ts)}</div>
         <span class="st${f.status === 'costeado' ? ' sent' : ''}">${ST[f.status] || f.status}</span>
-        ${f.inv ? (f.inv.errores.length ? `<span class="pill warn" title="${esc(f.inv.errores.join('\n'))}">inventario: ${f.inv.errores.length} con problema</span><button class="btn btn-ghost btn-sm" data-c="inv" type="button">Reintentar inventario</button>` : `<span class="pill ok">inventario ✓ ${f.inv.hechos}</span>`) : ''}
+        ${f.invManual ? '<span class="pill">inventario: metido a mano</span>' : ['revisado', 'costeado'].includes(f.status) ? '<button class="btn-link sm" data-c="invman" type="button">¿Ya se metió a mano?</button>' : ''}
+        ${f.invManual ? '' : f.inv ? (f.inv.errores.length ? `<span class="pill warn" title="${esc(f.inv.errores.join('\n'))}">inventario: ${f.inv.errores.length} con problema</span><button class="btn btn-ghost btn-sm" data-c="inv" type="button">Reintentar inventario</button>` : `<span class="pill ok">inventario ✓ ${f.inv.hechos}</span>`) : ''}
         ${f.status !== 'costeado' ? `<button class="btn ${f.status === 'borrador' ? 'btn-oro' : 'btn-ghost'} btn-sm" data-c="open" type="button">${f.status === 'borrador' ? 'Revisar' : 'Abrir'}</button>` : ''}</div>`).join('')
       : '<p class="data-info">Todavía no hay recibos.</p>';
   }
+  document.addEventListener('change', (e) => { if (e.target.id === 'recInvMan' && R.rec) { R.rec.invManual = e.target.checked; touchRec(); } });
   $('#recRecent').addEventListener('click', async (e) => {
+    const bm = e.target.closest('[data-c="invman"]');
+    if (bm) {
+      if (!confirm('¿El inventario de esta factura ya se había metido a mano en InSitu?\n\nLa IA no lo meterá, y si ya lo metió, lo regresa (para que no quede doble).')) return;
+      bm.disabled = true;
+      try { const { inv } = await cosCall('recibo_inventario', { id: bm.closest('.hist-item').dataset.rid, manual: true }); toast(inv && inv.errores && inv.errores.length ? `Hecho con ${inv.errores.length} problema(s)` : 'Listo: esta factura queda como metida a mano'); } catch (err) { toast(err.message); }
+      R.list = null; renderRecList(); return;
+    }
     const bi = e.target.closest('[data-c="inv"]');
     if (bi) {
       const row = bi.closest('.hist-item'), f = (R.list || []).find((x) => x.id === row.dataset.rid);

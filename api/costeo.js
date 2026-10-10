@@ -398,6 +398,7 @@ module.exports = async (req, res) => {
           by: (prev && prev.by) || who, ts: (prev && prev.ts) || now, updated: now, updatedBy: who,
           doneAt: final ? ((prev && prev.doneAt) || now) : null,
           inv: (prev && prev.inv) || null,
+          invManual: r.invManual != null ? !!r.invManual : !!(prev && prev.invManual),
         };
         await db('PUT', 'recibos/' + id, rec);
         if (final) await syncLotes(id, prev, rec);
@@ -419,6 +420,7 @@ module.exports = async (req, res) => {
         const rid = codeKey(body.id);
         const rec = await db('GET', 'recibos/' + rid);
         if (!rec || !['revisado', 'costeado'].includes(rec.status)) return res.status(400).json({ error: 'Ese recibo no está terminado' });
+        if (body.manual === true) { rec.invManual = true; await db('PATCH', 'recibos/' + rid, { invManual: true }); }
         const inv = await recInventario(rec);
         if (inv) await db('PATCH', 'recibos/' + rid, { inv });
         return res.json({ inv });
@@ -430,7 +432,7 @@ module.exports = async (req, res) => {
           const c = (e) => L.filter((l) => l.estado === e).length;
           return { id: f.id, proveedor: f.proveedor, factura: f.factura, fecha: f.fecha, status: f.status, by: f.by, ts: f.ts, updated: f.updated, doneAt: f.doneAt || null,
             lines: L.length, ok: c('ok'), parcial: c('parcial'), no: c('no'), pendiente: c('pendiente'), sinRevisar: c(''),
-            fechas: L.filter((l) => l.caducidad).length, costeoId: f.costeoId || null, origen: f.origen || 'bodega', updatedBy: f.updatedBy || '',
+            fechas: L.filter((l) => l.caducidad).length, costeoId: f.costeoId || null, origen: f.origen || 'bodega', updatedBy: f.updatedBy || '', invManual: !!f.invManual,
             inv: f.inv ? { hechos: Object.keys(f.inv.aplicado || {}).length, errores: (f.inv.errores || []).slice(0, 8) } : null };
         }).sort((a, b) => (b.updated || b.ts) - (a.updated || a.ts)).slice(0, 60);
         return res.json({ list });
@@ -709,7 +711,8 @@ async function recInventario(rec) {
   const units = {};
   ((cat && cat.items) || []).forEach((p) => { units[String(p.id)] = String(p.units || ''); });
   const target = {}, cajasBy = {};
-  rec.lines.forEach((l) => {
+  // Metido a mano: no se mete nada (y lo que la IA ya hubiera metido se regresa)
+  if (!rec.invManual) rec.lines.forEach((l) => {
     if (!l.sku) return;
     const cajas = l.estado === 'ok' ? l.cantidad : l.estado === 'parcial' ? l.recibido : 0; // solo lo que llegó
     if (!(cajas > 0)) return;
