@@ -115,8 +115,6 @@ async function autoUnidades(prods) {
 }
 
 module.exports = async (req, res) => {
-  try { return await fixCero(res); } catch (e) { return res.json({ error: String(e.message || e) }); }
-  }
   try {
     const force = req.query && req.query.force === '1';
     const last = (await db('GET', 'insitu/lastRun')) || {};
