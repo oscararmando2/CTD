@@ -244,6 +244,7 @@ module.exports = async (req, res) => {
           applied: Array.isArray(body.results) ? body.results.slice(0, 300) : [],
           by: who, ts: Date.now(),
         };
+        if (id === prevId) { const pb = await db('GET', 'costeoFacturas/' + id + '/bill'); if (pb) rec.bill = pb; } // no perder la factura de QB ya creada
         await db('PUT', 'costeoFacturas/' + id, rec);
         // Aprende: código del proveedor → producto (para reconocerlo solo la próxima vez)
         const vk = vendorKey(f.proveedor);
@@ -400,6 +401,7 @@ module.exports = async (req, res) => {
           doneAt: final ? ((prev && prev.doneAt) || now) : null,
           inv: (prev && prev.inv) || null,
           invManual: r.invManual != null ? !!r.invManual : !!(prev && prev.invManual),
+          bill: (prev && prev.bill) || null,
           recv: r.recv && typeof r.recv === 'object' ? { pallets: str(r.recv.pallets, 10), combinados: str(r.recv.combinados, 10), temp: str(r.recv.temp, 20), por: str(r.recv.por, 80) } : (prev && prev.recv) || null,
         };
         await db('PUT', 'recibos/' + id, rec);
@@ -416,6 +418,69 @@ module.exports = async (req, res) => {
           await db('PATCH', 'costeoFacturas/' + costeoId, { bodega: { reciboId: id, by: rec.updatedBy, at: now, nota: rec.nota, dif } });
         }
         return res.json({ id, status: rec.status, costeoId, inv });
+      }
+      case 'qb_bill': {
+        // Factura del proveedor (Bill) en QuickBooks con lo que se recibió: mete el inventario y la cuenta por pagar.
+        // No duplica: si ya hay un Bill con ese número para ese proveedor, no crea otro.
+        let rec = body.reciboId ? await db('GET', 'recibos/' + codeKey(body.reciboId)) : null;
+        let cos = null;
+        if (body.costeoId) cos = await db('GET', 'costeoFacturas/' + codeKey(body.costeoId));
+        if (!rec && cos) rec = await findRecibo(cos.key);
+        if (rec && !cos && rec.costeoId) cos = await db('GET', 'costeoFacturas/' + rec.costeoId);
+        const src = rec || cos;
+        if (!src) return res.status(404).json({ error: 'No encontré la factura' });
+        if (src.bill && src.bill.id && !body.force) return res.json({ ya: true, bill: src.bill });
+        const revisado = rec && ['revisado', 'costeado'].includes(rec.status);
+        // Proveedor en QuickBooks: el elegido, o por nombre
+        let vendorId = /^\d+$/.test(String(body.vendorId || '')) ? String(body.vendorId) : '';
+        if (!vendorId) {
+          const vs = ((await qbQuery('select Id, DisplayName from Vendor where Active = true maxresults 1000')).Vendor || []);
+          const pn = norm(src.proveedor || ''), w = pn.split(' ')[0] || '';
+          const v = vs.find((x) => norm(x.DisplayName) === pn) || vs.find((x) => norm(x.DisplayName).includes(pn) || pn.includes(norm(x.DisplayName))) || (w.length > 2 && vs.filter((x) => norm(x.DisplayName).split(' ')[0] === w).length === 1 && vs.find((x) => norm(x.DisplayName).split(' ')[0] === w));
+          if (!v) return res.status(409).json({ error: `No encontré el proveedor "${src.proveedor}" en QuickBooks: elígelo`, code: 'no_vendor', vendors: vs.map((x) => ({ id: String(x.Id), name: x.DisplayName })).sort((a, b) => a.name.localeCompare(b.name)) });
+          vendorId = String(v.Id);
+        }
+        const doc = String(src.factura || '').slice(0, 21);
+        if (doc && !body.force) {
+          const ex = ((await qbQuery(`select Id, TotalAmt, TxnDate from Bill where DocNumber = '${doc.replace(/'/g, "\\'")}'`)).Bill || []).filter((b) => true);
+          const mine = [];
+          for (const b of ex) { const full = await qb('GET', 'bill/' + b.Id); if (full.Bill && full.Bill.VendorRef && String(full.Bill.VendorRef.value) === vendorId) mine.push(full.Bill); }
+          if (mine.length) { const bill = { id: mine[0].Id, doc, total: mine[0].TotalAmt, at: Date.now(), existente: true }; return res.json({ ya: true, bill }); }
+        }
+        // Renglones: lo recibido (si bodega ya revisó) o lo de la factura; en piezas si se vende por pieza
+        const [pzMem, cat] = await Promise.all([db('GET', 'costeoPz'), db('GET', 'catalogo')]);
+        const units = {};
+        ((cat && cat.items) || []).forEach((p) => { units[String(p.id)] = String(p.units || ''); });
+        const skuCos = {};
+        ((cos && cos.lines) || []).forEach((l) => { const s = l.qbId || l.sku; if (s) skuCos[norm(l.producto)] = { sku: String(s), pz: l.pz || 0 }; });
+        const lines = [], faltan = [];
+        ((rec && rec.lines) || (cos && cos.lines) || []).forEach((l) => {
+          const cajas = revisado ? (l.estado === 'ok' ? Number(l.recibido ?? l.cantidad) || 0 : l.estado === 'parcial' ? Number(l.recibido) || 0 : 0) : Number(l.cantidad) || 0;
+          if (!(cajas > 0)) return;
+          const cs = skuCos[norm(l.producto)] || {};
+          const sku = String(l.qbId || l.sku || cs.sku || '');
+          if (!/^\d+$/.test(sku)) { faltan.push(l.nombre || l.producto); return; }
+          const mem = (pzMem || {})[codeKey(sku)];
+          const pzL = cs.pz > 1 ? cs.pz : mem > 1 ? mem : 0;
+          const porPieza = pzL > 1 || (mem == null && /each|count|pieza|unit/i.test(units[sku] || ''));
+          const n = pzL > 1 ? pzL : piezasDe(l);
+          if (porPieza && !(n > 1)) { faltan.push(`${l.nombre || l.producto} (por pieza: no sé cuántas trae la caja)`); return; }
+          const costo = Number(l.costo_caja) || 0;
+          const qty = porPieza ? cajas * n : cajas, price = porPieza ? r2(costo / n) : r2(costo);
+          lines.push({ DetailType: 'ItemBasedExpenseLineDetail', Amount: r2(qty * price), Description: String(l.nombre || l.producto || '').slice(0, 4000),
+            ItemBasedExpenseLineDetail: { ItemRef: { value: sku }, Qty: qty, UnitPrice: price } });
+        });
+        if (faltan.length) return res.status(409).json({ error: `Faltan productos por ligar: ${faltan.slice(0, 8).join(' · ')}${faltan.length > 8 ? '…' : ''}`, code: 'faltan' });
+        if (!lines.length) return res.status(400).json({ error: 'No hay nada recibido para la factura' });
+        const fecha = /^\d{4}-\d{2}-\d{2}$/.test(src.fecha || '') ? src.fecha : todayCT();
+        const payload = { VendorRef: { value: vendorId }, TxnDate: fecha, Line: lines, PrivateNote: `Creada por la IA (${who}) · ${revisado ? 'cantidades recibidas en bodega' : 'cantidades de la factura'}`.slice(0, 4000) };
+        if (doc) payload.DocNumber = doc;
+        const d = await qb('POST', 'bill', payload);
+        const bill = { id: d.Bill.Id, doc, total: d.Bill.TotalAmt, at: Date.now(), by: who, lineas: lines.length, recibido: !!revisado };
+        if (rec) await db('PATCH', 'recibos/' + rec.id, { bill });
+        if (cos && (body.costeoId || (rec && rec.costeoId))) await db('PATCH', 'costeoFacturas/' + codeKey(body.costeoId || rec.costeoId), { bill });
+        await log({ action: 'qb-bill', name: `${src.proveedor} #${doc}`, qbId: d.Bill.Id, total: d.Bill.TotalAmt, lineas: lines.length, by: who });
+        return res.json({ ok: true, bill });
       }
       case 'recibo_inventario': {
         // Reintentar meter el inventario de un recibo ya terminado (ej. faltaba la sesión de InSitu)
@@ -434,7 +499,7 @@ module.exports = async (req, res) => {
           const c = (e) => L.filter((l) => l.estado === e).length;
           return { id: f.id, proveedor: f.proveedor, factura: f.factura, fecha: f.fecha, status: f.status, by: f.by, ts: f.ts, updated: f.updated, doneAt: f.doneAt || null,
             lines: L.length, ok: c('ok'), parcial: c('parcial'), no: c('no'), pendiente: c('pendiente'), sinRevisar: c(''),
-            fechas: L.filter((l) => l.caducidad).length, costeoId: f.costeoId || null, origen: f.origen || 'bodega', updatedBy: f.updatedBy || '', invManual: !!f.invManual,
+            fechas: L.filter((l) => l.caducidad).length, costeoId: f.costeoId || null, origen: f.origen || 'bodega', updatedBy: f.updatedBy || '', invManual: !!f.invManual, bill: f.bill || null,
             inv: f.inv ? { hechos: Object.keys(f.inv.aplicado || {}).length, errores: (f.inv.errores || []).slice(0, 8) } : null };
         }).sort((a, b) => (b.updated || b.ts) - (a.updated || a.ts)).slice(0, 60);
         return res.json({ list });
@@ -683,7 +748,7 @@ async function avisosTienda() {
   });
   return out.sort((a, b) => a.dias - b.dias || a.tienda.localeCompare(b.tienda)).slice(0, 300);
 }
-const RECIBO_ACTIONS = ['recibo_inventario', 'parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'lote_add', 'lote_del', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
+const RECIBO_ACTIONS = ['qb_bill', 'recibo_inventario', 'parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'lote_add', 'lote_del', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
 const ESTADOS = ['', 'ok', 'parcial', 'no', 'pendiente'];
 const ymdOk = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '');
 
