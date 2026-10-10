@@ -420,6 +420,8 @@ module.exports = async (req, res) => {
         return res.json({ id, status: rec.status, costeoId, inv });
       }
       case 'qb_bill': {
+        // PAUSADO (10 oct 2026, Oscar): nada se manda a QuickBooks/InSitu desde Recibo hasta decidir el proceso
+        if (PAUSA_RECIBO_QB) return res.status(403).json({ error: 'Pausado por ahora: el recibo se hace a mano en QuickBooks.' });
         // Factura del proveedor (Bill) en QuickBooks con lo que se recibió: mete el inventario y la cuenta por pagar.
         // No duplica: si ya hay un Bill con ese número para ese proveedor, no crea otro.
         let rec = body.reciboId ? await db('GET', 'recibos/' + codeKey(body.reciboId)) : null;
@@ -533,6 +535,7 @@ module.exports = async (req, res) => {
         return res.json({ ok: true, bill, tipo: campo });
       }
       case 'recibo_inventario': {
+        if (PAUSA_RECIBO_QB) return res.status(403).json({ error: 'Pausado por ahora: el recibo se hace a mano en QuickBooks.' });
         // Reintentar meter el inventario de un recibo ya terminado (ej. faltaba la sesión de InSitu)
         const rid = codeKey(body.id);
         const rec = await db('GET', 'recibos/' + rid);
@@ -824,6 +827,7 @@ function piezasDe(l) {
 // APAGADO (10 oct 2026): el inventario de InSitu viene de QuickBooks (Jona hace "Recibir artículos" en QB),
 // así que ajustar InSitu directo duplicaría. Solo se permite REGRESAR lo que la IA ya hubiera metido.
 const INV_INSITU_ACTIVO = false;
+const PAUSA_RECIBO_QB = true; // botones de mandar a QuickBooks/InSitu desde Recibo/Costeo, pausados
 async function recInventario(rec) {
   if (!rec.doneAt || rec.doneAt < INV_DESDE) return rec.inv || null;
   if (!INV_INSITU_ACTIVO && !Object.values((rec.inv && rec.inv.aplicado) || {}).some((v) => v)) return rec.inv || null;
