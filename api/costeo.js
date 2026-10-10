@@ -401,7 +401,7 @@ module.exports = async (req, res) => {
           doneAt: final ? ((prev && prev.doneAt) || now) : null,
           inv: (prev && prev.inv) || null,
           invManual: r.invManual != null ? !!r.invManual : !!(prev && prev.invManual),
-          bill: (prev && prev.bill) || null, po: (prev && prev.po) || null,
+          bill: (prev && prev.bill) || null, po: (prev && prev.po) || null, insitu: (prev && prev.insitu) || null,
           recv: r.recv && typeof r.recv === 'object' ? { pallets: str(r.recv.pallets, 10), combinados: str(r.recv.combinados, 10), temp: str(r.recv.temp, 20), por: str(r.recv.por, 80) } : (prev && prev.recv) || null,
         };
         await db('PUT', 'recibos/' + id, rec);
@@ -431,9 +431,10 @@ module.exports = async (req, res) => {
         if (!src) return res.status(404).json({ error: 'No encontré la factura' });
         // tipo 'po' (default): Orden de compra abierta → Jona la recibe en QuickBooks ("Recibo de artículo") con un clic.
         // tipo 'bill': factura del proveedor (mete inventario y cuenta por pagar directo).
-        const esPO = body.tipo !== 'bill';
-        const ENT = esPO ? 'PurchaseOrder' : 'Bill', campo = esPO ? 'po' : 'bill';
-        if (src[campo] && src[campo].id && !body.force) return res.json({ ya: true, bill: src[campo], tipo: campo });
+        const enInsitu = body.tipo === 'insitu';
+        const esPO = !enInsitu && body.tipo !== 'bill';
+        const ENT = esPO ? 'PurchaseOrder' : 'Bill', campo = enInsitu ? 'insitu' : esPO ? 'po' : 'bill';
+        if (src[campo] && (src[campo].id || src[campo].at) && !body.force) return res.json({ ya: true, bill: src[campo], tipo: campo });
         const revisado = rec && ['revisado', 'costeado'].includes(rec.status);
         // Proveedor en QuickBooks: el elegido, o por nombre
         let vendorId = /^\d+$/.test(String(body.vendorId || '')) ? String(body.vendorId) : '';
@@ -445,7 +446,7 @@ module.exports = async (req, res) => {
           vendorId = String(v.Id);
         }
         const doc = String(src.factura || '').slice(0, 21);
-        if (doc && !body.force) {
+        if (doc && !body.force && !enInsitu) {
           const ex = ((await qbQuery(`select Id, TotalAmt, TxnDate from ${ENT} where DocNumber = '${doc.replace(/'/g, "\\'")}'`))[ENT] || []);
           const mine = [];
           for (const b of ex) { const full = await qb('GET', ENT.toLowerCase() + '/' + b.Id); const x = full[ENT]; if (x && x.VendorRef && String(x.VendorRef.value) === vendorId) mine.push(x); }
@@ -479,6 +480,38 @@ module.exports = async (req, res) => {
         // Fecha: el día que llegó la mercancía (bodega terminó el recibo), como lo hace Jona; si no, la de la factura
         const ctDate = (ms) => new Date(ms).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
         const fecha = revisado && rec.doneAt ? ctDate(rec.doneAt) : /^\d{4}-\d{2}-\d{2}$/.test(src.fecha || '') ? src.fecha : todayCT();
+        if (enInsitu) {
+          // Recepción de mercancía (Item Receipt) en InSitu: por si InSitu la manda a QuickBooks como "Recibo de artículo"
+          const stocks = await insituGet('/inventory_stock', {}, true);
+          const wc = {}; stocks.forEach((w) => { wc[w.warehouse_id] = (wc[w.warehouse_id] || 0) + 1; });
+          const defW = Number(Object.keys(wc).sort((a, b) => wc[b] - wc[a])[0]);
+          const bc = {};
+          for (const path of ['/item_receipt', '/inventory_adjustment']) {
+            try {
+              const j = await insituGet(path, { limit: 200, order: JSON.stringify([['id', 'DESC']]) });
+              (Object.values(j).find(Array.isArray) || []).forEach((x) => [x, ...(Array.isArray(x.lines) ? x.lines : [])].forEach((y) => { if (y && y.bin_location_id && y.warehouse_id) { const k = y.warehouse_id + '|' + y.bin_location_id; bc[k] = (bc[k] || 0) + 1; } }));
+            } catch (e) { /* sigue */ }
+          }
+          const binFor = (wid) => { const k = Object.keys(bc).filter((x) => x.startsWith(wid + '|')).sort((a, b) => bc[b] - bc[a])[0] || Object.keys(bc).sort((a, b) => bc[b] - bc[a])[0]; return k ? Number(k.split('|')[1]) : undefined; };
+          const rl = [];
+          for (const ln of lines) {
+            const code = ln.ItemBasedExpenseLineDetail.ItemRef.value;
+            const pr = await insituGet('/products', { where: JSON.stringify({ code }) });
+            const p = (Object.values(pr).find(Array.isArray) || []).find((x) => String(x.code).trim() === code);
+            if (!p) return res.status(409).json({ error: `${ln.Description}: no está en InSitu todavía`, code: 'faltan' });
+            const mine = stocks.filter((x) => x.product_id === p.id);
+            const wid = mine.length ? mine.sort((a, b) => (Number(b.stock) || 0) - (Number(a.stock) || 0))[0].warehouse_id : defW;
+            const l = (rec && rec.lines || []).find((x) => String(x.sku || x.qbId) === code) || {};
+            rl.push({ product_id: p.id, product_code: code, product_name: p.name, warehouse_id: wid, bin_location_id: binFor(wid), quantity: ln.ItemBasedExpenseLineDetail.Qty, product_cost: ln.ItemBasedExpenseLineDetail.UnitPrice, amount: ln.Amount, ...(l.caducidad ? { exp_date: l.caducidad } : {}) });
+          }
+          const payload = { vendor_code: vendorId, vendor_name: String(src.proveedor || ''), trn_date: fecha, total_amount: r2(rl.reduce((a, x) => a + x.amount, 0)), remark: `Factura ${doc} · creada por la IA (${who})`.slice(0, 250), lines: rl };
+          const d = await insituPost('/item_receipt', payload);
+          const ir = (d && (d.item_receipt || d.data)) || {};
+          const bill = { id: ir.id || '', doc, total: payload.total_amount, at: Date.now(), by: who, lineas: rl.length, recibido: !!revisado };
+          if (rec) await db('PATCH', 'recibos/' + rec.id, { insitu: bill });
+          await log({ action: 'insitu-recepcion', name: `${src.proveedor} #${doc}`, insituId: bill.id, total: bill.total, lineas: rl.length, by: who });
+          return res.json({ ok: true, bill, tipo: 'insitu' });
+        }
         // QuickBooks no deja meter inventario antes de la fecha de inicio del producto: se adelanta (productos recién dados de alta)
         for (const ln of (esPO ? [] : lines)) {
           const it = await qbItem(ln.ItemBasedExpenseLineDetail.ItemRef.value);
@@ -516,7 +549,7 @@ module.exports = async (req, res) => {
           const c = (e) => L.filter((l) => l.estado === e).length;
           return { id: f.id, proveedor: f.proveedor, factura: f.factura, fecha: f.fecha, status: f.status, by: f.by, ts: f.ts, updated: f.updated, doneAt: f.doneAt || null,
             lines: L.length, ok: c('ok'), parcial: c('parcial'), no: c('no'), pendiente: c('pendiente'), sinRevisar: c(''),
-            fechas: L.filter((l) => l.caducidad).length, costeoId: f.costeoId || null, origen: f.origen || 'bodega', updatedBy: f.updatedBy || '', invManual: !!f.invManual, bill: f.bill || null, po: f.po || null,
+            fechas: L.filter((l) => l.caducidad).length, costeoId: f.costeoId || null, origen: f.origen || 'bodega', updatedBy: f.updatedBy || '', invManual: !!f.invManual, bill: f.bill || null, po: f.po || null, insitu: f.insitu || null,
             inv: f.inv ? { hechos: Object.keys(f.inv.aplicado || {}).length, errores: (f.inv.errores || []).slice(0, 8) } : null };
         }).sort((a, b) => (b.updated || b.ts) - (a.updated || a.ts)).slice(0, 60);
         return res.json({ list });

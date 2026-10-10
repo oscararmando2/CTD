@@ -3502,6 +3502,7 @@
         ${f.lines} productos${f.parcial ? ` · ${f.parcial} llegaron menos` : ''}${f.no ? ` · ${f.no} no llegaron` : ''}${f.pendiente ? ` · ${f.pendiente} pendientes` : ''} · ${f.fechas} con fecha · ${f.origen === 'costeo' ? 'subió ' + esc(f.by || '') + ' en Costeo' : esc(f.by || '')} · ${fmtTs(f.updated || f.ts)}</div>
         <span class="st${f.status === 'costeado' ? ' sent' : ''}">${ST[f.status] || f.status}</span>
         ${f.po ? `<span class="pill ok">QuickBooks: orden ${esc(f.po.doc || f.po.id)} lista para recibir</span>` : `${f.bill ? `<span class="pill warn">QuickBooks: Bill ${esc(f.bill.doc || f.bill.id)}</span>` : ''}${['revisado', 'costeado'].includes(f.status) ? `<button class="btn btn-oro btn-sm" data-c="bill" data-tenia="${f.bill ? 1 : ''}" type="button">Mandar a QuickBooks para recibir</button>` : ''}`}
+        ${f.insitu ? `<span class="pill ok">InSitu: recepción ${esc(f.insitu.id || '')} ✓</span>` : ['revisado', 'costeado'].includes(f.status) ? '<button class="btn btn-ghost btn-sm" data-c="insitu" type="button">Recepción en InSitu (prueba)</button>' : ''}
         ${['revisado', 'costeado'].includes(f.status) ? `<button class="btn btn-ghost btn-sm" data-c="xls" type="button">${icon('download')}Formato Excel</button>` : ''}
         ${f.invManual ? '<span class="pill">inventario: metido a mano</span>' : ['revisado', 'costeado'].includes(f.status) ? '<button class="btn-link sm" data-c="invman" type="button">¿Ya se metió a mano?</button>' : ''}
         ${f.invManual ? '' : f.inv ? (f.inv.errores.length ? `<span class="pill warn" title="${esc(f.inv.errores.join('\n'))}">inventario: ${f.inv.errores.length} con problema</span><button class="btn btn-ghost btn-sm" data-c="inv" type="button">Reintentar inventario</button>` : `<span class="pill ok">inventario ✓ ${f.inv.hechos}</span>`) : ''}
@@ -3512,7 +3513,16 @@
   document.addEventListener('input', (e) => { const k = e.target.dataset && e.target.dataset.recv; if (k && R.rec) { R.rec.recv = { ...(R.rec.recv || {}), [k]: e.target.value }; touchRec(); } });
 
   /* ---- Factura del proveedor (Bill) en QuickBooks desde la IA: mete el inventario (InSitu lo toma de QB) ---- */
-  async function crearBill(ids) {
+  async function crearBill(ids, tipo) {
+    if (tipo === 'insitu') {
+      if (!confirm('PRUEBA: ¿Crear la recepción de mercancía de esta factura en InSitu?\n\nSi InSitu la manda a QuickBooks, aparecerá como "Recibo de artículo". Asegúrate de que en QuickBooks NO haya ya un Recibo de artículo ni una orden de compra de esta factura.')) return null;
+      try {
+        const d = await cosCall('qb_bill', { ...ids, tipo: 'insitu' });
+        if (d.ya) { toast('Ya se había mandado a InSitu'); return { ...d.bill, tipo: 'insitu' }; }
+        alert(`Listo ✓ Recepción creada en InSitu${d.bill.id ? ' (#' + d.bill.id + ')' : ''} · ${d.bill.lineas} productos · ${money(d.bill.total)}\n\nAhora esperen la sincronización de InSitu con QuickBooks y revisen si aparece en "Recibo de artículo".`);
+        return { ...d.bill, tipo: 'insitu' };
+      } catch (e) { alert('No se pudo crear en InSitu:\n\n' + e.message); return null; }
+    }
     if (!confirm('¿Mandar esta factura a QuickBooks para recibirla?\n\nSe crea una Orden de compra abierta con el proveedor, productos, cantidades recibidas y costos (no mueve inventario todavía).\nDespués, en QuickBooks → Recibo de artículo, eliges el proveedor, le das "Agregar" a la orden y Guardar.')) return null;
     let extra = {};
     for (let intento = 0; intento < 2; intento++) {
@@ -3588,6 +3598,8 @@
     download(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Receiving-${normTxt(rec.proveedor || '').replace(/[^a-z0-9]+/g, '-').slice(0, 24)}-${String(rec.factura || '').replace(/[^\w-]+/g, '')}.xlsx`);
   }
   $('#recRecent').addEventListener('click', async (e) => {
+    const bi2 = e.target.closest('[data-c="insitu"]');
+    if (bi2) { bi2.disabled = true; const r = await crearBill({ reciboId: bi2.closest('.hist-item').dataset.rid }, 'insitu'); if (r) { R.list = null; renderRecList(); } else bi2.disabled = false; return; }
     const bb = e.target.closest('[data-c="bill"]');
     if (bb) {
       if (bb.dataset.tenia && !confirm('Esta factura ya tiene un Bill creado por la IA en QuickBooks.\n\nBórralo primero en QuickBooks; si no, al recibir la orden el inventario se DUPLICA.\n\n¿Ya lo borraste?')) return;
