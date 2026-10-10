@@ -3953,11 +3953,6 @@
           act: `<button type="button" class="btn btn-ghost btn-sm" data-tesp="${esc(r.sku)}">${icon('sparkles')}Mandar a especial</button>` });
       });
     }
-    // Productos nuevos: todavía no hay ventas para calcular
-    if (full) {
-      const nuevos = [...new Set(rows.filter((r) => r.dias >= 0).map((r) => r.sku))].map((sku) => S.products.find((x) => skuKey(x.id) === sku)).filter((p) => p && esNuevo(p, skuKey(p.id)));
-      if (nuevos.length) tips.push({ lvl: '', t: `${nuevos.length} ${nuevos.length === 1 ? 'producto nuevo' : 'productos nuevos'}: todavía sin ventas para calcular`, d: `Llegaron hace poco, así que aún no se sabe si alcanzan a venderse antes de su fecha: ${nuevos.slice(0, 5).map((p) => esc(p.name)).join(', ')}${nuevos.length > 5 ? '…' : ''}. La IA lo empieza a medir cuando tengan unas semanas de ventas.` });
-    }
     // 4) Dos fechas del mismo producto: sacar primero la más próxima
     const bySku = {};
     rows.filter((r) => r.dias >= 0).forEach((r) => { (bySku[r.sku] = bySku[r.sku] || []).push(r); });
