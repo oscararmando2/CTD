@@ -212,7 +212,7 @@ module.exports = async (req, res) => {
             };
             if (/^\d+$/.test(String(c.vendorId || ''))) item.PrefVendorRef = { value: String(c.vendorId) };
             if (c.cat) { try { const cat = await qbCategoria(c.cat); if (cat) Object.assign(item, { SubItem: true, ParentRef: { value: cat.Id } }); } catch (e) { /* sin categoría */ } }
-            if (tpl.Type === 'Inventory') Object.assign(item, { AssetAccountRef: tpl.AssetAccountRef, TrackQtyOnHand: true, QtyOnHand: 0, InvStartDate: todayCT() });
+            if (tpl.Type === 'Inventory') Object.assign(item, { AssetAccountRef: tpl.AssetAccountRef, TrackQtyOnHand: true, QtyOnHand: 0, InvStartDate: new Date(Date.parse(todayCT() + 'T12:00:00Z') - 30 * 864e5).toISOString().slice(0, 10) }); // 30 días antes: para poder meter la factura de compra con su fecha
             const d = await qb('POST', 'item', item);
             await log({ action: 'costeo-alta', name, qbId: d.Item.Id, price: item.UnitPrice, cost: item.PurchaseCost, factura: body.factura || '', by: who });
             // Lo que QuickBooks no guarda (categoría, marca, código de barras, foto) se pone en InSitu cuando el producto llegue (cron de cada hora)
@@ -472,7 +472,17 @@ module.exports = async (req, res) => {
         });
         if (faltan.length) return res.status(409).json({ error: `Faltan productos por ligar: ${faltan.slice(0, 8).join(' · ')}${faltan.length > 8 ? '…' : ''}`, code: 'faltan' });
         if (!lines.length) return res.status(400).json({ error: 'No hay nada recibido para la factura' });
-        const fecha = /^\d{4}-\d{2}-\d{2}$/.test(src.fecha || '') ? src.fecha : todayCT();
+        // Fecha: el día que llegó la mercancía (bodega terminó el recibo), como lo hace Jona; si no, la de la factura
+        const ctDate = (ms) => new Date(ms).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+        const fecha = revisado && rec.doneAt ? ctDate(rec.doneAt) : /^\d{4}-\d{2}-\d{2}$/.test(src.fecha || '') ? src.fecha : todayCT();
+        // QuickBooks no deja meter inventario antes de la fecha de inicio del producto: se adelanta (productos recién dados de alta)
+        for (const ln of lines) {
+          const it = await qbItem(ln.ItemBasedExpenseLineDetail.ItemRef.value);
+          if (it && it.Type === 'Inventory' && it.InvStartDate && it.InvStartDate > fecha) {
+            await qb('POST', 'item', { Id: it.Id, SyncToken: it.SyncToken, sparse: true, InvStartDate: fecha });
+            await log({ action: 'qb-inv-start', name: it.Name, qbId: it.Id, de: it.InvStartDate, a: fecha, by: who });
+          }
+        }
         const payload = { VendorRef: { value: vendorId }, TxnDate: fecha, Line: lines, PrivateNote: `Creada por la IA (${who}) · ${revisado ? 'cantidades recibidas en bodega' : 'cantidades de la factura'}`.slice(0, 4000) };
         if (doc) payload.DocNumber = doc;
         const d = await qb('POST', 'bill', payload);
