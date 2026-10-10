@@ -3225,7 +3225,7 @@
     lots.slice(0, 3).forEach(([d]) => { if (!opts.some((o) => o.d === d)) opts.push({ d, t: 'la vez pasada' }); });
     const chip = (o) => `<button type="button" class="chip${l.caducidad === o.d ? ' on' : ''}" data-r="date" data-d="${o.d}">${esc(fmtLong(o.d))}<small>${esc(o.t)}</small></button>`;
     const dd = l.caducidad ? daysTo(l.caducidad) : null;
-    const prev = l.caducidad ? `Vence <b>${esc(fmtLong(l.caducidad))}</b>${dd < 0 ? ' · <span class="bad">ya venció</span>' : dd < 120 ? ` · <span class="warn">en ${dd} días</span>` : ''}` : 'Sin fecha';
+    const prev = l.fechas && l.fechas.length > 1 ? `Vence <b>${l.fechas.map((x) => `${esc(fmtLong(x.f))} (${nfmt(x.q)})`).join(' + ')}</b>` : l.caducidad ? `Vence <b>${esc(fmtLong(l.caducidad))}</b>${dd < 0 ? ' · <span class="bad">ya venció</span>' : dd < 120 ? ` · <span class="warn">en ${dd} días</span>` : ''}` : 'Sin fecha';
     const same = l.sku && normTxt(l.nombre).replace(/\W/g, '') === normTxt(l.producto).replace(/\W/g, '');
     return `
       <article class="rec-card" data-i="${i}">
@@ -3347,6 +3347,11 @@
         return `<button type="button" class="dy${d === cur ? ' pick' : ''}${wd === 0 || wd === 6 ? ' we' : ''}" data-s="d" data-d="${d}"${off ? ' disabled' : ''}><small>${DIAS[wd]}</small><b>${d}</b></button>`;
       }).join('')}</div>`;
     }
+    const tot = !sh.item ? (l.estado === 'parcial' ? Number(l.recibido) || 0 : Number(l.cantidad) || 0) : 0;
+    const parts = sh.parts || [], puestas = parts.reduce((a, x) => a + x.q, 0);
+    const split = sh.split ? `<div class="sh-split"><p class="lbl sh-l">Varias fechas · ${nfmt(puestas)} de ${nfmt(tot)} cajas</p>
+      ${parts.map((x, k) => `<span class="pill">${nfmt(x.q)} ${x.q === 1 ? 'caja' : 'cajas'} · ${esc(fmtLong(x.f))} <button type="button" class="g-x" data-s="rm" data-k="${k}" aria-label="Quitar">×</button></span>`).join(' ')}
+      <p class="status">${puestas < tot ? `Escoge la fecha de las ${nfmt(tot - puestas)} que faltan.` : 'Listo.'}</p></div>` : '';
     el.hidden = false;
     el.innerHTML = `
       <div class="sh-back" data-s="close"></div>
@@ -3356,11 +3361,12 @@
           ${thumb(l, 'rec-th')}
           <div><p class="hud">¿Cuándo vence?</p><p class="sh-prod">${esc(l.sku ? l.nombre : l.producto)}</p></div>
         </div>
+        ${split}
         <div class="sh-months">${months}</div>
         <div class="sh-years">${years}</div>
         ${days}
         <div class="sh-foot">
-          <button type="button" class="btn btn-ghost btn-sm" data-s="none">Sin fecha</button>
+          ${sh.split ? `<button type="button" class="btn btn-oro btn-sm" data-s="splitok"${parts.length ? '' : ' disabled'}>Guardar fechas</button>` : `<button type="button" class="btn btn-ghost btn-sm" data-s="none">Sin fecha</button>${!sh.item && tot > 1 ? '<button type="button" class="btn btn-ghost btn-sm" data-s="split">Varias fechas</button>' : ''}`}
           <button type="button" class="btn btn-ghost btn-sm" data-s="close">Cancelar</button>
         </div>
       </div>`;
@@ -3378,10 +3384,29 @@
     const s = R.sheet;
     if (s.cb) { if (ymdv) R.lastDate = ymdv; closeSheet(); s.cb(ymdv); return; }
     const l = R.rec.lines[s.i];
+    if (s.split && ymdv) {
+      // Varias fechas: cuántas cajas traen esta fecha
+      const tot = l.estado === 'parcial' ? Number(l.recibido) || 0 : Number(l.cantidad) || 0;
+      const falta = tot - (s.parts || []).reduce((a, x) => a + x.q, 0);
+      const n = Math.round(Number(prompt(`¿Cuántas cajas vencen el ${fmtLong(ymdv)}?`, String(Math.max(1, falta)))) || 0);
+      if (n > 0) { const ex = s.parts.find((x) => x.f === ymdv); if (ex) ex.q += n; else s.parts.push({ f: ymdv, q: n }); s.parts.sort((a, b) => (a.f < b.f ? -1 : 1)); }
+      s.m = null; s.y = null; s.day = false; R.lastDate = ymdv;
+      if (s.parts.reduce((a, x) => a + x.q, 0) >= tot && s.parts.length) { guardarPartes(); return; }
+      renderSheet(); return;
+    }
+    l.fechas = null;
     l.caducidad = ymdv;
     if (ymdv) R.lastDate = ymdv;
     touchRec();
     closeSheet();
+    if (s.adv && s.i === R.cur) { R.noteOpen = false; nextCard(); }
+    renderRecibo(); toCard();
+  }
+  function guardarPartes() {
+    const s = R.sheet, l = R.rec.lines[s.i];
+    l.fechas = s.parts.length > 1 ? s.parts.map((x) => ({ f: x.f, q: x.q })) : null;
+    l.caducidad = s.parts.length ? s.parts[0].f : ''; // la más próxima
+    touchRec(); closeSheet();
     if (s.adv && s.i === R.cur) { R.noteOpen = false; nextCard(); }
     renderRecibo(); toCard();
   }
@@ -3398,6 +3423,9 @@
     const a = b.dataset.s, sh = R.sheet;
     if (a === 'close') { const cb = R.sheet.cb; closeSheet(); if (!cb) renderRecibo(); return; }
     if (a === 'none') { pickDate(''); return; }
+    if (a === 'split') { const l = R.rec.lines[sh.i]; sh.split = true; sh.parts = (l.fechas || []).map((x) => ({ ...x })); sh.m = null; sh.y = null; sh.day = false; renderSheet(); return; }
+    if (a === 'rm') { sh.parts.splice(+b.dataset.k, 1); renderSheet(); return; }
+    if (a === 'splitok') { guardarPartes(); return; }
     if (a === 'm') { sh.m = +b.dataset.m; sh.day = false; monthYearReady(); return; }
     if (a === 'y') { sh.y = +b.dataset.y; sh.day = false; monthYearReady(); return; }
     if (a === 'd') pickDate(mkYmd(sh.y, sh.m, +b.dataset.d));

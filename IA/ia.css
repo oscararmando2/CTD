@@ -913,3 +913,6 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .rec-invman{display:flex;gap:10px;align-items:flex-start;margin:14px 0;padding:12px 14px;border-radius:14px;background:rgba(242,163,30,.08);cursor:pointer}
 .rec-invman input{margin-top:3px;width:18px;height:18px;accent-color:var(--oro)}
 .rec-invman small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+.sh-split{margin:6px 0 10px}
+.sh-split .pill{display:inline-flex;align-items:center;gap:6px;margin:3px 4px 3px 0}
+.sh-split .g-x{width:22px;height:22px;font-size:14px}
