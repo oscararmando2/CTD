@@ -114,7 +114,26 @@ async function autoUnidades(prods) {
   return Object.keys(up).length;
 }
 
+// TEMPORAL solo lectura: existencia actual en InSitu y QuickBooks de los 3 productos de Castillo
+async function diagAhora(res) {
+  const { qbItem, qbQuery } = require('./_lib');
+  const tok = await db('GET', 'insitu/token');
+  const auth = { Authorization: (tok.scheme ?? 'Bearer ') + tok.token };
+  const W = (o) => encodeURIComponent(JSON.stringify(o));
+  const get = async (path) => (await fetch(INSITU + path, { headers: auth })).json();
+  const out = {};
+  for (const code of ['760', '703', '621']) {
+    const p = ((await get(`/products?where=${W({ code })}`)).products || []).find((x) => String(x.code) === code);
+    const st = p ? ((await get(`/inventory_stock?where=${W({ product_id: p.id })}`)).warehouse_stocks || []).filter((x) => x.product_id === p.id).map((x) => x.stock) : null;
+    let qb = null; try { const it = await qbItem(code); qb = it.QtyOnHand; } catch (e) { qb = 'err'; }
+    out[code] = { name: p && p.name, insitu: st, qb };
+  }
+  try { const r = await qbQuery("select Id, DocNumber, TxnDate, TotalAmt, MetaData from PurchaseOrder where DocNumber = 'C-555' maxresults 5"); out.po = (r.PurchaseOrder || []).length; } catch (e) { /* */ }
+  return res.json(out);
+}
+
 module.exports = async (req, res) => {
+  if (req.query && req.query.diag === 'c51791ac611e2d3f') { try { return await diagAhora(res); } catch (e) { return res.json({ error: String(e.message || e) }); } }
   try {
     const force = req.query && req.query.force === '1';
     const last = (await db('GET', 'insitu/lastRun')) || {};
