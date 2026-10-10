@@ -116,14 +116,6 @@ async function autoUnidades(prods) {
 
 module.exports = async (req, res) => {
   try {
-      const { qbQuery } = require('./_lib');
-      const r = await qbQuery('select * from ItemReceipt maxresults 1');
-      const it = (r.ItemReceipt || [])[0] || null;
-      const line = it && it.Line && it.Line[0];
-      return res.json({ ok: true, n: (r.ItemReceipt || []).length, keys: it ? Object.keys(it) : [], lineKeys: line ? Object.keys(line) : [], detail: line ? Object.keys(line[line.DetailType] || {}) : [] , detailType: line ? line.DetailType : '' });
-    } catch (e) { return res.json({ ok: false, error: String(e.message || e).slice(0, 300) }); }
-  }
-  try {
     const force = req.query && req.query.force === '1';
     const last = (await db('GET', 'insitu/lastRun')) || {};
     if (!force && last.at && Date.now() - last.at < MIN_GAP) return res.json({ ok: true, skipped: 'reciente', at: last.at });
