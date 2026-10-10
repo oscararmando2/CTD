@@ -3353,9 +3353,9 @@
   }
 
   /* ---- Caducidad en dos toques: hoja que sube desde abajo → mes + año.
-   * Si vence en 7 meses o menos (producto de vida corta) pide también el día; si no, se guarda el fin de mes. ---- */
+   * Si vence en 9 meses o menos pide también el día; si no, se guarda el fin de mes. ---- */
   const DIAS = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
-  const SHORT_DAYS = 215; // ~7 meses
+  const SHORT_DAYS = 275; // ~9 meses
   function openSheet(i, adv) {
     R.sheet = { i, adv, m: null, y: null, day: false }; // siempre dos toques nuevos (la fecha anterior queda marcada como pista)
     renderSheet();
@@ -3457,7 +3457,7 @@
     if (s.adv && s.i === R.cur) { R.noteOpen = false; nextCard(); }
     renderRecibo(); toCard();
   }
-  // Con mes y año: si vence en más de ~7 meses se guarda el fin de mes; si no, se pide el día
+  // Con mes y año: si vence en más de ~9 meses se guarda el fin de mes; si no, se pide el día
   function monthYearReady() {
     const sh = R.sheet;
     if (sh.m == null || sh.y == null) { renderSheet(); return; }
