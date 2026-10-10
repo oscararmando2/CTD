@@ -114,40 +114,8 @@ async function autoUnidades(prods) {
   return Object.keys(up).length;
 }
 
-// Arreglo pedido por Oscar (10 oct 2026): Topo Chico 760, Jumex 703 y Agua Mineral 621 quedaron negativos por la
-// prueba de Castillo; se ponen en 0 para que Jona haga el Recibo de artículo a mano. Una sola vez (fixes/cero1).
-async function fixCero(res) {
-  const { insituPost } = require('./_lib');
-  const tok = await db('GET', 'insitu/token');
-  const auth = { Authorization: (tok.scheme ?? 'Bearer ') + tok.token };
-  const W = (o) => encodeURIComponent(JSON.stringify(o));
-  const get = async (path) => (await fetch(INSITU + path, { headers: auth })).json();
-  // Ubicación: de la recepción #350604 (mismo almacén) o de cualquier campo "bin" de los ajustes
-  let bin; const vistos = {};
-  const scan = (o) => { if (!o || typeof o !== 'object') return; Object.entries(o).forEach(([k, v]) => { if (/bin/i.test(k) && v != null && typeof v !== 'object') { vistos[k] = v; if (!bin && /id$/i.test(k) && Number(v)) bin = Number(v); } else if (typeof v === 'object') scan(v); }); };
-  try { scan(await get('/item_receipt/350604')); } catch (e) { /* */ }
-  try { const j = await get(`/inventory_adjustment?limit=50&order=${encodeURIComponent(JSON.stringify([['id', 'DESC']]))}`); scan(j); vistos.ajusteKeys = Object.keys(((Object.values(j).find(Array.isArray)) || [])[0] || {}).join(','); } catch (e) { /* */ }
-  const out = [];
-  if (!bin) { return res.json({ sinBin: true, vistos }); }
-  out.push('bin ' + bin);
-  for (const code of ['760', '703', '621']) {
-    const p = ((await get(`/products?where=${W({ code })}`)).products || []).find((x) => String(x.code) === code);
-    if (!p) { out.push(code + ': no está'); continue; }
-    for (const w of ((await get(`/inventory_stock?where=${W({ product_id: p.id })}`)).warehouse_stocks || []).filter((x) => x.product_id === p.id)) {
-      const s = Number(w.stock) || 0;
-      if (s >= 0) { out.push(`${p.name}: ${s} (no se toca)`); continue; }
-      try { await insituPost('/inventory_adjustment', { warehouse_id: w.warehouse_id, bin_location_id: bin, product_id: p.id, quantity: -s, new_quantity: 0, remark: 'Arreglo IA: a 0 (prueba Castillo) para recibo manual', approved: 1 }); out.push(`${p.name}: ${s} → 0`); } catch (e) { out.push(`${p.name}: ${e.message}`); }
-    }
-  }
-  await db('PUT', 'fixes/cero2', { at: Date.now(), out });
-  return res.json({ out });
-}
-
 module.exports = async (req, res) => {
-  if (req.query && req.query.fix === 'abb40021b5312cee') {
-    const done = await db('GET', 'fixes/cero2');
-    if (done) return res.json({ yaHecho: true, ...done });
-    try { return await fixCero(res); } catch (e) { return res.json({ error: String(e.message || e) }); }
+  try { return await fixCero(res); } catch (e) { return res.json({ error: String(e.message || e) }); }
   }
   try {
     const force = req.query && req.query.force === '1';
