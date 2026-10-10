@@ -115,8 +115,7 @@ async function autoUnidades(prods) {
 }
 
 module.exports = async (req, res) => {
-  if (req.query && req.query.probe === 'ir') { // temporal: ¿QuickBooks deja leer/crear Item Receipts por API? (solo nombres de campos)
-    try {
+  try {
       const { qbQuery } = require('./_lib');
       const r = await qbQuery('select * from ItemReceipt maxresults 1');
       const it = (r.ItemReceipt || [])[0] || null;

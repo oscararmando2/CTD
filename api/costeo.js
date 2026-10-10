@@ -706,8 +706,13 @@ function piezasDe(l) {
   const m = s.match(/\bcj\.?\s*(\d{1,3})\b/i) || s.match(/\bcaja\s*(?:de\s*)?(\d{1,3})\b/i) || s.match(/\b(\d{1,3})\s*(?:unds?|pzas?|piezas|pcs|ct)\b/i) || s.match(/(?:^|\s)(\d{1,3})\s*\/\s*\d/);
   return m ? Number(m[1]) : 0;
 }
+// APAGADO (10 oct 2026): el inventario de InSitu viene de QuickBooks (Jona hace "Recibir artículos" en QB),
+// así que ajustar InSitu directo duplicaría. Solo se permite REGRESAR lo que la IA ya hubiera metido.
+const INV_INSITU_ACTIVO = false;
 async function recInventario(rec) {
   if (!rec.doneAt || rec.doneAt < INV_DESDE) return rec.inv || null;
+  if (!INV_INSITU_ACTIVO && !Object.values((rec.inv && rec.inv.aplicado) || {}).some((v) => v)) return rec.inv || null;
+  if (!INV_INSITU_ACTIVO) rec = { ...rec, invManual: true }; // si algo ya entró por la IA, se regresa
   const inv = { ...(rec.inv || {}), aplicado: { ...((rec.inv && rec.inv.aplicado) || {}) }, detalle: { ...((rec.inv && rec.inv.detalle) || {}) }, errores: [], at: Date.now() };
   const [pzMem, cat] = await Promise.all([db('GET', 'costeoPz'), db('GET', 'catalogo')]);
   const units = {};
