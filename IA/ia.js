@@ -2613,7 +2613,7 @@
     const nuevo = l.nuevo ? `
       <div class="cos-alta">
         <label class="field alta-n"><span>Nombre en QuickBooks</span><input data-a="name" value="${esc(l.alta.name)}"></label>
-        <label class="field${ctdOk(l.alta.sku) ? '' : ' falta'}"><span>SKU (CTD-####)</span><input data-a="sku" value="${esc(ctdOk(l.alta.sku) ? l.alta.sku : (l.alta.sku = nextCtd(ctdUsados())))}"></label>
+        <label class="field${ctdOk(l.alta.sku) ? '' : ' falta'}"><span>SKU (CTD-####)</span><input data-a="sku" placeholder="CTD-####" value="${esc(ctdOk(l.alta.sku) ? l.alta.sku : (l.alta.sku = ''))}"></label>
         <label class="field"><span>Código de barras (UPC) → Barcode 2</span><input data-a="barcode" inputmode="numeric" value="${esc(l.alta.barcode || '')}"></label>
         <label class="field${l.alta.cat ? '' : ' falta'}"><span>Categoría</span><select data-a="cat"><option value="">Elige…</option>${altaCats().map((c) => `<option${c === l.alta.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
         <label class="field${l.alta.brand ? '' : ' falta'}"><span>Marca</span><input data-a="brand" list="altaBrands" placeholder="Ej. La Costeña" value="${esc(l.alta.brand || '')}"></label>
@@ -2646,7 +2646,7 @@
           <label class="field"><span>Categoría</span><select data-c="cat"><option value="">Elige…</option>${altaCats().map((c) => `<option${c === l.comp.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
           <label class="field"><span>Marca</span><input data-c="brand" list="altaBrands" value="${esc(l.comp.brand)}"></label>
           <label class="field"><span>Unidad (InSitu)</span>${unitSel('data-c="units"', l.comp.units)}</label>
-          <label class="field"><span>SKU (CTD-####)</span><input data-c="sku" value="${esc(l.comp.sku)}"></label>
+          <label class="field"><span>SKU (CTD-####)</span><input data-c="sku" placeholder="CTD-####" value="${esc(l.comp.sku)}"></label>
           <label class="field"><span>UPC → Barcode 2</span><input data-c="barcode" inputmode="numeric" value="${esc(l.comp.barcode)}"></label>
           <label class="field"><span>Foto (URL)</span><input data-c="photo" placeholder="https://…" value="${esc(l.comp.photo)}"></label>
           <button class="btn btn-oro btn-sm" type="button" data-comp-save>Guardar en QuickBooks e InSitu</button>
@@ -2688,11 +2688,11 @@
     const l = C.lines[Number(b.closest('.cos-l').dataset.i)]; if (!l) return;
     if (b.hasAttribute('data-comp')) {
       if (l.comp) { l.comp = null; renderCosteo(); return; }
-      b.disabled = true; await Promise.all([loadUnits(true), loadCtdNext(), loadVivo([qbIdOf(l) || l.sku], true)]); // InSitu y QuickBooks al momento
+      b.disabled = true; await Promise.all([loadUnits(true), loadVivo([qbIdOf(l) || l.sku], true)]); // InSitu y QuickBooks al momento
       const p = prodSrv(l);
       const ctdYa = ctdOk(p.qbSku) ? ctdFmt(p.qbSku) : ctdOk(p.upc) ? ctdFmt(p.upc) : ''; // el que ya tiene en QuickBooks (o en InSitu)
       const upcYa = p.ean || (!ctdYa && /^\d{8,14}$/.test(p.upc || '') ? p.upc : '');
-      l.comp = { cat: p.cat && p.cat !== 'Otros' ? p.cat : altaGuess(l.producto).cat, brand: p.brand || altaGuess(l.producto).brand, units: p.units || unitGuess(l), sku: ctdYa || nextCtd(ctdUsados()), barcode: upcYa || l.upc || '', photo: '' };
+      l.comp = { cat: p.cat && p.cat !== 'Otros' ? p.cat : altaGuess(l.producto).cat, brand: p.brand || altaGuess(l.producto).brand, units: p.units || unitGuess(l), sku: ctdYa, barcode: upcYa || l.upc || '', photo: '' };
       renderCosteo(); return;
     }
     const box = b.closest('.cos-alta');
