@@ -337,6 +337,22 @@ module.exports = async (req, res) => {
         await log({ action: 'costeo-completar', name: it.Name, qbId: id, ...extra, qbCat, by: who });
         return res.json({ ok: true, qbCat, qbSku, insitu: Object.keys(extra).length > 0 });
       }
+      case 'insitu_vivo': {
+        // Datos de productos leídos de InSitu en este momento (foto, categoría, marca, unidad, barcodes) + SKU de QuickBooks
+        const codes = [...new Set((Array.isArray(body.codes) ? body.codes : []).map((c) => String(c).trim()).filter((c) => /^\d+$/.test(c)))].slice(0, 40);
+        const out = {};
+        for (let i = 0; i < codes.length; i += 6) {
+          await Promise.all(codes.slice(i, i + 6).map(async (code) => {
+            try {
+              const j = await insituGet('/products', { where: JSON.stringify({ code }) });
+              const p = (Object.values(j).find(Array.isArray) || []).find((x) => String(x.code).trim() === code);
+              if (p) out[code] = { photo: /^https:\/\//.test(p.photourl || '') ? String(p.photourl).trim() : '', cat: String(p.line_name || '').trim(), brand: String(p.brand_name || '').trim(), units: String(p.units || '').trim(), upc: String(p.barcode || '').trim(), ean: String(p.ean || '').trim() };
+            } catch (e) { /* ese no */ }
+            if (body.qb) { try { const it = await qbItem(code); if (it) out[code] = { ...(out[code] || {}), qbSku: it.Sku || '' }; } catch (e) { /* */ } }
+          }));
+        }
+        return res.json({ items: out });
+      }
       case 'ctd_next': {
         // Siguiente SKU de CTD según QuickBooks (el mayor CTD-#### + 1)
         let max = 0;
