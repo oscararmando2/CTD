@@ -93,6 +93,9 @@ async function parseInvoice(images) {
 }
 
 // Plantilla para altas: tipo y cuentas contables del tipo de producto más común en QuickBooks
+// "ctd1345", "CTD 1345", "CTD-1345" → "CTD-1345"
+function ctdNorm(v) { const m = String(v || '').trim().match(/^CTD\s*-?\s*(\d{1,6})$/i); return m ? 'CTD-' + m[1] : ''; }
+
 async function itemTemplate() {
   const r = await qbQuery('select * from Item where Active = true maxresults 200');
   const items = (r.Item || []).filter((i) => ['Inventory', 'NonInventory'].includes(i.Type) && i.IncomeAccountRef);
@@ -205,7 +208,7 @@ module.exports = async (req, res) => {
             if (exists.Item && exists.Item.length) throw new Error('Ya existe un producto con ese nombre en QuickBooks');
             tpl = tpl || await itemTemplate();
             const item = {
-              Name: name, Type: tpl.Type, Sku: String(c.sku || '').slice(0, 100) || undefined,
+              Name: name, Type: tpl.Type, Sku: ctdNorm(c.sku) || String(c.sku || '').slice(0, 100) || undefined,
               UnitPrice: r2(c.price), PurchaseCost: r2(c.cost),
               Description: c.description ? String(c.description).slice(0, 4000) : undefined,
               IncomeAccountRef: tpl.IncomeAccountRef, ExpenseAccountRef: tpl.ExpenseAccountRef,
@@ -319,7 +322,8 @@ module.exports = async (req, res) => {
         }
         // SKU de CTD (CTD-####) en QuickBooks: de ahí InSitu lo pone en Barcode
         let qbSku = '';
-        const sku = String(body.sku || '').trim().toUpperCase();
+        const sku = ctdNorm(body.sku);
+        if (String(body.sku || '').trim() && !sku) return res.status(400).json({ error: `"${str(body.sku, 30)}" no es un SKU de CTD (ej. CTD-1345)` });
         if (/^CTD-\d+$/.test(sku) && sku !== String(it.Sku || '').toUpperCase()) {
           const dupe = ((await qbQuery(`select Id, Name from Item where Sku = '${sku}'`)).Item || []).filter((x) => x.Id !== it.Id);
           if (dupe.length) return res.status(409).json({ error: `El SKU ${sku} ya lo tiene "${dupe[0].Name}" en QuickBooks` });
@@ -332,6 +336,16 @@ module.exports = async (req, res) => {
         if (Object.keys(extra).length) await db('PUT', 'costeoFotos/' + id, { ...extra, name: it.Name, ts: Date.now(), by: who });
         await log({ action: 'costeo-completar', name: it.Name, qbId: id, ...extra, qbCat, by: who });
         return res.json({ ok: true, qbCat, qbSku, insitu: Object.keys(extra).length > 0 });
+      }
+      case 'ctd_next': {
+        // Siguiente SKU de CTD según QuickBooks (el mayor CTD-#### + 1)
+        let max = 0;
+        for (let pos = 1; pos < 6000; pos += 1000) {
+          const r = await qbQuery(`select Sku from Item startposition ${pos} maxresults 1000`);
+          (r.Item || []).forEach((x) => { const m = String(x.Sku || '').match(/^CTD-?\s*(\d+)$/i); if (m) max = Math.max(max, +m[1]); });
+          if ((r.Item || []).length < 1000) break;
+        }
+        return res.json({ next: max ? 'CTD-' + (max + 1) : '', max });
       }
       case 'qb_vendors': {
         const r = await qbQuery('select Id, DisplayName from Vendor where Active = true maxresults 1000');
