@@ -477,7 +477,12 @@ module.exports = async (req, res) => {
         const enInsitu = body.tipo === 'insitu';
         const esPO = !enInsitu && body.tipo !== 'bill';
         const ENT = esPO ? 'PurchaseOrder' : 'Bill', campo = enInsitu ? 'insitu' : esPO ? 'po' : 'bill';
-        if (src[campo] && (src[campo].id || src[campo].at) && !body.force) return res.json({ ya: true, bill: src[campo], tipo: campo });
+        if (src[campo] && (src[campo].id || src[campo].at) && !body.force) {
+          // ¿Sigue existiendo en QuickBooks? Si la borraron, se puede volver a crear
+          let sigue = true;
+          if (!enInsitu && src[campo].id) { try { const g = await qb('GET', ENT.toLowerCase() + '/' + src[campo].id); sigue = !!(g && g[ENT]); } catch (e) { sigue = false; } }
+          if (sigue) return res.json({ ya: true, bill: src[campo], tipo: campo });
+        }
         const revisado = rec && ['revisado', 'costeado'].includes(rec.status);
         // Proveedor en QuickBooks: el elegido, o por nombre
         let vendorId = /^\d+$/.test(String(body.vendorId || '')) ? String(body.vendorId) : '';
