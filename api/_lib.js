@@ -146,22 +146,25 @@ async function log(entry) {
 }
 
 // Aplica y regresa precios según la fecha de hoy (Chicago). Idempotente: se puede correr varias veces.
+// Los especiales regresan a su precio el MISMO día que terminan, a partir de las 12 del día (hora de Kansas City)
+const hourCT = () => Number(new Date().toLocaleString('en-US', { timeZone: 'America/Chicago', hour: 'numeric', hour12: false })) % 24;
 async function tick(by = 'automático') {
   const all = (await db('GET', 'qbEspeciales')) || {};
   const today = todayCT();
+  const yaTermino = (e) => e.to < today || (e.to === today && hourCT() >= 12);
   const done = [];
   for (const [id, e] of Object.entries(all)) {
     try {
-      if (e.status === 'programado' && e.from <= today && e.to >= today) {
+      if (e.status === 'programado' && e.from <= today && !yaTermino(e)) {
         const it = await qbItem(e.qbId);
         const original = r2(it.UnitPrice || 0);
         await qbSetPrice(e.qbId, r2(e.special));
         await db('PATCH', 'qbEspeciales/' + id, { status: 'activo', original, appliedAt: Date.now() });
         await log({ id, action: 'activar', name: e.name, from: original, to: r2(e.special), by });
         done.push({ id, action: 'activar' });
-      } else if (e.status === 'programado' && e.to < today) {
+      } else if (e.status === 'programado' && yaTermino(e)) {
         await db('PATCH', 'qbEspeciales/' + id, { status: 'vencido', note: 'La fecha pasó sin activarse' });
-      } else if (e.status === 'activo' && e.to < today) {
+      } else if (e.status === 'activo' && yaTermino(e)) {
         const it = await qbItem(e.qbId);
         if (same(it.UnitPrice, e.special)) {
           await qbSetPrice(e.qbId, r2(e.original));
