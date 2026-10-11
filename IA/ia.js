@@ -2253,15 +2253,21 @@
     box.innerHTML = '<p class="data-info">Cargando…</p>';
     try {
       const d = await qbCall('list');
-      box.innerHTML = d.list.length ? d.list.map((e) => `<div class="qb-row st-${esc(e.status)}">
+      // Solo los que siguen vivos (programados / activos); los terminados quedan guardados para Resultados
+      const vivos = d.list.filter((e) => ['programado', 'activo'].includes(e.status));
+      const viejos = d.list.length - vivos.length;
+      const lista = S.qbVerTodos ? d.list : vivos;
+      box.innerHTML = (lista.length ? lista.map((e) => `<div class="qb-row st-${esc(e.status)}">
           <span class="qb-pill">${esc(QB_STATUS[e.status] || e.status)}</span>
           <div class="qb-main"><b>${esc(e.name || e.qbName)}</b><span>${fmtD(e.from)} – ${fmtD(e.to)} · ${esc(e.by || '')}${e.note ? ' · ' + esc(e.note) : ''}${e.lastError ? ' · ⚠ ' + esc(e.lastError) : ''}</span></div>
           <div class="qb-prices">${e.original != null ? `<s>${money(e.original)}</s> → ` : ''}<b>${money(e.special)}</b>
             ${['programado', 'activo'].includes(e.status) ? `<button class="btn-link" type="button" data-cancel="${esc(e.id)}">cancelar</button>` : ''}</div>
-        </div>`).join('') : '<p class="data-info">Todavía no hay especiales en QuickBooks.</p>';
+        </div>`).join('') : '<p class="data-info">No hay especiales activos ni programados en QuickBooks.</p>')
+        + (viejos ? `<button type="button" class="btn-link sm" data-vertodos>${S.qbVerTodos ? 'ocultar terminados' : `ver terminados (${viejos})`}</button>` : '');
     } catch (e) { box.innerHTML = `<p class="qb-msg">${esc(e.message)}</p>`; }
   }
   $('#qbList').addEventListener('click', async (e) => {
+    if (e.target.closest('[data-vertodos]')) { S.qbVerTodos = !S.qbVerTodos; loadQbList(); return; }
     const b = e.target.closest('[data-cancel]'); if (!b) return;
     if (!confirm('¿Cancelar este especial? Si ya está activo, el precio regresa al original ahora mismo.')) return;
     b.disabled = true;
