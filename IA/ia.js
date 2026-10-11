@@ -1258,23 +1258,51 @@
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'pt', format: 'letter' });
     const W = doc.internal.pageSize.getWidth();
-    const logo = await logoData(); if (logo) doc.addImage(logo, 'PNG', 40, 30, 80, 43);
     const [a, b] = resSel.split('|');
     const filas = resFilas(resSel);
     const tot = filas.reduce((x, r) => x + r['Cajas vendidas'], 0), esp = filas.reduce((x, r) => x + r['Normal (esperado)'], 0), venta = filas.reduce((x, r) => x + r['Venta en especial'], 0);
     const fun = filas.filter((r) => r.Resultado === 'Funcionó' || r.Resultado.startsWith('Se movió')).length;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.text('Resultados de especiales', W - 40, 50, { align: 'right' });
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.text(`${fmtLong(a)} – ${fmtLong(b)}`, W - 40, 68, { align: 'right' });
-    doc.setFontSize(10);
-    doc.text(`Cajas vendidas: ${nfmt(tot)} (normal ~${nfmt(r2(esp))})   ·   Contra lo normal: ${esp > 0 ? `${tot >= esp ? '+' : ''}${Math.round((tot / esp - 1) * 100)}%` : '—'}   ·   Funcionaron: ${fun} de ${filas.length}   ·   Venta en especial: ${money(venta)}`, 40, 98);
-    doc.autoTable({
-      startY: 112, margin: { left: 40, right: 40 },
-      head: [['Producto', 'Precio esp.', 'Cajas', 'Normal', '% vs normal', 'Venta', 'Resultado']],
-      body: filas.map((r) => [r.Producto, money(r['Precio especial']), nfmt(r['Cajas vendidas']), nfmt(r['Normal (esperado)']), r['Contra lo normal %'] === '' ? '—' : `${r['Contra lo normal %'] > 0 ? '+' : ''}${r['Contra lo normal %']}%`, money(r['Venta en especial']), r.Resultado]),
-      styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 4, textColor: [20, 18, 12] },
-      headStyles: { fillColor: [15, 13, 10], textColor: [242, 163, 30], fontStyle: 'bold' },
-      columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' } },
+    const liftT = esp > 0 ? tot / esp - 1 : null;
+    const VERDE = [46, 139, 61], ROJO = [216, 51, 27], ORO = [242, 163, 30], NEGRO = [15, 13, 10], GRIS = [110, 104, 94];
+    // Banda de encabezado
+    doc.setFillColor(...NEGRO); doc.rect(0, 0, W, 92, 'F');
+    const logo = await logoData(); if (logo) { doc.setFillColor(255, 255, 255); doc.roundedRect(36, 18, 96, 56, 8, 8, 'F'); doc.addImage(logo, 'PNG', 44, 24, 80, 43); }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(...ORO); doc.text('Resultados de especiales', W - 40, 46, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(246, 242, 233); doc.text(`${fmtLong(a)} – ${fmtLong(b)}`, W - 40, 66, { align: 'right' });
+    // Recuadros de resumen
+    const kpis = [
+      ['CAJAS VENDIDAS', nfmt(tot), `normal ~${nfmt(r2(esp))}`, [46, 64, 120]],
+      ['CONTRA LO NORMAL', liftT == null ? '—' : `${liftT >= 0 ? '+' : ''}${Math.round(liftT * 100)}%`, `${nfmt(r2(tot - esp))} cajas ${tot >= esp ? 'extra' : 'menos'}`, liftT == null ? GRIS : liftT > 0.2 ? VERDE : liftT < -0.1 ? ROJO : GRIS],
+      ['FUNCIONARON', `${fun} de ${filas.length}`, 'subieron más de 20%', [190, 110, 20]],
+      ['VENTA EN ESPECIAL', money(venta), `${fmtD(a)} – ${fmtD(b)}`, NEGRO],
+    ];
+    const bw = (W - 80 - 3 * 10) / 4;
+    kpis.forEach(([lbl, val, sub, col], i) => {
+      const x = 40 + i * (bw + 10);
+      doc.setFillColor(...col); doc.roundedRect(x, 108, bw, 62, 8, 8, 'F');
+      doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.text(lbl, x + 10, 124);
+      doc.setFontSize(17); doc.text(String(val), x + 10, 146);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.text(sub, x + 10, 160);
     });
+    const colorDe = (res) => (res === 'Funcionó' || res.startsWith('Se movió') ? VERDE : res === 'Bajó' ? ROJO : GRIS);
+    doc.autoTable({
+      startY: 186, margin: { left: 40, right: 40 },
+      head: [['Producto', 'Precio esp.', 'Cajas', 'Normal', '% vs normal', 'Venta', 'Resultado']],
+      body: filas.map((r) => [r.Producto, money(r['Precio especial']), nfmt(r['Cajas vendidas']), nfmt(r['Normal (esperado)']), r['Contra lo normal %'] === '' ? 'nuevo' : `${r['Contra lo normal %'] > 0 ? '+' : ''}${r['Contra lo normal %']}%`, money(r['Venta en especial']), r.Resultado]),
+      styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 5, textColor: [20, 18, 12], lineColor: [230, 224, 212], lineWidth: 0.5 },
+      headStyles: { fillColor: NEGRO, textColor: ORO, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [250, 247, 240] },
+      columnStyles: { 0: { fontStyle: 'bold' }, 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right', fontStyle: 'bold' }, 5: { halign: 'right' }, 6: { halign: 'center', fontStyle: 'bold' } },
+      didParseCell: (h) => {
+        if (h.section !== 'body') return;
+        const res = filas[h.row.index].Resultado, col = colorDe(res);
+        if (h.column.index === 4) h.cell.styles.textColor = col;
+        if (h.column.index === 6) { h.cell.styles.fillColor = col; h.cell.styles.textColor = [255, 255, 255]; }
+      },
+    });
+    // Pie
+    const pages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pages; i++) { doc.setPage(i); doc.setFontSize(8); doc.setTextColor(...GRIS); doc.text(`Central Trade Distribution · Sistema Inteligente · página ${i} de ${pages}`, W / 2, doc.internal.pageSize.getHeight() - 20, { align: 'center' }); }
     download(doc.output('blob'), `Resultados-especiales-${a}_a_${b}.pdf`);
   }
   $('#resultados').addEventListener('click', (e) => {
