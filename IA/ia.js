@@ -1175,7 +1175,7 @@
 
   /* ---- Resultados de los especiales: cuánto se vendió durante el especial vs lo normal
    * (promedio de las 8 semanas anteriores, con las ventas por día de InSitu) ---- */
-  let resSel = null;
+  let resSel = null, RES = null;
   const addDays = (s, n) => { const d = parseYmd(s); d.setDate(d.getDate() + n); return ymd(d); };
   function sumDias(dd, a, b) { let q = 0; Object.entries(dd || {}).forEach(([k, v]) => { if (k >= a && k <= b) q += v; }); return q; }
   function resultadosDe(list, today) {
@@ -1221,8 +1221,10 @@
     const tag = (r) => (r.lift == null ? '<span class="pill ok">se movió (antes no se vendía)</span>' : r.lift > 0.2 ? `<span class="pill ok">funcionó · +${Math.round(r.lift * 100)}%</span>`
       : r.lift >= -0.1 ? `<span class="pill">igual que siempre${r.lift ? ` · ${r.lift > 0 ? '+' : ''}${Math.round(r.lift * 100)}%` : ''}</span>` : `<span class="pill bad">bajó · ${Math.round(r.lift * 100)}%</span>`);
     sec.hidden = false;
+    RES = { per, keys, today };
     sec.innerHTML = `
-      <div class="vig-h"><p class="lbl">Resultados de especiales${enCurso ? ' <small>(en curso, hasta ayer)</small>' : ''}</p></div>
+      <div class="vig-h"><p class="lbl">Resultados de especiales${enCurso ? ' <small>(en curso, hasta ayer)</small>' : ''}</p>
+        <div class="res-dl"><button type="button" class="btn btn-ghost btn-sm" data-resdl="pdf">${icon('download')}PDF</button><button type="button" class="btn btn-ghost btn-sm" data-resdl="xls">${icon('download')}Excel</button>${keys.length > 1 ? `<button type="button" class="btn btn-ghost btn-sm" data-resdl="todos">${icon('download')}Excel todos</button>` : ''}</div></div>
       ${keys.length > 1 ? `<div class="pills res-per">${keys.slice(0, 6).map((k) => { const [a, b] = k.split('|'); return `<button type="button" data-res="${k}" class="${k === resSel ? 'on' : ''}">${fmtD(a)} – ${fmtD(b)}</button>`; }).join('')}</div>` : ''}
       <div class="res-kpis">
         <div class="fs"><span class="lbl">Cajas vendidas</span><b>${nfmt(tot)}</b><small>normal ~${nfmt(r2(esp))}</small></div>
@@ -1235,7 +1237,50 @@
         <div class="res-m"><b>${esc(r.p.name)}</b><small>Vendiste ${nfmt(r.durante)} ${r.durante === 1 ? 'caja' : 'cajas'} en ${r.dias} ${r.dias === 1 ? 'día' : 'días'} · normal ~${nfmt(r.esperado)} · a ${money(r.e.special)}</small></div>
         ${tag(r)}</div>`).join('')}</div>`;
   }
-  $('#resultados').addEventListener('click', (e) => { const b = e.target.closest('[data-res]'); if (!b) return; resSel = b.dataset.res; renderResultados(ymd(new Date())); });
+  // ---- Descargar el informe de resultados (PDF / Excel del periodo, o Excel de todos los periodos) ----
+  const resultTxt = (r) => (r.lift == null ? 'Se movió (antes no se vendía)' : r.lift > 0.2 ? 'Funcionó' : r.lift >= -0.1 ? 'Igual que siempre' : 'Bajó');
+  const resFilas = (key) => resultadosDe(RES.per[key], RES.today).sort((a, b) => (b.lift ?? 9) - (a.lift ?? 9)).map((r) => ({
+    Periodo: `${fmtD(r.e.from)} – ${fmtD(r.e.to)}`, Producto: r.p.name, 'Precio especial': r.e.special, 'Precio normal': r.e.original ?? r.e.regular ?? '', Días: r.dias,
+    'Cajas vendidas': r.durante, 'Normal (esperado)': r.esperado, 'Cajas extra': r.extra, 'Contra lo normal %': r.lift == null ? '' : Math.round(r.lift * 100), 'Venta en especial': r.venta, Resultado: resultTxt(r) }));
+  async function descargarResultados(tipo) {
+    if (!RES) return;
+    const d = new Date(), stamp = `${d.getDate()}${MES[d.getMonth()]}${d.getFullYear()}`;
+    if (tipo === 'xls' || tipo === 'todos') {
+      if (!window.XLSX) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+      const wb = XLSX.utils.book_new();
+      const keys = tipo === 'todos' ? RES.keys : [resSel];
+      keys.forEach((k) => { const [a, b] = k.split('|'); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resFilas(k)), `${fmtD(a)} a ${fmtD(b)}`.replace(/[\\/?*[\]:]/g, '').slice(0, 31)); });
+      XLSX.writeFile(wb, `Resultados-especiales-${tipo === 'todos' ? 'todos' : resSel.replace('|', '_a_')}-${stamp}.xlsx`);
+      return;
+    }
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const W = doc.internal.pageSize.getWidth();
+    const logo = await logoData(); if (logo) doc.addImage(logo, 'PNG', 40, 30, 80, 43);
+    const [a, b] = resSel.split('|');
+    const filas = resFilas(resSel);
+    const tot = filas.reduce((x, r) => x + r['Cajas vendidas'], 0), esp = filas.reduce((x, r) => x + r['Normal (esperado)'], 0), venta = filas.reduce((x, r) => x + r['Venta en especial'], 0);
+    const fun = filas.filter((r) => r.Resultado === 'Funcionó' || r.Resultado.startsWith('Se movió')).length;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.text('Resultados de especiales', W - 40, 50, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.text(`${fmtLong(a)} – ${fmtLong(b)}`, W - 40, 68, { align: 'right' });
+    doc.setFontSize(10);
+    doc.text(`Cajas vendidas: ${nfmt(tot)} (normal ~${nfmt(r2(esp))})   ·   Contra lo normal: ${esp > 0 ? `${tot >= esp ? '+' : ''}${Math.round((tot / esp - 1) * 100)}%` : '—'}   ·   Funcionaron: ${fun} de ${filas.length}   ·   Venta en especial: ${money(venta)}`, 40, 98);
+    doc.autoTable({
+      startY: 112, margin: { left: 40, right: 40 },
+      head: [['Producto', 'Precio esp.', 'Cajas', 'Normal', '% vs normal', 'Venta', 'Resultado']],
+      body: filas.map((r) => [r.Producto, money(r['Precio especial']), nfmt(r['Cajas vendidas']), nfmt(r['Normal (esperado)']), r['Contra lo normal %'] === '' ? '—' : `${r['Contra lo normal %'] > 0 ? '+' : ''}${r['Contra lo normal %']}%`, money(r['Venta en especial']), r.Resultado]),
+      styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 4, textColor: [20, 18, 12] },
+      headStyles: { fillColor: [15, 13, 10], textColor: [242, 163, 30], fontStyle: 'bold' },
+      columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' } },
+    });
+    download(doc.output('blob'), `Resultados-especiales-${a}_a_${b}.pdf`);
+  }
+  $('#resultados').addEventListener('click', (e) => {
+    const dl = e.target.closest('[data-resdl]'); if (dl) { descargarResultados(dl.dataset.resdl).catch((err) => toast('No se pudo: ' + err.message)); return; }
+    const b = e.target.closest('[data-res]'); if (!b) return; resSel = b.dataset.res; renderResultados(ymd(new Date()));
+  });
 
   /* ---- Grupo con el mismo precio: varios productos (ej. veladoras) con un solo precio especial c/u.
    * En QuickBooks cada producto lleva ese precio durante la vigencia. ---- */
