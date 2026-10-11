@@ -3,7 +3,7 @@
 // 2) Renueva la copia del catálogo (con existencia) que usan Jonathan y Rocío.
 // 3) Ajusta las fechas de caducidad a la existencia real (sale primero la más vieja; en 0 se cierra).
 // GET sin datos sensibles en la respuesta; se salta si ya corrió hace menos de 40 minutos.
-const { db, loteQueda, r2 } = require('./_lib');
+const { db, loteQueda, r2, tick } = require('./_lib');
 
 const INSITU = 'https://app.b2bmobilesales.com/api/v1';
 const MIN_GAP = 40 * 60 * 1000;
@@ -120,10 +120,13 @@ async function autoUnidades(prods) {
 }
 
 module.exports = async (req, res) => {
+  // Especiales: cada hora se revisa (activar los que empiezan, regresar a las 12 del día los que terminan hoy)
+  let especiales = null;
+  try { especiales = await tick('automático'); } catch (e) { especiales = { error: String(e.message || e).slice(0, 120) }; }
   try {
     const force = req.query && req.query.force === '1';
     const last = (await db('GET', 'insitu/lastRun')) || {};
-    if (!force && last.at && Date.now() - last.at < MIN_GAP) return res.json({ ok: true, skipped: 'reciente', at: last.at });
+    if (!force && last.at && Date.now() - last.at < MIN_GAP) return res.json({ ok: true, skipped: 'reciente', at: last.at, especiales });
     const tok = await db('GET', 'insitu/token');
     if (!tok || !tok.token) return res.json({ ok: false, error: 'Falta la sesión de InSitu: que Oscar, Luis o Diego abran la IA una vez' });
 
@@ -163,7 +166,7 @@ module.exports = async (req, res) => {
     try { await autoUnidades(prods); } catch (e) { /* sigue */ }
     try { altas = await completarAltas(tok, prods); } catch (e) { altas = { error: String(e.message || e).slice(0, 200) }; } // no detiene la sincronización
     await db('PUT', 'insitu/lastRun', { at: Date.now(), productos: items.length, ajustes, altas });
-    return res.json({ ok: true, productos: items.length, conExistencia: items.filter((p) => p.stock > 0).length, ajustes, altas });
+    return res.json({ ok: true, productos: items.length, conExistencia: items.filter((p) => p.stock > 0).length, ajustes, altas, especiales });
   } catch (e) {
     await db('PUT', 'insitu/lastRun', { at: Date.now(), error: String(e.message || e).slice(0, 200) }).catch(() => {});
     return res.status(e.auth ? 401 : 500).json({ ok: false, error: String(e.message || e) });

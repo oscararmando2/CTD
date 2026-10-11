@@ -1,5 +1,5 @@
-// Tarea diaria (Vercel Cron, ~4am Chicago): activa los especiales que empiezan hoy y regresa el
-// precio original de los que ya terminaron. Si hay CRON_SECRET, Vercel lo manda y aquí se exige.
+// Tarea diaria (Vercel Cron, ~4am Chicago): activa los especiales que empiezan hoy. Además la sincronización
+// de cada hora (insitu-cron) revisa los especiales: los que terminan hoy regresan a su precio a las 12 del día. Si hay CRON_SECRET, Vercel lo manda y aquí se exige.
 const { tick } = require('./_lib');
 
 module.exports = async (req, res) => {
