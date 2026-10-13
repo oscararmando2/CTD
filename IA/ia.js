@@ -4227,7 +4227,7 @@
           ${c.status === 'aplicado' ? `<span class="st sent">Aplicado · ${esc(c.numero)}</span>` : '<span class="st">Pendiente en InSitu</span>'}
           <button class="btn btn-ghost btn-sm" data-cr="open" type="button">Abrir</button>
           <button class="btn btn-ghost btn-sm" data-cr="pdf" type="button">${icon('printer')}Hoja</button>
-          ${c.status === 'aplicado' ? '' : '<button class="btn btn-oro btn-sm" data-cr="apl" type="button">Registrar nota de crédito</button>'}
+          ${c.status === 'aplicado' ? '' : '<button class="btn btn-oro btn-sm" data-cr="qb" type="button">Crear nota en QuickBooks</button><button class="btn-link sm" data-cr="apl" type="button">ya la hice a mano</button>'}
           <button class="icon-btn" data-cr="del" type="button" title="Borrar" aria-label="Borrar">${icon('trash')}</button>
         </div></div>`).join('') || '<p class="data-info">Nada con esa búsqueda.</p>';
   }
@@ -4239,6 +4239,34 @@
     const a = b.dataset.cr;
     if (a === 'open') { CR.ed = JSON.parse(JSON.stringify(c)); renderCreditos(); crCargarHist(); window.scrollTo({ top: 0 }); }
     if (a === 'pdf') { if (c.cliente.code && !CR.hist[c.cliente.code]) await crCargarHist(c); crPdf(c); }
+    if (a === 'qb') {
+      if (!confirm(`¿Crear la nota de crédito (Credit Memo) en QuickBooks?\n\n${c.cliente.name} · ${crM(c.total || 0)}\n${(c.lineas || []).map((l) => `• ${l.nombre}: ${l.piezas} pzas a ${money(l.precio)} (${l.motivo || ''})`).join('\n')}`)) return;
+      if (c.cliente.code && !CR.hist[c.cliente.code]) await crCargarHist(c);
+      const h = CR.hist[c.cliente.code];
+      // Las compras de cada producto (con número de factura) van en la nota
+      const compras = (c.lineas || []).map((l) => { const rv = crRevision(l, h && !h.error ? h : null); return rv.compras.slice(0, 4).map((x) => `${fmtLong(x.fecha)} · ${rv.cuanto(x)}${x.factura ? ' · #' + x.factura : ''}`).join('; '); });
+      let extra = {};
+      for (let k = 0; k < 2; k++) {
+        try {
+          b.disabled = true;
+          const d = await cosCall('cr_qb', { id: c.id, compras, ...extra });
+          alert(d.ya ? `Ya estaba en QuickBooks (nota ${d.qb.doc || d.qb.id}).` : `Listo ✓ Nota de crédito ${d.qb.doc || d.qb.id} en QuickBooks · ${crM(d.qb.total || 0)}`);
+          crLoadList(); return;
+        } catch (err) {
+          b.disabled = false;
+          if (err.code === 'no_customer' && err.data && err.data.customers) {
+            const q = normTxt(prompt(`${err.message}\n\nEscribe parte del nombre del cliente en QuickBooks:`, c.cliente.name.split(' ').slice(0, 2).join(' ')) || '');
+            if (!q) return;
+            const res = err.data.customers.filter((x) => normTxt(x.name).includes(q)).slice(0, 12);
+            if (!res.length) { alert('No encontré ese cliente en QuickBooks.'); return; }
+            const n = Number(prompt(res.map((x, i) => `${i + 1}. ${x.name}`).join('\n') + '\n\nEscribe el número:', '1'));
+            if (!res[n - 1]) return;
+            extra = { customerId: res[n - 1].id }; continue;
+          }
+          alert('No se pudo crear en QuickBooks:\n\n' + err.message); return;
+        }
+      }
+    }
     if (a === 'apl') {
       const n = prompt('Número de la nota de crédito que se hizo en InSitu (ej. HM102):', ''); if (!n) return;
       try { await cosCall('cr_aplicar', { id: c.id, numero: n.trim() }); toast('Nota de crédito registrada'); crLoadList(); } catch (err) { toast(err.message); }
@@ -4466,7 +4494,7 @@
     const rows = [];
     c.lineas.forEach((l) => {
       const rv = crRevision(l, h && !h.error ? h : null);
-      const compras = rv.compras.slice(0, 4).map((x) => `${fmtLong(x.fecha)}: ${rv.cuanto(x)}${rv.fac(x) > 1 ? ` (${money(x.precio / rv.fac(x))}/pza)` : ''}`).join('\n') || 'Sin compras en 12 meses';
+      const compras = rv.compras.slice(0, 6).map((x) => `${fmtLong(x.fecha)} · ${rv.cuanto(x)}${rv.fac(x) > 1 ? ` (${money(x.precio / rv.fac(x))}/pza)` : ''}${x.factura ? ` · #${x.factura}` : ''}`).join('\n') || 'Sin compras en 12 meses';
       rows.push([l.nombreOrig || l.nombre, compras, (rv.alertas.length ? rv.alertas : ['Cuadra con lo que se le vendió.']).join('\n')]);
     });
     doc.autoTable({

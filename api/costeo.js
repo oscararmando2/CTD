@@ -719,6 +719,50 @@ module.exports = async (req, res) => {
         await db('PATCH', 'creditos/' + id, numero ? { status: 'aplicado', numero, aplicadoBy: who, aplicadoAt: Date.now() } : { status: 'capturado', numero: '' });
         return res.json({ ok: true });
       }
+      case 'cr_qb': {
+        // Nota de crédito (Credit Memo) en QuickBooks con lo capturado en la IA: cliente, productos CR- en piezas, motivo,
+        // vendedor y las compras del cliente (con número de factura). No duplica.
+        const id = codeKey(body.id);
+        const c = await db('GET', 'creditos/' + id);
+        if (!c) return res.status(404).json({ error: 'No existe' });
+        if (c.qb && c.qb.id) {
+          let sigue = true; try { const g = await qb('GET', 'creditmemo/' + c.qb.id); sigue = !!(g && g.CreditMemo); } catch (e) { sigue = false; }
+          if (sigue) return res.json({ ya: true, qb: c.qb });
+        }
+        // Cliente en QuickBooks: el elegido, o por nombre
+        let custId = /^\d+$/.test(String(body.customerId || '')) ? String(body.customerId) : '';
+        if (!custId) {
+          const nm = String((c.cliente && c.cliente.name) || '').trim();
+          const exact = ((await qbQuery(`select Id, DisplayName from Customer where DisplayName = '${nm.replace(/'/g, "\\'")}'`)).Customer || []);
+          if (exact.length === 1) custId = String(exact[0].Id);
+          else {
+            const all = [];
+            for (let pos = 1; pos < 5000; pos += 1000) { const r = await qbQuery(`select Id, DisplayName from Customer where Active = true startposition ${pos} maxresults 1000`); all.push(...(r.Customer || [])); if ((r.Customer || []).length < 1000) break; }
+            const n = norm(nm), cand = all.filter((x) => norm(x.DisplayName) === n);
+            if (cand.length === 1) custId = String(cand[0].Id);
+            else return res.status(409).json({ error: `No encontré al cliente "${nm}" en QuickBooks: elígelo`, code: 'no_customer', customers: all.map((x) => ({ id: String(x.Id), name: x.DisplayName })).sort((a, b) => a.name.localeCompare(b.name)) });
+          }
+        }
+        const lineas = (c.lineas || []).filter((l) => l.piezas > 0);
+        const malos = lineas.filter((l) => !/^\d+$/.test(String(l.sku || '')));
+        if (malos.length) return res.status(409).json({ error: `Estos productos no están ligados a QuickBooks: ${malos.map((l) => l.nombre).join(', ')}` });
+        if (!lineas.length) return res.status(400).json({ error: 'El crédito no tiene productos' });
+        // Solo productos CR-: si se usa el producto normal, la nota regresaría esas piezas al inventario
+        const noCr = lineas.filter((l) => !/^\s*CR\s*-/i.test(String(l.nombre || '')));
+        if (noCr.length) return res.status(409).json({ error: `Estos productos no son CR- (la nota regresaría piezas al inventario): ${noCr.map((l) => l.nombre).join(', ')}. Usa su versión CR- o haz la nota a mano.` });
+        const compras = Array.isArray(body.compras) ? body.compras : [];
+        const Line = lineas.map((l) => ({ DetailType: 'SalesItemLineDetail', Amount: r2(l.piezas * l.precio), Description: `${l.nombre}${l.motivo ? ' · ' + l.motivo : ''}`.slice(0, 4000),
+          SalesItemLineDetail: { ItemRef: { value: String(l.sku) }, Qty: l.piezas, UnitPrice: r2(l.precio) } }));
+        const memo = [`Motivo: ${[...new Set(lineas.map((l) => l.motivo).filter(Boolean))].join(', ') || '—'}`, c.vendedor ? `Vendedor: ${c.vendedor}` : '',
+          ...lineas.map((l, i) => compras[i] ? `${l.nombre}: compras ${str(compras[i], 300)}` : ''), c.nota ? `Nota: ${c.nota}` : ''].filter(Boolean).join(' | ').slice(0, 1000);
+        const payload = { CustomerRef: { value: custId }, TxnDate: todayCT(), Line, CustomerMemo: { value: memo }, PrivateNote: `Creada por la IA (${who}) · crédito ${id}`.slice(0, 4000) };
+        const d = await qb('POST', 'creditmemo', payload);
+        const cm = d.CreditMemo;
+        const info = { id: cm.Id, doc: cm.DocNumber || '', total: cm.TotalAmt, at: Date.now(), by: who };
+        await db('PATCH', 'creditos/' + id, { qb: info, status: 'aplicado', numero: cm.DocNumber || ('QB ' + cm.Id), aplicadoBy: who, aplicadoAt: Date.now() });
+        await log({ action: 'qb-creditmemo', name: c.cliente && c.cliente.name, qbId: cm.Id, total: cm.TotalAmt, by: who });
+        return res.json({ ok: true, qb: info });
+      }
       case 'cr_borrar': {
         await db('DELETE', 'creditos/' + codeKey(body.id));
         return res.json({ ok: true });
