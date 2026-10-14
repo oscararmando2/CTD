@@ -3714,7 +3714,7 @@
       const sku = l.upcSis || pOf(l).upc || l.sku || l.codigo_proveedor || '';
       const desc = (l.nombre || l.producto || '') + (l.estado === 'no' ? '  (NO LLEGÓ)' : l.estado === 'parcial' ? `  (llegaron ${cajas} de ${l.cantidad})` : l.estado === 'pendiente' ? '  (PENDIENTE)' : '');
       const fds = Array.isArray(l.fechas) && l.fechas.length > 1 ? l.fechas : [{ f: l.caducidad || '', q: cajas }];
-      fds.forEach((x) => filas.push({ sku, desc, q: x.q, f: x.f ? (() => { const d = parseYmd(x.f); return `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`; })() : '' }));
+      fds.forEach((x) => filas.push({ sku, desc, q: x.q, f: x.f ? fmtLong(x.f) : '' })); // con nombre del mes (lo pidió Jonathan)
     });
     const frio = (rec.lines || []).some((l) => FRIO.test(`${pOf(l).cat || ''} ${l.nombre || l.producto || ''}`));
     const seco = (rec.lines || []).some((l) => !FRIO.test(`${pOf(l).cat || ''} ${l.nombre || l.producto || ''}`));
@@ -3745,7 +3745,7 @@
     r++; put(`A${r}`, chk(frio)); put(`B${r}`, 'PRODUCTO FRIO O CONGELADO'); put(`E${r}`, `# PALLET´S  COMBINADOS:  ${rv.combinados || ''}`, { align: { horizontal: 'right' } });
     r++; put(`E${r}`, `TEMPERATURA:  ${rv.temp || ''}`, { align: { horizontal: 'right' } });
     const fr = rec.doneAt ? new Date(rec.doneAt) : new Date();
-    r++; put(`B${r}`, `FECHA DE RECIVING :  ${String(fr.getMonth() + 1).padStart(2, '0')}/${String(fr.getDate()).padStart(2, '0')}/${fr.getFullYear()}`); put(`E${r}`, `# DE CAJAS:  ${nfmt(totalCajas)}`, { align: { horizontal: 'right' } });
+    r++; put(`B${r}`, `FECHA DE RECIVING :  ${fmtLong(ymd(fr))}`); put(`E${r}`, `# DE CAJAS:  ${nfmt(totalCajas)}`, { align: { horizontal: 'right' } });
     r++; put(`B${r}`, `PROOVEDOR :  ${rec.proveedor || ''}`); put(`E${r}`, 'FIRMA Y SELLO', { align: { horizontal: 'right' } });
     if (rec.nota) { r += 2; put(`B${r}`, `NOTAS: ${rec.nota}`, { align: { wrapText: true } }); ws.mergeCells(`B${r}:E${r}`); ws.getRow(r).height = 30; }
     const buf = await wb.xlsx.writeBuffer();
@@ -4115,7 +4115,7 @@
     const m = canMoney();
     const data = rows.map((r) => {
       const p = fechProd(r.sku) || {};
-      const o = { Departamento: r.dep, Producto: r.nombre, SKU: r.sku, UPC: p.upc || '', Vence: r.d, 'Días': r.dias, Cajas: cajasDe(r), 'Llegaron': r.recibido };
+      const o = { Departamento: r.dep, Producto: r.nombre, SKU: r.sku, UPC: p.upc || '', Vence: fmtLong(r.d), 'Días': r.dias, Cajas: cajasDe(r), 'Llegaron': r.recibido };
       if (m) { o['Costo caja'] = p.cost || 0; o.Valor = r2(valorDe(r)); }
       o.Nota = r.riesgo ? 'No alcanza a venderse' : r.dias < 0 ? 'Vencido' : '';
       return o;
