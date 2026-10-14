@@ -943,3 +943,14 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .rec-bus-res .rb-n{flex:1;min-width:0;font-size:14px}
 .rec-bus-res .rb-n small{display:block;color:var(--muted);font-size:12px}
 .rec-row-sku{display:block;font-family:var(--mono);font-size:10.5px;color:var(--oro);letter-spacing:.06em}
+
+/* Reporte a Cortes (novedades) */
+.nov-auto{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.nov-box{margin-top:12px;padding:12px 14px;border-radius:14px;background:rgba(216,51,27,.08);border:1px solid rgba(216,51,27,.25)}
+.nov-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px}
+.nov-grid select,.nov-grid input{width:100%}
+.nov-fotos{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.nov-f{position:relative}
+.nov-f img{width:72px;height:72px;object-fit:cover;border-radius:10px}
+.nov-f .g-x{position:absolute;top:-6px;right:-6px;width:22px;height:22px}
+@media (max-width:560px){.nov-grid{grid-template-columns:1fr 1fr}.nov-grid .field:first-child{grid-column:1/-1}}

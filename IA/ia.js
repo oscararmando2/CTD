@@ -3385,6 +3385,7 @@
           <span class="status">de ${nfmt(l.cantidad)}</span>
           <button type="button" class="btn btn-oro rec-listo" data-r="parcialok">Listo${l.caducidad ? ', siguiente →' : ' → fecha'}</button>
         </div>` : ''}
+        ${novPanelHTML(l)}
         ${l.nota || R.noteOpen ? `<label class="field"><span>Nota</span><input id="recNote" type="text" maxlength="300" placeholder="Dañado, regresó, llegó otro sabor…" value="${esc(l.nota)}"></label>`
           : '<button type="button" class="btn-link rec-addnote" data-r="note">+ Agregar nota</button>'}
         <div class="rec-nav">
@@ -3424,6 +3425,98 @@
           <button type="button" class="btn btn-oro" data-r="finish">${R.rec.status === 'revisado' ? 'Guardar cambios' : 'Terminar y mandar a Costeo'}</button>
         </div>
       </article>`;
+  }
+
+  /* ---- Formato de Novedad (Delivery Updates) para Cortes: lo que llegó mal se reporta al revisar y sale el Excel ---- */
+  const NOMBRES = { jonathan: 'Jonathan Reyes' }; // nombre completo para los formatos del proveedor
+  const nombreCompleto = (n) => NOMBRES[normTxt(n).trim()] || label(n);
+  const NOV_ES = { damaged: 'Dañado', 'missing item': 'Faltante', 'short date format': 'Fecha corta', spare: 'Sobrante' };
+  const FECHA_CORTA = 90; // días
+  const esCortes = (rec) => /cortes/i.test(String((rec && rec.proveedor) || ''));
+  const diasEntre = (a, b) => Math.round((parseYmd(b) - parseYmd(a)) / 864e5);
+  const recDia = (rec) => ymd(rec.doneAt ? new Date(rec.doneAt) : new Date());
+  function novPanelHTML(l) {
+    const corta = l.caducidad && diasEntre(recDia(R.rec), l.caducidad) < FECHA_CORTA;
+    const auto = [l.estado === 'no' ? `Faltante: ${nfmt(l.cantidad)}` : '', l.estado === 'parcial' ? `Faltante: ${nfmt((l.cantidad || 0) - (l.recibido || 0))}` : '', corta ? `Fecha corta (vence en ${diasEntre(recDia(R.rec), l.caducidad)} días)` : ''].filter(Boolean);
+    if (!l.nov) return `<div class="nov-auto">${auto.length ? `<span class="pill warn">Se reporta a Cortes: ${esc(auto.join(' · '))}</span>` : ''}<button type="button" class="btn-link rec-addnote" data-r="nov">⚠ Reportar (dañado, sobrante…) con foto</button></div>`;
+    const n = l.nov;
+    return `<div class="nov-box">
+      ${auto.length ? `<p class="status">También se reporta solo: ${esc(auto.join(' · '))}</p>` : ''}
+      <div class="nov-grid">
+        <label class="field"><span>Motivo</span><select data-nov="tipo">${Object.entries(NOV_ES).map(([k, v]) => `<option value="${k}"${n.tipo === k ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
+        <label class="field"><span>Cantidad</span><input data-nov="cant" type="number" inputmode="numeric" min="0" value="${n.cant ?? 1}"></label>
+        <label class="field"><span>Unidad</span><select data-nov="um"><option value="case"${n.um !== 'each' ? ' selected' : ''}>Caja</option><option value="each"${n.um === 'each' ? ' selected' : ''}>Pieza</option></select></label>
+      </div>
+      <label class="field"><span>Observaciones</span><input data-nov="nota" type="text" maxlength="300" placeholder="una lata rota, falto una caja…" value="${esc(n.nota || '')}"></label>
+      <div class="nov-fotos">${(n.fotos || []).map((f, k) => `<span class="nov-f"><img src="${f}" alt=""><button type="button" class="g-x" data-r="novfotoquitar" data-k="${k}" aria-label="Quitar">×</button></span>`).join('')}
+        ${(n.fotos || []).length < 3 ? '<button type="button" class="btn btn-ghost btn-sm" data-r="novfoto">📷 Foto</button>' : ''}
+        <input id="novFile" type="file" accept="image/*" capture="environment" multiple hidden></div>
+      <button type="button" class="btn-link sm" data-r="novquitar">Quitar reporte</button>
+    </div>`;
+  }
+  // Foto del celular → JPEG chico (máx. 1000 px) para guardarla y meterla al Excel
+  function fotoChica(file) {
+    return new Promise((ok, bad) => {
+      const img = new Image(), url = URL.createObjectURL(file);
+      img.onload = () => { const s = Math.min(1, 1000 / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * s); c.height = Math.round(img.height * s); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); ok(c.toDataURL('image/jpeg', 0.7)); };
+      img.onerror = (e) => { URL.revokeObjectURL(url); bad(e); };
+      img.src = url;
+    });
+  }
+  // Renglones del formato: faltantes (Llegó menos / No llegó), fecha corta (< 90 días) y lo que Jona reportó
+  function novFilas(rec) {
+    const prods = S.products.length ? S.products : (R.cat || []);
+    const dia = recDia(rec), out = [];
+    (rec.lines || []).forEach((l) => {
+      const p = prods.find((x) => String(x.id) === String(l.sku)) || {};
+      const ctd = [l.upcSis, p.upc].find((v) => /^CTD-?\d+$/i.test(String(v || '')));
+      const sku = String(l.codigo_proveedor || '').trim() || (ctd ? String(ctd).replace(/^CTD-?/i, '') : '');
+      const base = { sku, prod: l.producto || l.nombre || '', exp: l.caducidad ? fmtLong(l.caducidad) : '', fact: rec.factura || '' };
+      const falta = l.estado === 'no' ? Number(l.cantidad) || 0 : l.estado === 'parcial' ? (Number(l.cantidad) || 0) - (Number(l.recibido) || 0) : 0;
+      if (falta > 0 && !(l.nov && l.nov.tipo === 'missing item')) out.push({ ...base, razon: 'missing item', cant: falta, um: 'CASE', obs: `falto ${nfmt(falta)} ${falta === 1 ? 'caja' : 'cajas'}`, fotos: [] });
+      if (l.caducidad && diasEntre(dia, l.caducidad) < FECHA_CORTA && !(l.nov && l.nov.tipo === 'short date format')) {
+        const q = l.estado === 'parcial' ? Number(l.recibido) || 0 : Number(l.cantidad) || 0;
+        if (q > 0) out.push({ ...base, razon: 'short date format', cant: q, um: 'CASE', obs: 'FECHA CORTA', fotos: [] });
+      }
+      if (l.nov) out.push({ ...base, razon: l.nov.tipo, cant: l.nov.cant, um: l.nov.um === 'each' ? 'EA' : 'CASE', obs: l.nov.nota || NOV_ES[l.nov.tipo], fotos: l.nov.fotos || [] });
+    });
+    return out;
+  }
+  async function formatoNovedad(rec) {
+    const filas = novFilas(rec);
+    if (!filas.length) { alert('Este recibo no tiene nada que reportar a Cortes (faltantes, dañados, fecha corta o sobrantes).'); return; }
+    const { num } = await cosCall('novedad_num', { id: rec.id });
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
+    const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('Formato NOVEDAD', { pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
+    [5.9, 10, 37.8, 12, 17.6, 29.3, 16, 14, 11, 26.8, 11.1, 17.4, 17.4, 17.4].forEach((w, i) => { ws.getColumn(i + 1).width = w; });
+    const F = { name: 'Calibri', size: 10 }, thin = { style: 'thin' }, box = { top: thin, left: thin, bottom: thin, right: thin };
+    ws.mergeCells('B1:J1'); Object.assign(ws.getCell('B1'), { value: 'DELIVERY UPDATES', font: { ...F, bold: true, color: { argb: 'FFFFFFFF' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E78' } }, alignment: { horizontal: 'center' } });
+    const set = (a, v, o = {}) => Object.assign(ws.getCell(a), { value: v, font: { ...F, ...(o.font || {}) }, ...(o.alignment ? { alignment: o.alignment } : {}) });
+    ws.mergeCells('C3:D3'); ws.mergeCells('G3:H3'); ws.mergeCells('C4:D4'); ws.mergeCells('G4:H4');
+    set('B3', 'Reporr Nu.:', { font: { bold: true } }); set('C3', num);
+    set('F3', 'Data:', { font: { bold: true }, alignment: { horizontal: 'center' } }); set('G3', fmtLong(recDia(rec)));
+    set('B4', 'Costumer:', { font: { bold: true } }); set('C4', 'Central Trade Distribution, LLC');
+    set('F4', 'Supplier:', { font: { bold: true }, alignment: { horizontal: 'center' } }); set('G4', 'Cortes Distributors, LLC');
+    set('B6', 'This form is for informational purposes only and is valid only if completed within 48 hours of receiving the product.', { font: { bold: true } });
+    ['Item', 'SKU', 'Product', 'Lote', 'Exp Date', 'REASON FOR ALERT', 'Quan. Sale Unit ', 'UM (EA, CASE)', 'CONDITION', 'OBSERVATIONS', 'INVOISE NUMBERT', 'PHOTOGRAPHIC RECORD'].forEach((h, k) => {
+      Object.assign(ws.getRow(8).getCell(k + 1), { value: h, font: { ...F, bold: true }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9EAD3' } }, alignment: { horizontal: 'center', vertical: 'middle', wrapText: true }, border: box });
+    });
+    ws.getRow(8).height = 27;
+    try { const b = await (await fetch('cortes-logo.png')).blob(); const d64 = await new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(b); }); ws.addImage(wb.addImage({ base64: d64, extension: 'png' }), { tl: { col: 10.1, row: 0.05 }, ext: { width: 200, height: 118 } }); } catch (e) { /* sin logo */ }
+    filas.forEach((f, k) => {
+      const r = 9 + k, row = ws.getRow(r);
+      [k + 1, f.sku ? (/^\d+$/.test(f.sku) ? Number(f.sku) : f.sku) : '', f.prod, '', f.exp, f.razon, f.cant, f.um, '', f.obs, f.fact, ''].forEach((v, j) => {
+        Object.assign(row.getCell(j + 1), { value: v, font: F, border: box, alignment: { horizontal: j === 2 ? 'left' : 'center', vertical: 'middle', wrapText: j === 2 || j === 9 } });
+      });
+      row.height = f.fotos.length ? 95 : 30;
+      f.fotos.forEach((foto, n) => { ws.addImage(wb.addImage({ base64: foto, extension: 'jpeg' }), { tl: { col: 11 + n + 0.05, row: r - 1 + 0.05 }, ext: { width: 115, height: 120 } }); });
+    });
+    const rs = 9 + filas.length + 2;
+    set(`B${rs}`, 'SENT BY:'); ws.mergeCells(`C${rs}:D${rs}`);
+    Object.assign(ws.getCell(`C${rs}`), { value: nombreCompleto((rec.recv && rec.recv.por) || rec.updatedBy || S.who), font: F, border: { bottom: { style: 'medium' } } });
+    const buf = await wb.xlsx.writeBuffer(), d = new Date();
+    download(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `formato novedad ${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}-${num}.xlsx`);
+    toast(`Formato de novedad #${num} descargado`);
   }
 
   // ---- Buscar un producto de la factura (tarimas mixtas: no llega en el orden de la factura) ----
@@ -3621,6 +3714,7 @@
         const hecho = { ...R.rec, doneAt: R.rec.doneAt || Date.now(), updatedBy: S.who };
         R.rec = null; store.del(K_REC); await loadLotes(true);
         if (confirm('¿Descargar el formato de Receiving en Excel?')) formatoReceiving(hecho).catch((err) => toast('No se pudo: ' + err.message));
+        if (esCortes(hecho) && novFilas(hecho).length && confirm(`Hay ${novFilas(hecho).length} cosas para reportar a Cortes (faltantes, dañados, fecha corta…). ¿Descargar el Formato de Novedad?`)) formatoNovedad({ ...hecho, id: st.id }).catch((err) => toast('No se pudo: ' + err.message));
       } catch (err) { toast('No se pudo guardar: ' + err.message); b.disabled = false; return; }
       renderRecibo(); window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -3636,6 +3730,20 @@
     if (a === 'date') { l.caducidad = b.dataset.d; touchRec(); renderRecibo(); return; }
     if (a === 'nodate') { l.caducidad = ''; touchRec(); renderRecibo(); return; }
     if (a === 'note') { R.noteOpen = true; renderRecibo(); const n = $('#recNote'); if (n) n.focus(); }
+    if (a === 'nov') { l.nov = l.nov || { tipo: 'damaged', cant: 1, um: 'case', nota: '', fotos: [] }; touchRec(); renderRecibo(); return; }
+    if (a === 'novquitar') { if (confirm('¿Quitar el reporte de este producto?')) { l.nov = null; touchRec(); renderRecibo(); } return; }
+    if (a === 'novfotoquitar') { l.nov.fotos.splice(Number(b.dataset.k), 1); touchRec(); renderRecibo(); return; }
+    if (a === 'novfoto') { const f = $('#novFile'); if (f) f.click(); return; }
+  });
+  $('#recWork').addEventListener('change', async (e) => {
+    const el = e.target, l = R.rec && R.rec.lines[R.cur]; if (!l || !l.nov) return;
+    if (el.id === 'novFile') {
+      for (const file of [...el.files].slice(0, 3 - (l.nov.fotos || []).length)) {
+        try { l.nov.fotos = [...(l.nov.fotos || []), await fotoChica(file)]; } catch (err) { toast('No se pudo leer la foto'); }
+      }
+      touchRec(); renderRecibo(); return;
+    }
+    if (el.dataset.nov) { l.nov[el.dataset.nov] = el.dataset.nov === 'cant' ? Math.max(0, Number(el.value) || 0) : el.value; touchRec(); }
   });
 
   // ---- Lista de recibos (en curso / en Costeo / costeados) ----
@@ -3656,6 +3764,7 @@
         ${f.po ? `<span class="pill ok">Orden QB ${esc(f.po.doc || f.po.id)} creada</span>` : ''}${['revisado', 'costeado'].includes(f.status) ? `<button class="btn ${f.po ? 'btn-ghost' : 'btn-oro'} btn-sm" data-c="bill" type="button">Crear Orden QB</button>` : ''}
         ${PAUSA_QB ? '' : f.po ? `<span class="pill ok">QuickBooks: orden ${esc(f.po.doc || f.po.id)} lista para recibir</span>` : `${f.bill ? `<span class="pill warn">QuickBooks: Bill ${esc(f.bill.doc || f.bill.id)}</span>` : ''}${['revisado', 'costeado'].includes(f.status) ? `<button class="btn btn-oro btn-sm" data-c="bill" data-tenia="${f.bill ? 1 : ''}" type="button">Mandar a QuickBooks para recibir</button>` : ''}`}
         ${PAUSA_QB ? '' : f.insitu ? `<span class="pill ok">InSitu: recepción ${esc(f.insitu.id || '')} ✓</span>` : ['revisado', 'costeado'].includes(f.status) ? '<button class="btn btn-ghost btn-sm" data-c="insitu" type="button">Recepción en InSitu (prueba)</button>' : ''}
+        ${['revisado', 'costeado'].includes(f.status) && /cortes/i.test(f.proveedor || '') ? `<button class="btn btn-ghost btn-sm" data-c="nov" type="button">${f.novedad ? `Novedad #${f.novedad.num}` : 'Formato Novedad'}</button>` : ''}
         ${['revisado', 'costeado'].includes(f.status) ? `<button class="btn btn-ghost btn-sm" data-c="xls" type="button">${icon('download')}Formato Excel</button>` : ''}
         ${PAUSA_QB ? '' : f.invManual ? '<span class="pill">inventario: metido a mano</span>' : ['revisado', 'costeado'].includes(f.status) ? '<button class="btn-link sm" data-c="invman" type="button">¿Ya se metió a mano?</button>' : ''}
         ${PAUSA_QB || f.invManual ? '' : f.inv ? (f.inv.errores.length ? `<span class="pill warn" title="${esc(f.inv.errores.join('\n'))}">inventario: ${f.inv.errores.length} con problema</span><button class="btn btn-ghost btn-sm" data-c="inv" type="button">Reintentar inventario</button>` : `<span class="pill ok">inventario ✓ ${f.inv.hechos}</span>`) : ''}
@@ -3758,6 +3867,12 @@
     if (bb) {
       if (bb.dataset.tenia && !confirm('Esta factura ya tiene un Bill creado por la IA en QuickBooks.\n\nBórralo primero en QuickBooks; si no, al recibir la orden el inventario se DUPLICA.\n\n¿Ya lo borraste?')) return;
       bb.disabled = true; const r = await crearBill({ reciboId: bb.closest('.hist-item').dataset.rid }); if (r) { R.list = null; renderRecList(); } else bb.disabled = false; return; }
+    const bn = e.target.closest('[data-c="nov"]');
+    if (bn) {
+      bn.disabled = true;
+      try { const { recibo } = await cosCall('recibo_get', { id: bn.closest('.hist-item').dataset.rid }); await formatoNovedad(recibo); R.list = null; renderRecList(); } catch (err) { toast('No se pudo: ' + err.message); }
+      bn.disabled = false; return;
+    }
     const bx = e.target.closest('[data-c="xls"]');
     if (bx) {
       bx.disabled = true;
