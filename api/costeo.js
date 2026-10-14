@@ -433,6 +433,8 @@ module.exports = async (req, res) => {
             photo: /^https:\/\//.test(l.photo || '') ? str(l.photo, 500) : '', upcSis: str(l.upcSis, 40),
             estado: ESTADOS.includes(l.estado) ? l.estado : '', recibido: num(l.recibido),
             caducidad: ymdOk(l.caducidad), leida: ymdOk(l.leida), nota: str(l.nota, 300),
+            nov: l.nov && typeof l.nov === 'object' && NOV_TIPOS.includes(l.nov.tipo) ? { tipo: l.nov.tipo, cant: num(Number(l.nov.cant)), um: str(l.nov.um, 10), nota: str(l.nov.nota, 300),
+              fotos: (Array.isArray(l.nov.fotos) ? l.nov.fotos : []).filter((f) => typeof f === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(f) && f.length < 400000).slice(0, 3) } : null,
             fechas: Array.isArray(l.fechas) && l.fechas.length > 1 ? l.fechas.slice(0, 6).map((x) => ({ f: ymdOk(x && x.f), q: num(Number(x && x.q)) })).filter((x) => x.f && x.q > 0) : null,
           })),
           nota: str(r.nota, 1500),
@@ -442,6 +444,7 @@ module.exports = async (req, res) => {
           inv: (prev && prev.inv) || null,
           invManual: r.invManual != null ? !!r.invManual : !!(prev && prev.invManual),
           bill: (prev && prev.bill) || null, po: (prev && prev.po) || null, insitu: (prev && prev.insitu) || null,
+          novedad: (prev && prev.novedad) || null,
           recv: r.recv && typeof r.recv === 'object' ? { pallets: str(r.recv.pallets, 10), combinados: str(r.recv.combinados, 10), temp: str(r.recv.temp, 20), por: str(r.recv.por, 80) } : (prev && prev.recv) || null,
         };
         await db('PUT', 'recibos/' + id, rec);
@@ -580,6 +583,19 @@ module.exports = async (req, res) => {
         await log({ action: esPO ? 'qb-po' : 'qb-bill', name: `${src.proveedor} #${doc}`, qbId: x.Id, total: x.TotalAmt, lineas: lines.length, by: who });
         return res.json({ ok: true, bill, tipo: campo });
       }
+      case 'novedad_num': {
+        // Número consecutivo del "Formato de Novedad" de Cortes (el siguiente después del 9 es el 10); uno por recibo
+        const rid = codeKey(body.id);
+        const rec = await db('GET', 'recibos/' + rid);
+        if (!rec) return res.status(404).json({ error: 'No existe el recibo' });
+        if (rec.novedad && rec.novedad.num) return res.json({ num: rec.novedad.num, at: rec.novedad.at });
+        const ult = Number(await db('GET', 'novedadSeq')) || 9;
+        const num = ult + 1;
+        await db('PUT', 'novedadSeq', num);
+        const novedad = { num, at: Date.now(), by: who };
+        await db('PATCH', 'recibos/' + rid, { novedad });
+        return res.json(novedad);
+      }
       case 'recibo_inventario': {
         if (PAUSA_RECIBO_QB) return res.status(403).json({ error: 'Pausado por ahora: el recibo se hace a mano en QuickBooks.' });
         // Reintentar meter el inventario de un recibo ya terminado (ej. faltaba la sesión de InSitu)
@@ -598,7 +614,7 @@ module.exports = async (req, res) => {
           const c = (e) => L.filter((l) => l.estado === e).length;
           return { id: f.id, proveedor: f.proveedor, factura: f.factura, fecha: f.fecha, status: f.status, by: f.by, ts: f.ts, updated: f.updated, doneAt: f.doneAt || null,
             lines: L.length, ok: c('ok'), parcial: c('parcial'), no: c('no'), pendiente: c('pendiente'), sinRevisar: c(''),
-            fechas: L.filter((l) => l.caducidad).length, costeoId: f.costeoId || null, origen: f.origen || 'bodega', updatedBy: f.updatedBy || '', invManual: !!f.invManual, bill: f.bill || null, po: f.po || null, insitu: f.insitu || null,
+            fechas: L.filter((l) => l.caducidad).length, costeoId: f.costeoId || null, origen: f.origen || 'bodega', updatedBy: f.updatedBy || '', invManual: !!f.invManual, bill: f.bill || null, po: f.po || null, insitu: f.insitu || null, novedad: f.novedad || null,
             inv: f.inv ? { hechos: Object.keys(f.inv.aplicado || {}).length, errores: (f.inv.errores || []).slice(0, 8) } : null };
         }).sort((a, b) => (b.updated || b.ts) - (a.updated || a.ts)).slice(0, 60);
         return res.json({ list });
@@ -891,7 +907,8 @@ async function avisosTienda() {
   });
   return out.sort((a, b) => a.dias - b.dias || a.tienda.localeCompare(b.tienda)).slice(0, 300);
 }
-const RECIBO_ACTIONS = ['qb_bill', 'recibo_inventario', 'parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'lote_add', 'lote_del', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
+const NOV_TIPOS = ['damaged', 'missing item', 'short date format', 'spare'];
+const RECIBO_ACTIONS = ['novedad_num', 'qb_bill', 'recibo_inventario', 'parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'lote_add', 'lote_del', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
 const ESTADOS = ['', 'ok', 'parcial', 'no', 'pendiente'];
 const ymdOk = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '');
 
