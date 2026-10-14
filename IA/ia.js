@@ -3470,9 +3470,9 @@
   }
 
   /* ---- Caducidad en dos toques: hoja que sube desde abajo → mes + año.
-   * Si vence en 9 meses o menos pide también el día; si no, se guarda el fin de mes. ---- */
+   * Siempre pide también el día (día, mes y año). ---- */
   const DIAS = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
-  const SHORT_DAYS = 275; // ~9 meses
+  const SHORT_DAYS = Infinity; // siempre se pide el día (Jonathan: día, mes y año en todas)
   function openSheet(i, adv) {
     R.sheet = { i, adv, m: null, y: null, day: false }; // siempre dos toques nuevos (la fecha anterior queda marcada como pista)
     renderSheet();
