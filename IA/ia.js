@@ -1745,13 +1745,19 @@
     },
   };
   function initFirebase() {
-    if (typeof firebase === 'undefined') { gateMsg('No cargó Firebase. Revisa tu internet y recarga.', 'err'); return; }
+    if (typeof firebase === 'undefined') { const b = $('#boot'); if (b) b.remove(); $('#gate').hidden = false; gateMsg('No cargó Firebase. Revisa tu internet y recarga.', 'err'); return; }
     firebase.initializeApp(FIREBASE_CONFIG);
     auth = firebase.auth();
     db = firebase.database();
     // La sesión queda guardada en el dispositivo (LOCAL): no vuelve a pedir contraseña hasta "Salir"
     auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+    // Que el celular no borre la sesión guardada para ahorrar espacio
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) { /* */ }
+    // Mientras se revisa si ya había sesión se ve "Cargando…" (no la contraseña)
+    const bootOff = () => { const b = $('#boot'); if (b) b.remove(); };
+    setTimeout(() => { if ($('#boot')) { bootOff(); if ($('#app').hidden) showGate(); } }, 8000);
     auth.onAuthStateChanged(async (u) => {
+      bootOff();
       const name = u && nameOf(u.email);
       if (name) { enterApp(name); return; }
       if (u) { await auth.signOut(); gateMsg('Esta cuenta no tiene acceso.', 'err'); }

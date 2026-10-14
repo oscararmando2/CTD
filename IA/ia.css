@@ -929,3 +929,6 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
   .hist-item > .st,.hist-item > .pill,.hist-item > .btn,.hist-item > .btn-link,.hist-item > .icon-btn,.hist-item > .hi-acts{flex:0 0 auto}
   .hist-item .pill{white-space:normal}
 }
+.boot{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--negro, #0F0D0A);color:var(--muted);z-index:50}
+.boot img{width:120px;opacity:.9}
+.boot p{font-family:var(--mono);font-size:12px;letter-spacing:.2em;text-transform:uppercase}
