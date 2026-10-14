@@ -932,3 +932,14 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .boot{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:var(--negro, #0F0D0A);color:var(--muted);z-index:50}
 .boot img{width:120px;opacity:.9}
 .boot p{font-family:var(--mono);font-size:12px;letter-spacing:.2em;text-transform:uppercase}
+
+/* Buscar producto en el recibo */
+.rec-bus{position:relative;margin-top:12px}
+.rec-bus input{width:100%;font-size:16px;padding:14px 16px;border-radius:14px;border:1px solid var(--linea);background:rgba(246,242,233,.06);color:var(--hueso)}
+.rec-bus-res{position:absolute;left:0;right:0;top:100%;z-index:20;background:var(--negro-2,#1a1713);border-radius:14px;margin-top:6px;box-shadow:0 12px 30px rgba(0,0,0,.5);overflow:hidden}
+.rec-bus-res:empty{display:none}
+.rec-bus-res button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;border:0;background:none;color:var(--hueso);border-top:1px solid var(--linea)}
+.rec-bus-res .rb-sku{font-family:var(--mono);font-size:12px;color:var(--oro);min-width:78px}
+.rec-bus-res .rb-n{flex:1;min-width:0;font-size:14px}
+.rec-bus-res .rb-n small{display:block;color:var(--muted);font-size:12px}
+.rec-row-sku{display:block;font-family:var(--mono);font-size:10.5px;color:var(--oro);letter-spacing:.06em}

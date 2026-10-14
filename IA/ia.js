@@ -3300,6 +3300,7 @@
         <h2 class="rec-title">${esc(R.rec.proveedor || 'Proveedor')} <small>#${esc(R.rec.factura || '—')}</small></h2>
         <div class="rec-prog"><span style="width:${L.length ? (done / L.length) * 100 : 0}%"></span></div>
         <p class="status">${done} de ${L.length} revisados${R.rec.fecha ? ' · factura del ' + esc(fmtLong(R.rec.fecha)) : ''}</p>
+        <div class="rec-bus"><input id="recBus" type="search" placeholder="Buscar producto: SKU, UPC o nombre" autocomplete="off" enterkeyhint="search"><div id="recBusRes" class="rec-bus-res"></div></div>
       </div>`;
     box.innerHTML = head + (R.cur >= L.length ? finishHTML() : cardRecHTML(R.cur)) + stripHTML();
     const di = $('#recDate');
@@ -3425,12 +3426,43 @@
       </article>`;
   }
 
+  // ---- Buscar un producto de la factura (tarimas mixtas: no llega en el orden de la factura) ----
+  const recProd = (l) => (S.products.length ? S.products : (R.cat || [])).find((x) => String(x.id) === String(l.sku)) || {};
+  const recSku = (l) => { const p = recProd(l); return [l.upcSis, p.upc].find((v) => /^CTD-?\d+$/i.test(String(v || ''))) || ''; };
+  const recCodigos = (l) => { const p = recProd(l); return [recSku(l), l.upc, l.upcSis, p.upc, p.ean, l.sku, l.codigo_proveedor].map((v) => String(v || '').trim()).filter(Boolean); };
+  function recBuscar(q) {
+    const s = normTxt(q).trim(); if (!s) return [];
+    const dig = s.replace(/[^a-z0-9]/g, '');
+    return R.rec.lines.map((l, i) => ({ l, i })).filter(({ l }) => {
+      const cods = recCodigos(l).map((c) => normTxt(c).replace(/[^a-z0-9]/g, ''));
+      if (dig.length >= 3 && cods.some((c) => c === dig || c.endsWith(dig) || (dig.length >= 6 && c.includes(dig)) || (c.length >= 6 && dig.endsWith(c)))) return true;
+      const nom = normTxt(`${l.nombre || ''} ${l.producto || ''}`);
+      return s.split(/\s+/).every((w) => nom.includes(w) || cods.some((c) => c.includes(w)));
+    }).slice(0, 8);
+  }
+  function recIr(i) { R.cur = i; R.noteOpen = false; renderRecibo(); toCard(); }
+  $('#recWork').addEventListener('input', (e) => {
+    if (e.target.id !== 'recBus') return;
+    const res = recBuscar(e.target.value), box = $('#recBusRes');
+    box.innerHTML = e.target.value.trim() ? (res.length ? res.map(({ l, i }) => `<button type="button" data-busi="${i}">
+        <span class="rb-sku">${esc(recSku(l) || l.upc || ('#' + (l.sku || '')))}</span>${thumb(l, 'rec-th')}
+        <span class="rb-n">${esc(l.sku ? l.nombre : l.producto)}<small>${nfmt(l.cantidad)} ${l.cantidad === 1 ? 'caja' : 'cajas'}${l.estado ? ' · ya revisado' : ''}</small></span></button>`).join('')
+      : '<p class="data-info" style="padding:10px">No está en esta factura</p>') : '';
+  });
+  $('#recWork').addEventListener('keydown', (e) => {
+    if (e.target.id !== 'recBus' || e.key !== 'Enter') return;
+    e.preventDefault();
+    const res = recBuscar(e.target.value);
+    if (res.length === 1) recIr(res[0].i); // escaneado con lector: si solo hay uno, brinca solo
+  });
+  $('#recWork').addEventListener('click', (e) => { const b = e.target.closest('[data-busi]'); if (b) recIr(Number(b.dataset.busi)); });
+
   function stripHTML() {
     return `<div class="rec-strip">${R.rec.lines.map((l, i) => `
       <button type="button" class="rec-row${i === R.cur ? ' cur' : ''}" data-r="go" data-i="${i}">
         <span class="rec-dot ${l.estado || 'none'}" aria-hidden="true"></span>
         ${thumb(l, 'rec-th')}
-        <span class="rec-row-n">${esc(l.sku ? l.nombre : l.producto)}</span>
+        <span class="rec-row-n">${recSku(l) ? `<small class="rec-row-sku">${esc(recSku(l))}</small>` : ''}${esc(l.sku ? l.nombre : l.producto)}</span>
         <span class="rec-row-d">${l.estado === 'parcial' ? nfmt(l.recibido || 0) + '/' : ''}${nfmt(l.cantidad)}${l.caducidad ? ' · ' + esc(fmtD(l.caducidad)) + ' ' + parseYmd(l.caducidad).getFullYear() % 100 : ''}</span>
       </button>`).join('')}
       <button type="button" class="rec-row${R.cur >= R.rec.lines.length ? ' cur' : ''}" data-r="go" data-i="${R.rec.lines.length}"><span class="rec-dot fin" aria-hidden="true"></span><span class="rec-row-n"><b>Terminar</b></span></button>
