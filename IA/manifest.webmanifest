@@ -1,0 +1,14 @@
+{
+  "name": "CTD · Sistema Inteligente",
+  "short_name": "CTD IA",
+  "start_url": "/IA/",
+  "scope": "/IA/",
+  "display": "standalone",
+  "background_color": "#0F0D0A",
+  "theme_color": "#0F0D0A",
+  "icons": [
+    { "src": "/IA/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/IA/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/IA/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
