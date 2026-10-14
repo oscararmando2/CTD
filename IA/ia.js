@@ -3431,7 +3431,7 @@
   const NOMBRES = { jonathan: 'Jonathan Reyes' }; // nombre completo para los formatos del proveedor
   const nombreCompleto = (n) => NOMBRES[normTxt(n).trim()] || label(n);
   const NOV_ES = { damaged: 'Dañado', 'missing item': 'Faltante', 'short date format': 'Fecha corta', spare: 'Sobrante' };
-  const FECHA_CORTA = 90; // días
+  const FECHA_CORTA = 45; // días (mes y medio)
   const esCortes = (rec) => /cortes/i.test(String((rec && rec.proveedor) || ''));
   const diasEntre = (a, b) => Math.round((parseYmd(b) - parseYmd(a)) / 864e5);
   const recDia = (rec) => ymd(rec.doneAt ? new Date(rec.doneAt) : new Date());
