@@ -920,3 +920,12 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 @media (min-width:720px){.rec-recv{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .res-dl{display:flex;gap:6px;flex-wrap:wrap}
 #resultados .vig-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* Listas (recibos, facturas, créditos) en el celular: el texto a todo lo ancho y los botones abajo */
+@media (max-width:640px){
+  .hist-item{flex-wrap:wrap;row-gap:10px}
+  .hist-item .hi-txt{flex:1 1 100%;padding-left:0}
+  .hist-item .hi-thumbs + .hi-txt{flex:1 1 calc(100% - 60px);padding-left:10px}
+  .hist-item > .st,.hist-item > .pill,.hist-item > .btn,.hist-item > .btn-link,.hist-item > .icon-btn,.hist-item > .hi-acts{flex:0 0 auto}
+  .hist-item .pill{white-space:normal}
+}
