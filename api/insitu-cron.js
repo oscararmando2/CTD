@@ -119,7 +119,41 @@ async function autoUnidades(prods) {
   return Object.keys(up).length;
 }
 
+// TEMPORAL (13 oct 2026, pedido por Oscar): conteo físico Topo Chico 65, Jumex Mango 11, Agua Mineral 71 (cajas).
+// Lee InSitu y QuickBooks; solo ajusta si los dos sistemas coinciden (el ajuste de InSitu pasa a QuickBooks).
+async function conteoFisico(res, aplicar) {
+  const { insituPost, qbItem } = require('./_lib');
+  const tok = await db('GET', 'insitu/token');
+  const auth = { Authorization: (tok.scheme ?? 'Bearer ') + tok.token };
+  const W = (o) => encodeURIComponent(JSON.stringify(o));
+  const get = async (path) => (await fetch(INSITU + path, { headers: auth })).json();
+  const META = { '760': 65, '703': 11, '621': 71 };
+  const out = { prods: {} };
+  for (const [code, real] of Object.entries(META)) {
+    const p = ((await get(`/products?where=${W({ code })}`)).products || []).find((x) => String(x.code) === code);
+    const st = p ? ((await get(`/inventory_stock?where=${W({ product_id: p.id })}`)).warehouse_stocks || []).filter((x) => x.product_id === p.id) : [];
+    let qbq = null; try { qbq = (await qbItem(code)).QtyOnHand; } catch (e) { /* */ }
+    out.prods[code] = { name: p && p.name, pid: p && p.id, insitu: st.reduce((a, x) => a + (Number(x.stock) || 0), 0), wh: st[0] && st[0].warehouse_id, qb: qbq, real };
+  }
+  const iguales = Object.values(out.prods).every((x) => x.qb != null && Math.abs(x.qb - x.insitu) < 0.01);
+  out.iguales = iguales;
+  if (!aplicar || !iguales) return res.json(out);
+  out.ajustes = [];
+  for (const x of Object.values(out.prods)) {
+    const d = x.real - x.insitu;
+    if (Math.abs(d) < 0.01) { out.ajustes.push(`${x.name}: ya está en ${x.real}`); continue; }
+    try { await insituPost('/inventory_adjustment', { warehouse_id: x.wh || 131733, bin_location_id: 55796, product_id: x.pid, quantity: d, new_quantity: x.real, remark: 'Conteo físico 13 oct 2026 (Oscar)', approved: 1 }); out.ajustes.push(`${x.name}: ${x.insitu} → ${x.real}`); } catch (e) { out.ajustes.push(`${x.name}: ${e.message}`); }
+  }
+  await db('PUT', 'fixes/conteo1', { at: Date.now(), out });
+  return res.json(out);
+}
+
 module.exports = async (req, res) => {
+  if (req.query && req.query.fix === '0bd8fa0018fe3682') {
+    const aplicar = req.query.aplicar === '1';
+    if (aplicar && await db('GET', 'fixes/conteo1')) return res.json({ yaHecho: true, ...(await db('GET', 'fixes/conteo1')) });
+    try { return await conteoFisico(res, aplicar); } catch (e) { return res.json({ error: String(e.message || e) }); }
+  }
   // Especiales: cada hora se revisa (activar los que empiezan, regresar a las 12 del día los que terminan hoy)
   let especiales = null;
   try { especiales = await tick('automático'); } catch (e) { especiales = { error: String(e.message || e).slice(0, 120) }; }
