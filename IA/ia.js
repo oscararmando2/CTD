@@ -2555,7 +2555,7 @@
     Object.values(porSku).filter((g) => g.length > 1).forEach((g) => {
       const fuerte = (l) => !['nombre', 'parecido'].includes(l.how);
       const best = g.slice().sort((a, b) => fuerte(b) - fuerte(a) || nameScore(b.producto, b.nombre) - nameScore(a.producto, a.nombre))[0];
-      g.filter((l) => l !== best && !fuerte(l)).forEach((l) => {
+      g.filter((l) => l !== best && !fuerte(l) && norm(l.producto) !== norm(best.producto)).forEach((l) => {
         const sk = l.sku, nm = l.nombre;
         Object.assign(l, { nuevo: true, sku: '', nombre: '', how: '', review: false, costo_antes: null, precio_antes: null, duda: `se parecía a ${nm} (SKU ${sk}), pero ese ya está en otro renglón: búscalo y lígalo`, alta: { name: cleanTitle(l.producto), sku: l.upc || '', barcode: l.upc || '', photo: '', ...altaGuess(l.producto) } });
       });
@@ -2853,7 +2853,10 @@
     const dentro = (s.match(/\(([^)]*\d[^)]*)\)/) || [])[1] || (s.includes(',') ? s : '');
     const out = [];
     dentro.replace(/(\d{1,4})\s*(?:x\s*)?([A-ZÁÉÍÓÚÑa-záéíóúñ][^,;\n\d]*)/g, (m, n, nom) => { const nm = nom.replace(/\s+/g, ' ').trim(); if (nm && !/^(pallets?|cajas?|cs|ct|pz|pk|pack|piezas?|ml|oz|fl oz|lt|l|g|gr|kg|lb)\b/i.test(nm)) out.push({ n: Number(n), nom: nm }); return m; });
-    return out;
+    // el mismo sabor dos veces (14 TWIST LIMON … 14 TWIST LIMON) = un solo renglón de 28
+    const uno = {};
+    out.forEach((x) => { const k = x.nom.toUpperCase(); if (uno[k]) uno[k].n += x.n; else uno[k] = { ...x }; });
+    return Object.values(uno);
   }
   function baseMix(texto) {
     return String(texto || '').split(/\s+-\s+|\(/)[0].replace(/\b(mix|mixto|surtido|assorted|variety|variado)\b/ig, '').replace(/\s+/g, ' ').trim();
