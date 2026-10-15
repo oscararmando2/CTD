@@ -353,6 +353,47 @@ module.exports = async (req, res) => {
         }
         return res.json({ items: out });
       }
+      case 'sku_revision': {
+        // Revisión de SKUs en QuickBooks: CTD-#### / solo número (ej. 6330, el de Cortes) / vacío / otro (UPC, etc.)
+        if (RECIBO_ONLY.includes(who)) return res.status(403).json({ error: 'Sin permiso' });
+        const all = [];
+        for (let pos = 1; pos < 8000; pos += 1000) {
+          const r = await qbQuery(`select Id, Name, Sku, Active, Type from Item startposition ${pos} maxresults 1000`);
+          all.push(...(r.Item || [])); if ((r.Item || []).length < 1000) break;
+        }
+        const items = all.filter((x) => x.Active !== false && ['Inventory', 'NonInventory'].includes(x.Type) && !/^\s*CR\s*-/i.test(x.Name || ''));
+        const usados = new Set(items.map((x) => String(x.Sku || '').trim().toUpperCase()).filter(Boolean));
+        const numero = [], vacio = [], otro = [];
+        let ctd = 0;
+        items.forEach((x) => {
+          const s = String(x.Sku || '').trim();
+          if (/^CTD-\d+$/i.test(s)) ctd++;
+          else if (/^\d{2,6}$/.test(s)) numero.push({ id: String(x.Id), name: x.Name, sku: s, nuevo: 'CTD-' + s, choca: usados.has('CTD-' + s) });
+          else if (!s) vacio.push({ id: String(x.Id), name: x.Name });
+          else otro.push({ id: String(x.Id), name: x.Name, sku: s });
+        });
+        return res.json({ total: items.length, ctd, numero, vacio, otro: otro.slice(0, 300), otroN: otro.length });
+      }
+      case 'sku_poner_ctd': {
+        // Pone "CTD-" a los SKU que son solo número (6330 → CTD-6330). Por tandas; no toca si ya existe ese CTD en otro producto.
+        if (RECIBO_ONLY.includes(who)) return res.status(403).json({ error: 'Sin permiso' });
+        const ids = (Array.isArray(body.ids) ? body.ids : []).map(String).filter((x) => /^\d+$/.test(x)).slice(0, 40);
+        const hechos = [], errores = [];
+        for (const id of ids) {
+          try {
+            const it = await qbItem(id);
+            const s = String(it.Sku || '').trim();
+            if (!/^\d{2,6}$/.test(s)) { errores.push({ id, name: it.Name, error: `SKU actual "${s}" no es solo número` }); continue; }
+            const nuevo = 'CTD-' + s;
+            const dupe = ((await qbQuery(`select Id, Name from Item where Sku = '${nuevo}'`)).Item || []).filter((x) => x.Id !== it.Id);
+            if (dupe.length) { errores.push({ id, name: it.Name, error: `${nuevo} ya lo tiene "${dupe[0].Name}"` }); continue; }
+            await qb('POST', 'item', { Id: it.Id, SyncToken: it.SyncToken, sparse: true, Sku: nuevo });
+            hechos.push({ id, name: it.Name, sku: nuevo });
+          } catch (e) { errores.push({ id, error: String(e.message || e).slice(0, 160) }); }
+        }
+        if (hechos.length) await log({ action: 'sku-ctd', n: hechos.length, primeros: hechos.slice(0, 5).map((x) => x.sku).join(', '), by: who });
+        return res.json({ hechos, errores });
+      }
       case 'ctd_next': {
         // Siguiente SKU de CTD según QuickBooks (el mayor CTD-#### + 1)
         let max = 0;
