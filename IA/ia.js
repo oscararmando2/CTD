@@ -2776,7 +2776,7 @@
           <span><small>Margen</small><b class="${m1 < CS.target / 100 - 1e-9 ? 'warn' : 'okc'}" data-v="m">${pct(m1)}</b>${m0 != null ? `<em class="m-antes">antes ${pct(m0)}</em>` : ''}</span>
           <span><small>Sugerido ${CS.target}%</small><b>${money(priceFor(cu(l)))}</b></span>
         </div>
-        ${!C.applied && saboresDe(l.producto).length >= 2 ? '<button type="button" class="btn btn-oro btn-sm" data-mix>Separar en sabores</button> ' : ''}
+        ${!(l.nuevo && creado(l)) && saboresDe(l.producto).length >= 2 ? '<button type="button" class="btn btn-oro btn-sm" data-mix>Separar en sabores</button> ' : ''}
         ${C.applied ? '' : `<button type="button" class="btn-link sm cos-pz" data-pz>${l.pz > 1 ? 'Se vende por caja, no por pieza' : `¿Lo vendes por pieza?${l.pzCaja > 1 ? ` (${l.pzCaja} por caja)` : ''}`}</button>`}
         ${nuevo}
         ${!l.nuevo && !(l.result && l.result.ok) ? '<button class="btn-link sm" type="button" data-link>¿Es otro producto? cambiar</button>' : ''}
@@ -2867,7 +2867,9 @@
     const items = C.lines.flatMap((x) => (x === l ? sab.map((s) => ({ ...toItem(l), upc: '', producto: `${base} ${s.nom}`.toUpperCase(), cantidad: s.n, total_linea: r2(s.n * l.costo_caja) })) : [toItem(x)]));
     const head = { ...C.head };
     C.busy = true; renderCosteo('Separando y buscando cada sabor…');
+    const keep = { savedId: C.savedId, recibo: C.recibo, reciboNota: C.reciboNota, bodega: C.bodega }; // misma factura: se guarda encima, no se duplica
     try { await loadInvoice({ ...head, items, dudas: [] }); } catch (err) { C.busy = false; renderCosteo(); throw err; }
+    Object.assign(C, keep); renderCosteo();
   }
   $('#cosList').addEventListener('click', (e) => {
     const b = e.target.closest('[data-mix]'); if (!b) return;
