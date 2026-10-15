@@ -375,6 +375,7 @@ module.exports = async (req, res) => {
         return res.json({ total: items.length, ctd, numero, vacio, otro: otro.slice(0, 300), otroN: otro.length });
       }
       case 'sku_poner_ctd': {
+        return res.status(403).json({ error: 'Pausado: 1261 y CTD-1261 pueden ser productos distintos.' });
         // Pone "CTD-" a los SKU que son solo número (6330 → CTD-6330). Por tandas; no toca si ya existe ese CTD en otro producto.
         if (RECIBO_ONLY.includes(who)) return res.status(403).json({ error: 'Sin permiso' });
         const ids = (Array.isArray(body.ids) ? body.ids : []).map(String).filter((x) => /^\d+$/.test(x)).slice(0, 40);
