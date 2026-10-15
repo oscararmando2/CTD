@@ -5129,7 +5129,7 @@
     const sinProv = vs.find((v) => v.name === 'Sin proveedor');
     const total = vs.reduce((a, v) => a + v.n, 0);
     const m = S.meta || {};
-    $('#ordPickInfo').innerHTML = S.ordAt ? `Según las ventas, el inventario y las compras de InSitu · datos de las ${esc(fmtTs(S.ordAt))}.` : m.receipts
+    $('#ordPickInfo').innerHTML = onlyView() && !S.ordAt ? 'Todavía no llegan las ventas y compras para calcular las órdenes: que Oscar, Luis o Diego abran la IA una vez y luego recarga.' : S.ordAt ? `Según las ventas, el inventario y las compras de InSitu · datos de las ${esc(fmtTs(S.ordAt))}.` : m.receipts
       ? `Según tus ventas, inventario y <b>${m.receipts} compras</b> registradas en InSitu.`
       : (syncing ? 'Bajando tus compras de InSitu…' : 'Todavía no se bajan tus compras de InSitu, por eso no salen tus proveedores.') +
         (Insitu.token() && !syncing ? ' <button id="ordSync" class="btn-link" type="button">Bajar compras ahora</button>' : '');
@@ -5168,7 +5168,7 @@
     if (picking) { renderPicker(); return; }
     $('#ordTitle').textContent = O.vendor || 'Todos los proveedores';
     const m = S.meta || {};
-    $('#ordInfo').innerHTML = S.ordAt ? `Calculado con las ventas y compras de InSitu · datos de las ${esc(fmtTs(S.ordAt))}` : m.receipts
+    $('#ordInfo').innerHTML = onlyView() && !S.ordAt ? 'Todavía no llegan las ventas y compras: que Oscar, Luis o Diego abran la IA una vez.' : S.ordAt ? `Calculado con las ventas y compras de InSitu · datos de las ${esc(fmtTs(S.ordAt))}` : m.receipts
       ? `Calculado con tus ventas y <b>${m.receipts} recepciones</b> de InSitu · stock al ${fmtTs(m.at)}`
       : (syncing ? 'Bajando tus compras de InSitu…' : 'Todavía no se bajan tus compras de InSitu, por eso todo sale "Sin proveedor".') +
         (Insitu.token() && !syncing ? ' <button id="ordSync" class="btn-link" type="button">Bajar compras ahora</button>' : '');
@@ -5390,6 +5390,8 @@
   async function saveOrder(status) {
     const p = orderPayload(status);
     O.status = status; saveDraft();
+    // Jonathan (sin permiso directo en la base) guarda por el servidor de la IA
+    if (onlyView()) { await cosCall('ord_save', { id: O.id, orden: p }); loadOrdenesSrv(); return p; }
     if (!db) return p;
     await withTimeout(db.ref('ordenes/' + O.id).set(p));
     return p;
@@ -5399,7 +5401,18 @@
     catch (e) { toast('No se pudo guardar (' + (e.code || e.message) + ')'); }
   });
 
+  // Órdenes recientes por el servidor (usuarios sin acceso directo a la base, como Jonathan)
+  let ordPoll = null;
+  async function loadOrdenesSrv() {
+    try { O.recent = (await cosCall('ord_list')).list || []; renderRecent(); }
+    catch (e) { $('#ordRecent').innerHTML = `<p class="data-info">No se pudo leer (${esc(e.message)}).</p>`; }
+  }
   function listenOrders() {
+    if (onlyView()) {
+      loadOrdenesSrv();
+      clearInterval(ordPoll); ordPoll = setInterval(() => { if (S.view === 'ord' && !document.hidden) loadOrdenesSrv(); }, 60000);
+      return;
+    }
     try {
       if (unOrd) unOrd();
       const ref = db.ref('ordenes').orderByChild('ts').limitToLast(15);
