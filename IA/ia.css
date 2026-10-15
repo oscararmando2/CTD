@@ -960,3 +960,20 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .sku-r{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--linea);font-size:13px}
 .sku-r b{font-family:var(--mono);font-size:12px;color:var(--oro);white-space:nowrap}
 #skuSec details{margin:6px 0}
+
+/* Inventario */
+.inv-chk{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+.inv-chk input{width:18px;height:18px;accent-color:var(--oro)}
+.inv-deps{margin-top:12px;flex-wrap:wrap}
+.inv-list{display:flex;flex-direction:column}
+.inv-r{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--linea)}
+.inv-r.cero{opacity:.55}
+.inv-ph{flex:none;width:54px;height:54px;border-radius:12px;background:#F4EFE5;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.inv-ph img{width:100%;height:100%;object-fit:contain}
+.inv-m{flex:1;min-width:0}
+.inv-m b{display:block;font-size:14.5px;line-height:1.25}
+.inv-m .meta{display:block;font-size:12.5px;color:var(--muted);margin-top:2px}
+.inv-m .warn{color:var(--oro)}
+.inv-q{flex:none;text-align:right}
+.inv-q b{display:block;font-family:var(--display);font-weight:800;font-size:22px}
+.inv-q small{font-size:11px;color:var(--muted)}
