@@ -2776,6 +2776,7 @@
           <span><small>Margen</small><b class="${m1 < CS.target / 100 - 1e-9 ? 'warn' : 'okc'}" data-v="m">${pct(m1)}</b>${m0 != null ? `<em class="m-antes">antes ${pct(m0)}</em>` : ''}</span>
           <span><small>Sugerido ${CS.target}%</small><b>${money(priceFor(cu(l)))}</b></span>
         </div>
+        ${!C.applied && saboresDe(l.producto).length >= 2 ? '<button type="button" class="btn btn-oro btn-sm" data-mix>Separar en sabores</button> ' : ''}
         ${C.applied ? '' : `<button type="button" class="btn-link sm cos-pz" data-pz>${l.pz > 1 ? 'Se vende por caja, no por pieza' : `¿Lo vendes por pieza?${l.pzCaja > 1 ? ` (${l.pzCaja} por caja)` : ''}`}</button>`}
         ${nuevo}
         ${!l.nuevo && !(l.result && l.result.ok) ? '<button class="btn-link sm" type="button" data-link>¿Es otro producto? cambiar</button>' : ''}
@@ -2845,6 +2846,32 @@
       alert(`Listo ✓${d.qbSku ? ` · SKU ${d.qbSku} en QuickBooks` : ''}${d.qbCat ? ` · categoría "${d.qbCat}" en QuickBooks` : ''}${d.insitu ? ' · en InSitu se pone en la siguiente sincronización (máx. 1 hora)' : ''}`);
       l.comp = null; renderCosteo();
     } catch (err) { alert('No se pudo guardar:\n\n' + err.message); b.disabled = false; b.textContent = 'Guardar en QuickBooks e InSitu'; }
+  });
+  // Pallet mixto ("PEÑAFIEL 600 ML MIX - 1 PALLET (14 TWIST LIMON, 14 MANZANITA, …)") → un renglón por sabor
+  function saboresDe(texto) {
+    const s = String(texto || '');
+    const dentro = (s.match(/\(([^)]*\d[^)]*)\)/) || [])[1] || (s.includes(',') ? s : '');
+    const out = [];
+    dentro.replace(/(\d{1,4})\s*(?:x\s*)?([A-ZÁÉÍÓÚÑa-záéíóúñ][^,;\n\d]*)/g, (m, n, nom) => { const nm = nom.replace(/\s+/g, ' ').trim(); if (nm && !/^(pallets?|cajas?|cs|ct|pz|pk|pack|piezas?|ml|oz|fl oz|lt|l|g|gr|kg|lb)\b/i.test(nm)) out.push({ n: Number(n), nom: nm }); return m; });
+    return out;
+  }
+  function baseMix(texto) {
+    return String(texto || '').split(/\s+-\s+|\(/)[0].replace(/\b(mix|mixto|surtido|assorted|variety|variado)\b/ig, '').replace(/\s+/g, ' ').trim();
+  }
+  async function separarSabores(l) {
+    const sab = saboresDe(l.producto);
+    if (sab.length < 2) { alert('No encontré sabores con cantidades en este renglón (ej. "14 TWIST LIMON, 14 MANZANITA…").'); return; }
+    const base = baseMix(l.producto), suma = sab.reduce((a, x) => a + x.n, 0);
+    if (!confirm(`¿Separar en ${sab.length} productos?\n\n${sab.map((x) => `• ${x.n} × ${base} ${x.nom}`).join('\n')}\n\nCada uno con costo ${money(l.costo_caja)} por caja.${suma !== Number(l.cantidad) ? `\n\nOjo: suman ${suma} cajas y el renglón dice ${l.cantidad}.` : ''}`)) return;
+    const toItem = (x) => ({ upc: x.upc || '', codigo_proveedor: x.codigo_proveedor || '', producto: x.producto, cantidad: x.cantidad, empaque: x.empaque || '', unidades_por_caja: x.unidades_por_caja ?? null, costo_caja: x.costo_caja, total_linea: x.total_linea ?? null, caducidad: x.caducidad || '' });
+    const items = C.lines.flatMap((x) => (x === l ? sab.map((s) => ({ ...toItem(l), upc: '', producto: `${base} ${s.nom}`.toUpperCase(), cantidad: s.n, total_linea: r2(s.n * l.costo_caja) })) : [toItem(x)]));
+    const head = { ...C.head };
+    C.busy = true; renderCosteo('Separando y buscando cada sabor…');
+    try { await loadInvoice({ ...head, items, dudas: [] }); } catch (err) { C.busy = false; renderCosteo(); throw err; }
+  }
+  $('#cosList').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-mix]'); if (!b) return;
+    const l = C.lines[Number(b.closest('.cos-l').dataset.i)]; if (l) separarSabores(l).catch((err) => toast(err.message));
   });
   // Cambiar entre "por pieza" y "por caja" (se recuerda por producto)
   $('#cosList').addEventListener('click', (e) => {
@@ -5480,7 +5507,8 @@
         styles: { font: 'helvetica', fontSize: 9, cellPadding: 5, textColor: [20, 18, 12] },
         headStyles: { fillColor: [15, 13, 10], textColor: [242, 163, 30], fontStyle: 'bold' },
         footStyles: { fillColor: [246, 242, 233], textColor: [20, 18, 12], fontStyle: 'bold' },
-        columnStyles: { 0: { cellWidth: 22 }, 1: { cellWidth: 60 }, 2: { cellWidth: 92 }, 4: { cellWidth: 60 }, 5: { cellWidth: 42, halign: 'right', fontStyle: 'bold' } },
+        columnStyles: { 0: { cellWidth: 30, halign: 'right', overflow: 'visible' }, 1: { cellWidth: 52 }, 2: { cellWidth: 88 }, 4: { cellWidth: 60 }, 5: { cellWidth: 42, halign: 'right', fontStyle: 'bold' } },
+        showFoot: 'lastPage', // el total solo al final, no en cada hoja
         alternateRowStyles: { fillColor: [250, 248, 243] },
       });
       y = doc.lastAutoTable.finalY + 18;
