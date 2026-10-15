@@ -114,6 +114,8 @@
     toast._t = setTimeout(() => t.classList.remove('show'), 2600);
   }
   const DAY = 864e5;
+  // SKU de CTD: "CTD-6330", "ctd6330" o solo "6330" (como lo tiene Cortes) → "CTD-6330"
+  const ctdDe = (...vals) => { for (const v of vals) { const m = String(v || '').trim().match(/^(?:CTD\s*-?\s*)?(\d{2,6})$/i); if (m) return 'CTD-' + m[1]; } return ''; };
   const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const parseYmd = (s) => { const [y, m, d] = String(s).split('-').map(Number); return new Date(y, (m || 1) - 1, d || 1); };
   const MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -2086,7 +2088,7 @@
       const p = fechProd(r.sku), ph = p && p.photo ? `<img src="${esc(proxied(p.photo))}" crossorigin="anonymous" alt="">` : '';
       const st = r.dias < 0 ? 'dead' : r.dias <= 30 ? 'hot' : r.dias <= 60 ? 'warm' : '';
       return `<div class="rp-r ${st}"><div class="rp-ph">${ph}</div>
-        <div class="rp-n">${esc(r.nombre)}<small>${skuFech(r.sku) ? esc(skuFech(r.sku)) + ' · ' : ''}${r.dias < 0 ? `venció hace ${-r.dias} días` : `vence en ${r.dias} días`}${r.riesgo ? ' · no alcanza a venderse' : ''}</small></div>
+        <div class="rp-n">${esc(r.nombre)}<small>${skuFech(r.sku) ? esc(skuFech(r.sku).replace(/^CTD-/, '')) + ' · ' : ''}${r.dias < 0 ? `venció hace ${-r.dias} días` : `vence en ${r.dias} días`}${r.riesgo ? ' · no alcanza a venderse' : ''}</small></div>
         <div class="rp-d">${esc(fmtLong(r.d))}</div><div class="rp-q">${nfmt(cajasDe(r))}<small>cajas</small></div></div>`;
     };
     $('#clientSheet').innerHTML = pages.map((blocks, k) => `<div class="pgwrap"><section class="pg pg-cat" style="${style}">
@@ -3503,7 +3505,7 @@
     const dia = recDia(rec), out = [];
     (rec.lines || []).forEach((l) => {
       const p = prods.find((x) => String(x.id) === String(l.sku)) || {};
-      const ctd = [l.upcSis, p.upc].find((v) => /^CTD-?\d+$/i.test(String(v || '')));
+      const ctd = ctdDe(l.upcSis, p.upc);
       const sku = String(l.codigo_proveedor || '').trim() || (ctd ? String(ctd).replace(/^CTD-?/i, '') : '');
       const base = { sku, prod: l.producto || l.nombre || '', exp: l.caducidad ? fmtLong(l.caducidad) : '', fact: rec.factura || '' };
       const falta = l.estado === 'no' ? Number(l.cantidad) || 0 : l.estado === 'parcial' ? (Number(l.cantidad) || 0) - (Number(l.recibido) || 0) : 0;
@@ -3555,7 +3557,7 @@
 
   // ---- Buscar un producto de la factura (tarimas mixtas: no llega en el orden de la factura) ----
   const recProd = (l) => (S.products.length ? S.products : (R.cat || [])).find((x) => String(x.id) === String(l.sku)) || {};
-  const recSku = (l) => { const p = recProd(l); return [l.upcSis, p.upc].find((v) => /^CTD-?\d+$/i.test(String(v || ''))) || ''; };
+  const recSku = (l) => { const p = recProd(l); return ctdDe(l.upcSis, p.upc); };
   const recCodigos = (l) => { const p = recProd(l); return [recSku(l), l.upc, l.upcSis, p.upc, p.ean, l.sku, l.codigo_proveedor].map((v) => String(v || '').trim()).filter(Boolean); };
   function recBuscar(q) {
     const s = normTxt(q).trim(); if (!s) return [];
@@ -3572,7 +3574,7 @@
     if (e.target.id !== 'recBus') return;
     const res = recBuscar(e.target.value), box = $('#recBusRes');
     box.innerHTML = e.target.value.trim() ? (res.length ? res.map(({ l, i }) => `<button type="button" data-busi="${i}">
-        <span class="rb-sku">${esc(recSku(l) || l.upc || ('#' + (l.sku || '')))}</span>${thumb(l, 'rec-th')}
+        <span class="rb-sku">${esc(recSku(l).replace(/^CTD-/, '') || l.upc || ('#' + (l.sku || '')))}</span>${thumb(l, 'rec-th')}
         <span class="rb-n">${esc(l.sku ? l.nombre : l.producto)}<small>${nfmt(l.cantidad)} ${l.cantidad === 1 ? 'caja' : 'cajas'}${l.estado ? ' · ya revisado' : ''}</small></span></button>`).join('')
       : '<p class="data-info" style="padding:10px">No está en esta factura</p>') : '';
   });
@@ -3589,7 +3591,7 @@
       <button type="button" class="rec-row${i === R.cur ? ' cur' : ''}" data-r="go" data-i="${i}">
         <span class="rec-dot ${l.estado || 'none'}" aria-hidden="true"></span>
         ${thumb(l, 'rec-th')}
-        <span class="rec-row-n">${recSku(l) ? `<small class="rec-row-sku">${esc(recSku(l))}</small>` : ''}${esc(l.sku ? l.nombre : l.producto)}</span>
+        <span class="rec-row-n">${recSku(l) ? `<small class="rec-row-sku">${esc(recSku(l).replace(/^CTD-/, ''))}</small>` : ''}${esc(l.sku ? l.nombre : l.producto)}</span>
         <span class="rec-row-d">${l.estado === 'parcial' ? nfmt(l.recibido || 0) + '/' : ''}${nfmt(l.cantidad)}${l.caducidad ? ' · ' + esc(fmtD(l.caducidad)) + ' ' + parseYmd(l.caducidad).getFullYear() % 100 : ''}</span>
       </button>`).join('')}
       <button type="button" class="rec-row${R.cur >= R.rec.lines.length ? ' cur' : ''}" data-r="go" data-i="${R.rec.lines.length}"><span class="rec-dot fin" aria-hidden="true"></span><span class="rec-row-n"><b>Terminar</b></span></button>
@@ -4020,7 +4022,7 @@
   const fechProds = () => (S.products.length ? S.products : (R.cat || []));
   const fechProd = (sku) => fechProds().find((x) => skuKey(x.id) === sku) || null;
   // SKU de CTD (CTD-####): InSitu lo tiene en Barcode (copia del SKU de QuickBooks)
-  const skuFech = (sku) => { const p = fechProd(sku) || {}; const v = [p.upc, p.qbSku].find((x) => /^CTD-?\d+$/i.test(String(x || ''))); return v ? String(v).toUpperCase().replace(/^CTD-?/, 'CTD-') : ''; };
+  const skuFech = (sku) => { const p = fechProd(sku) || {}; return ctdDe(p.upc, p.qbSku); };
   const depOf = (sku) => { const p = fechProd(sku); return (p && p.cat) || 'Otros'; };
   const canMoney = () => !onlyView() && S.products.some((p) => p.cost > 0); // el dinero solo lo ven Oscar, Luis y Diego
   // Filas con los filtros de la pantalla (departamento, cuándo vence, búsqueda)
@@ -4075,7 +4077,7 @@
       return `<div class="lot-row fr${r.dias < 0 ? ' dead' : r.dias <= 60 || r.riesgo ? ' hot' : r.dias <= 120 ? ' warm' : ''}">
         <div class="lot-d"><b>${esc(fmtD(r.d))}</b><small>${parseYmd(r.d).getFullYear()}</small></div>
         <div class="fr-ph">${ph ? `<img src="${esc(ph)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div>
-        <div class="lot-m">${skuFech(r.sku) ? `<small class="rec-row-sku">${esc(skuFech(r.sku))}</small>` : ''}<div class="ol-name">${esc(r.nombre)}</div>
+        <div class="lot-m">${skuFech(r.sku) ? `<small class="rec-row-sku">${esc(skuFech(r.sku).replace(/^CTD-/, ''))}</small>` : ''}<div class="ol-name">${esc(r.nombre)}</div>
           <div class="meta">${esc(r.dep)} · ${r.dias < 0 ? `venció hace ${-r.dias} días` : `vence en ${r.dias} días`} · ${r.quedan != null ? `quedan ~${nfmt(r.quedan)} de ${nfmt(r.recibido)}` : `${nfmt(r.recibido)} ${r.recibido === 1 ? 'caja' : 'cajas'}`}${info.man ? ' · puesta a mano' : ''}${r.venta != null ? ` · se venden en ~${r.venta} días` : ''}${r.riesgo ? ' · <b>no alcanza a venderse: ponlo en especial</b>' : ''}</div></div>
         ${info.man && !ro ? `<button type="button" class="g-x" data-fdel="${esc(r.sku)}" data-d="${r.d}" title="Quitar la fecha puesta a mano" aria-label="Quitar">×</button>` : ''}
       </div>`;
@@ -4131,7 +4133,7 @@
       const nx = has ? lotRows().find((r) => r.sku === skuKey(p.id)) : null;
       return `<button type="button" class="bd-p${has ? ' done' : ''}" data-bp="${esc(p.id)}">
           <span class="bd-ph">${p.photo ? `<img src="${esc(p.photo)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>
-          ${skuFech(p.id) ? `<span class="bd-sku">${esc(skuFech(p.id))}</span>` : ''}
+          ${skuFech(p.id) ? `<span class="bd-sku">${esc(skuFech(p.id).replace(/^CTD-/, ''))}</span>` : ''}
           <span class="bd-n">${esc(p.name)}</span>
           <span class="bd-s">${has && nx ? '✓ vence ' + esc(fmtD(nx.d)) + ' ' + String(parseYmd(nx.d).getFullYear()).slice(2) : (cf0[skuKey(p.id)] > 0 ? `${nfmt(Math.max(0, p.stock - cf0[skuKey(p.id)]))} sin fecha (llegó nuevo)` : nfmt(p.stock) + ' en existencia')}</span>
         </button>`;
@@ -4281,7 +4283,7 @@
     const m = canMoney();
     const data = rows.map((r) => {
       const p = fechProd(r.sku) || {};
-      const o = { Departamento: r.dep, SKU: skuFech(r.sku) || r.sku, Producto: r.nombre, UPC: p.ean || (/^\d{8,14}$/.test(p.upc || '') ? p.upc : ''), Vence: fmtLong(r.d), 'Días': r.dias, Cajas: cajasDe(r), 'Llegaron': r.recibido };
+      const o = { Departamento: r.dep, SKU: skuFech(r.sku).replace(/^CTD-/, '') || r.sku, Producto: r.nombre, UPC: p.ean || (/^\d{8,14}$/.test(p.upc || '') ? p.upc : ''), Vence: fmtLong(r.d), 'Días': r.dias, Cajas: cajasDe(r), 'Llegaron': r.recibido };
       if (m) { o['Costo caja'] = p.cost || 0; o.Valor = r2(valorDe(r)); }
       o.Nota = r.riesgo ? 'No alcanza a venderse' : r.dias < 0 ? 'Vencido' : '';
       return o;
