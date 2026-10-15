@@ -26,6 +26,7 @@ Extrae TODOS los renglones de producto de la factura, en el orden en que aparece
 - costo_caja: precio por caja (unit price de la factura; si la factura cobra por pieza y trae unidades por caja, multiplícalo).
 - total_linea: importe del renglón.
 - caducidad: si junto al renglón hay una fecha de caducidad escrita a mano (ej. "OCT-25-27", "07-22-27", "DIC-26-26", "15-mar-28"), conviértela a YYYY-MM-DD (en EE.UU. suele ser mes-día-año; el año de 2 dígitos es 20XX). Si no hay, cadena vacía. No confundas la fecha de la factura con una caducidad.
+- PALLETS MIXTOS / SURTIDOS: si un renglón trae varios sabores o variedades con su cantidad cada uno (ej. "PEÑAFIEL 600 ML MIX – 1 PALLET (14 TWIST LIMON, 14 MANZANITA, 14 SANGRIA…)"), SEPÁRALO en un renglón por sabor: producto = marca + presentación + sabor (ej. "PEÑAFIEL 600 ML MANZANITA"), cantidad = la de ese sabor, costo_caja = el mismo precio por caja, total_linea = cantidad × costo. Si un sabor aparece dos veces, deja dos renglones.
 Aparte: flete/freight, otros cargos y créditos/descuentos/devoluciones NO son productos; van en sus campos.
 Si un dato no se lee con claridad, pon lo más probable y márcalo en "dudas" con el número de renglón (empezando en 1).`;
 
