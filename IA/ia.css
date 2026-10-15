@@ -954,3 +954,5 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .nov-f img{width:72px;height:72px;object-fit:cover;border-radius:10px}
 .nov-f .g-x{position:absolute;top:-6px;right:-6px;width:22px;height:22px}
 @media (max-width:560px){.nov-grid{grid-template-columns:1fr 1fr}.nov-grid .field:first-child{grid-column:1/-1}}
+.bd-bus{margin:14px 0 4px}
+.bd-sku{display:block;font-family:var(--mono);font-size:10.5px;color:var(--oro);letter-spacing:.06em;margin-top:6px}

@@ -2086,7 +2086,7 @@
       const p = fechProd(r.sku), ph = p && p.photo ? `<img src="${esc(proxied(p.photo))}" crossorigin="anonymous" alt="">` : '';
       const st = r.dias < 0 ? 'dead' : r.dias <= 30 ? 'hot' : r.dias <= 60 ? 'warm' : '';
       return `<div class="rp-r ${st}"><div class="rp-ph">${ph}</div>
-        <div class="rp-n">${esc(r.nombre)}<small>${r.dias < 0 ? `venció hace ${-r.dias} días` : `vence en ${r.dias} días`}${r.riesgo ? ' · no alcanza a venderse' : ''}</small></div>
+        <div class="rp-n">${esc(r.nombre)}<small>${skuFech(r.sku) ? esc(skuFech(r.sku)) + ' · ' : ''}${r.dias < 0 ? `venció hace ${-r.dias} días` : `vence en ${r.dias} días`}${r.riesgo ? ' · no alcanza a venderse' : ''}</small></div>
         <div class="rp-d">${esc(fmtLong(r.d))}</div><div class="rp-q">${nfmt(cajasDe(r))}<small>cajas</small></div></div>`;
     };
     $('#clientSheet').innerHTML = pages.map((blocks, k) => `<div class="pgwrap"><section class="pg pg-cat" style="${style}">
@@ -3985,6 +3985,8 @@
   const F = { q: '', f: 'all', dep: '', add: null };
   const fechProds = () => (S.products.length ? S.products : (R.cat || []));
   const fechProd = (sku) => fechProds().find((x) => skuKey(x.id) === sku) || null;
+  // SKU de CTD (CTD-####): InSitu lo tiene en Barcode (copia del SKU de QuickBooks)
+  const skuFech = (sku) => { const p = fechProd(sku) || {}; const v = [p.upc, p.qbSku].find((x) => /^CTD-?\d+$/i.test(String(x || ''))); return v ? String(v).toUpperCase().replace(/^CTD-?/, 'CTD-') : ''; };
   const depOf = (sku) => { const p = fechProd(sku); return (p && p.cat) || 'Otros'; };
   const canMoney = () => !onlyView() && S.products.some((p) => p.cost > 0); // el dinero solo lo ven Oscar, Luis y Diego
   // Filas con los filtros de la pantalla (departamento, cuándo vence, búsqueda)
@@ -3993,7 +3995,7 @@
     let rows = lotRows().map((r) => ({ ...r, dep: depOf(r.sku) }));
     if (F.f === '60') rows = rows.filter((r) => r.dias >= 0 && r.dias <= 60);
     if (F.f === 'old') rows = rows.filter((r) => r.dias < 0);
-    if (q) rows = rows.filter((r) => q.split(/\s+/).every((w) => normTxt(r.nombre).includes(w)));
+    if (q) rows = rows.filter((r) => { const p = fechProd(r.sku) || {}; const tx = normTxt(`${r.nombre} ${skuFech(r.sku)} ${skuFech(r.sku).replace('-', '')} ${p.ean || ''} ${p.upc || ''} ${r.sku}`); return q.split(/\s+/).every((w) => tx.includes(w)); });
     if (F.dep && !ignoreDep) rows = rows.filter((r) => r.dep === F.dep);
     return rows;
   }
@@ -4039,7 +4041,7 @@
       return `<div class="lot-row fr${r.dias < 0 ? ' dead' : r.dias <= 60 || r.riesgo ? ' hot' : r.dias <= 120 ? ' warm' : ''}">
         <div class="lot-d"><b>${esc(fmtD(r.d))}</b><small>${parseYmd(r.d).getFullYear()}</small></div>
         <div class="fr-ph">${ph ? `<img src="${esc(ph)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div>
-        <div class="lot-m"><div class="ol-name">${esc(r.nombre)}</div>
+        <div class="lot-m">${skuFech(r.sku) ? `<small class="rec-row-sku">${esc(skuFech(r.sku))}</small>` : ''}<div class="ol-name">${esc(r.nombre)}</div>
           <div class="meta">${esc(r.dep)} · ${r.dias < 0 ? `venció hace ${-r.dias} días` : `vence en ${r.dias} días`} · ${r.quedan != null ? `quedan ~${nfmt(r.quedan)} de ${nfmt(r.recibido)}` : `${nfmt(r.recibido)} ${r.recibido === 1 ? 'caja' : 'cajas'}`}${info.man ? ' · puesta a mano' : ''}${r.venta != null ? ` · se venden en ~${r.venta} días` : ''}${r.riesgo ? ' · <b>no alcanza a venderse: ponlo en especial</b>' : ''}</div></div>
         ${info.man && !ro ? `<button type="button" class="g-x" data-fdel="${esc(r.sku)}" data-d="${r.d}" title="Quitar la fecha puesta a mano" aria-label="Quitar">×</button>` : ''}
       </div>`;
@@ -4083,7 +4085,31 @@
   }
   function renderBodega() {
     const box = $('#bodega'); if (!box) return;
+    if (!$('#bdBus')) {
+      box.insertAdjacentHTML('beforebegin', '<div id="bdBusWrap" class="rec-bus bd-bus" hidden><input id="bdBus" type="search" placeholder="Buscar en la bodega: SKU, nombre o código de barras" autocomplete="off" enterkeyhint="search"></div>');
+      $('#bdBus').addEventListener('input', (e) => { F.bq = e.target.value; renderBodega(); });
+    }
     const prods = bodegaProds();
+    $('#bdBusWrap').hidden = !prods.length;
+    const done0 = fechadas(), cf0 = conFecha();
+    const tile = (p) => {
+      const has = done0.has(skuKey(p.id));
+      const nx = has ? lotRows().find((r) => r.sku === skuKey(p.id)) : null;
+      return `<button type="button" class="bd-p${has ? ' done' : ''}" data-bp="${esc(p.id)}">
+          <span class="bd-ph">${p.photo ? `<img src="${esc(p.photo)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>
+          ${skuFech(p.id) ? `<span class="bd-sku">${esc(skuFech(p.id))}</span>` : ''}
+          <span class="bd-n">${esc(p.name)}</span>
+          <span class="bd-s">${has && nx ? '✓ vence ' + esc(fmtD(nx.d)) + ' ' + String(parseYmd(nx.d).getFullYear()).slice(2) : (cf0[skuKey(p.id)] > 0 ? `${nfmt(Math.max(0, p.stock - cf0[skuKey(p.id)]))} sin fecha (llegó nuevo)` : nfmt(p.stock) + ' en existencia')}</span>
+        </button>`;
+    };
+    // Con algo escrito: resultados de toda la bodega (todos los departamentos)
+    const bq = normTxt(F.bq || '').trim();
+    if (bq && prods.length) {
+      const hits = prods.filter((p) => { const tx = normTxt(`${p.name} ${skuFech(p.id)} ${skuFech(p.id).replace('-', '')} ${p.ean || ''} ${p.upc || ''} ${p.id}`); return bq.split(/\s+/).every((w) => tx.includes(w)); }).slice(0, 40);
+      box.hidden = false;
+      box.innerHTML = `<p class="status bd-help">${hits.length ? `${hits.length} ${hits.length === 1 ? 'producto' : 'productos'} · toca uno para ponerle fecha` : 'Nada en existencia con esa búsqueda.'}</p><div class="bd-grid">${hits.map(tile).join('')}</div>`;
+      return;
+    }
     if (!prods.length) {
       // Sin existencia no se puede saber qué falta: se dice por qué (en vez de esconderlo)
       const sinStock = !fechProds().some((p) => p.stock != null);
@@ -4112,7 +4138,6 @@
       return;
     }
     const all = (byDep[F.bdep] || []).sort((a, b) => a.name.localeCompare(b.name));
-    const cfMap = conFecha();
     const n = all.filter((p) => done.has(skuKey(p.id))).length;
     const show = F.bAll ? all : all.filter((p) => !done.has(skuKey(p.id)));
     box.innerHTML = `
@@ -4120,16 +4145,8 @@
       <div class="bd-h"><div><p class="hud">${esc(F.bdep)}</p><p class="bd-t">Llevas <b>${Math.round((n / (all.length || 1)) * 100)}%</b> · ${n} de ${all.length} con fecha</p></div>
         <button type="button" class="btn-link sm" data-ball>${F.bAll ? 'ver solo los que faltan' : 'ver todos'}</button></div>
       ${bar(n, all.length)}
-      <p class="status bd-help">Toca un producto y escoge mes y año. Se guarda con las cajas que hay en existencia.</p>
-      <div class="bd-grid">${show.map((p) => {
-        const has = done.has(skuKey(p.id));
-        const nx = has ? lotRows().find((r) => r.sku === skuKey(p.id)) : null;
-        return `<button type="button" class="bd-p${has ? ' done' : ''}" data-bp="${esc(p.id)}">
-          <span class="bd-ph">${p.photo ? `<img src="${esc(p.photo)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>
-          <span class="bd-n">${esc(p.name)}</span>
-          <span class="bd-s">${has && nx ? '✓ vence ' + esc(fmtD(nx.d)) + ' ' + String(parseYmd(nx.d).getFullYear()).slice(2) : (cfMap[skuKey(p.id)] > 0 ? `${nfmt(Math.max(0, p.stock - cfMap[skuKey(p.id)]))} sin fecha (llegó nuevo)` : nfmt(p.stock) + ' en existencia')}</span>
-        </button>`;
-      }).join('') || '<p class="bd-ok">✓ Este departamento ya tiene todas sus fechas.</p>'}</div>`;
+      <p class="status bd-help">Toca un producto y escoge día, mes y año. Se guarda con las cajas que hay en existencia.</p>
+      <div class="bd-grid">${show.map(tile).join('') || '<p class="bd-ok">✓ Este departamento ya tiene todas sus fechas.</p>'}</div>`;
   }
   $('#bodega').addEventListener('click', (e) => {
     const dep = e.target.closest('[data-bdep]');
@@ -4230,7 +4247,7 @@
     const m = canMoney();
     const data = rows.map((r) => {
       const p = fechProd(r.sku) || {};
-      const o = { Departamento: r.dep, Producto: r.nombre, SKU: r.sku, UPC: p.upc || '', Vence: fmtLong(r.d), 'Días': r.dias, Cajas: cajasDe(r), 'Llegaron': r.recibido };
+      const o = { Departamento: r.dep, SKU: skuFech(r.sku) || r.sku, Producto: r.nombre, UPC: p.ean || (/^\d{8,14}$/.test(p.upc || '') ? p.upc : ''), Vence: fmtLong(r.d), 'Días': r.dias, Cajas: cajasDe(r), 'Llegaron': r.recibido };
       if (m) { o['Costo caja'] = p.cost || 0; o.Valor = r2(valorDe(r)); }
       o.Nota = r.riesgo ? 'No alcanza a venderse' : r.dias < 0 ? 'Vencido' : '';
       return o;
