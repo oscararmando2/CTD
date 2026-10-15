@@ -402,6 +402,26 @@ module.exports = async (req, res) => {
         await db('PUT', 'ordenesData', { at: Date.now(), by: who, items });
         return res.json({ ok: true, n: items.length });
       }
+      case 'ord_list': {
+        const all = (await db('GET', 'ordenes')) || {};
+        const list = Object.entries(all).map(([id, o]) => ({ id, ...o })).sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 15);
+        if (RECIBO_ONLY.includes(who)) list.forEach((o) => { o.costo = 0; (o.lines || []).forEach((l) => { l.cost = 0; }); }); // bodega no ve dinero
+        return res.json({ list });
+      }
+      case 'ord_save': {
+        const id = String(body.id || '').replace(/[.#$/[\]\s]+/g, '_').slice(0, 60);
+        const o = body.orden || {};
+        if (!id || !Array.isArray(o.lines)) return res.status(400).json({ error: 'Orden incompleta' });
+        const prev = await db('GET', 'ordenes/' + id);
+        // Bodega no tiene costos: si la orden ya existía, se conservan los costos que tenía
+        if (RECIBO_ONLY.includes(who) && prev && Array.isArray(prev.lines)) {
+          const c = {}; prev.lines.forEach((l) => { c[l.id] = l.cost; });
+          o.lines.forEach((l) => { if (!(l.cost > 0) && c[l.id] > 0) l.cost = c[l.id]; });
+          o.costo = r2(o.lines.reduce((a, l) => a + (Number(l.qty) || 0) * (Number(l.cost) || 0), 0));
+        }
+        await db('PUT', 'ordenes/' + id, { ...o, lines: o.lines.slice(0, 500) });
+        return res.json({ ok: true });
+      }
       case 'ordenes_data': {
         const d = (await db('GET', 'ordenesData')) || {};
         let items = Array.isArray(d.items) ? d.items : [];
@@ -964,7 +984,7 @@ async function avisosTienda() {
   return out.sort((a, b) => a.dias - b.dias || a.tienda.localeCompare(b.tienda)).slice(0, 300);
 }
 const NOV_TIPOS = ['damaged', 'missing item', 'short date format', 'spare'];
-const RECIBO_ACTIONS = ['ordenes_data', 'novedad_num', 'qb_bill', 'recibo_inventario', 'parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'lote_add', 'lote_del', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
+const RECIBO_ACTIONS = ['ord_list', 'ord_save', 'ordenes_data', 'novedad_num', 'qb_bill', 'recibo_inventario', 'parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'lote_add', 'lote_del', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
 const ESTADOS = ['', 'ok', 'parcial', 'no', 'pendiente'];
 const ymdOk = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '');
 
