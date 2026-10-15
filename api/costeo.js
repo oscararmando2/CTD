@@ -395,6 +395,20 @@ module.exports = async (req, res) => {
         if (hechos.length) await log({ action: 'sku-ctd', n: hechos.length, primeros: hechos.slice(0, 5).map((x) => x.sku).join(', '), by: who });
         return res.json({ hechos, errores });
       }
+      case 'ordenes_save': {
+        // Copia de productos con ventas/existencia/proveedor para Órdenes de usuarios sin InSitu (Jonathan)
+        if (RECIBO_ONLY.includes(who) || COSTEO_ONLY.includes(who)) return res.status(403).json({ error: 'Sin permiso' });
+        const items = (Array.isArray(body.items) ? body.items : []).slice(0, 6000);
+        await db('PUT', 'ordenesData', { at: Date.now(), by: who, items });
+        return res.json({ ok: true, n: items.length });
+      }
+      case 'ordenes_data': {
+        const d = (await db('GET', 'ordenesData')) || {};
+        let items = Array.isArray(d.items) ? d.items : [];
+        // Bodega no ve dinero
+        if (RECIBO_ONLY.includes(who)) items = items.map((x) => ({ ...x, cost: 0, price: 0, buy: x.buy ? { ...x.buy, lastCost: 0 } : null }));
+        return res.json({ at: d.at || null, items });
+      }
       case 'ctd_next': {
         // Siguiente SKU de CTD según QuickBooks (el mayor CTD-#### + 1)
         let max = 0;
@@ -950,7 +964,7 @@ async function avisosTienda() {
   return out.sort((a, b) => a.dias - b.dias || a.tienda.localeCompare(b.tienda)).slice(0, 300);
 }
 const NOV_TIPOS = ['damaged', 'missing item', 'short date format', 'spare'];
-const RECIBO_ACTIONS = ['novedad_num', 'qb_bill', 'recibo_inventario', 'parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'lote_add', 'lote_del', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
+const RECIBO_ACTIONS = ['ordenes_data', 'novedad_num', 'qb_bill', 'recibo_inventario', 'parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'lote_add', 'lote_del', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
 const ESTADOS = ['', 'ok', 'parcial', 'no', 'pendiente'];
 const ymdOk = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '');
 
