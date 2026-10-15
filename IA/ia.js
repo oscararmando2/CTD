@@ -22,7 +22,7 @@
   const INSITU = 'https://app.b2bmobilesales.com/api/v1';
   const PEOPLE = ['Oscar', 'Luis', 'Diego', 'Jonathan', 'Rocio'];
   // Usuarios con una sola sección: Jonathan (bodega) → Recibo; Rocío → Costeo
-  const ONLY = { Jonathan: ['rec', 'fech'], Rocio: ['cos', 'cred', 'cat', 'fech'] };
+  const ONLY = { Jonathan: ['rec', 'fech', 'inv'], Rocio: ['cos', 'cred', 'cat', 'fech', 'inv'] };
   // Secciones que un usuario solo puede ver, sin cambiar nada (Rocío ve las fechas pero no las mueve)
   const READ_ONLY = { Rocio: ['fech'] };
   const soloVer = (v) => (READ_ONLY[S.who] || []).includes(v);
@@ -4391,6 +4391,62 @@
     return r.length ? r[0] : null;
   }
 
+  /* ================= INVENTARIO =================
+   * Lo que hay en existencia según InSitu (se actualiza cada hora), por departamento, con buscador.
+   * Sin dinero: solo producto, SKU, cajas y la fecha que vence primero. */
+  const INV = { q: '', dep: '', soloStock: true, n: 60 };
+  async function renderInventario(reload) {
+    const box = $('#invList'); if (!box) return;
+    if (reload) {
+      box.innerHTML = '<p class="data-info">Cargando…</p>';
+      if (!S.products.length && R.catAt && Date.now() - R.catAt > 15 * 60000) R.cat = null;
+      await Promise.all([recProducts(), loadLotes()]);
+    }
+    const prods = fechProds().filter((p) => !isCredito(p));
+    if (!prods.some((p) => p.stock != null)) { box.innerHTML = '<p class="data-info">Todavía no llega la existencia de InSitu a este dispositivo. Recarga en unos minutos.</p>'; return; }
+    const proxima = {};
+    lotRows().forEach((r) => { if (r.dias >= 0 && (!proxima[r.sku] || r.d < proxima[r.sku])) proxima[r.sku] = r.d; });
+    let rows = prods.filter((p) => !INV.soloStock || p.stock > 0);
+    const deps = {};
+    rows.forEach((p) => { const d = p.cat || 'Otros'; deps[d] = (deps[d] || 0) + 1; });
+    if (INV.dep && !deps[INV.dep]) INV.dep = '';
+    $('#invDeps').innerHTML = [`<button type="button" class="${INV.dep ? '' : 'on'}" data-idep="">Todos <small>${rows.length}</small></button>`]
+      .concat(Object.keys(deps).sort().map((d) => `<button type="button" class="${INV.dep === d ? 'on' : ''}" data-idep="${esc(d)}">${esc(d)} <small>${deps[d]}</small></button>`)).join('');
+    if (INV.dep) rows = rows.filter((p) => (p.cat || 'Otros') === INV.dep);
+    const q = normTxt(INV.q).trim();
+    if (q) rows = rows.filter((p) => { const sku = skuFech(p.id); const tx = normTxt(`${p.name} ${sku} ${sku.replace('-', '')} ${p.upc || ''} ${p.ean || ''} ${p.id} ${p.brand || ''}`); return q.split(/\s+/).every((w) => tx.includes(w)); });
+    rows.sort((a, b) => a.name.localeCompare(b.name));
+    const cajas = rows.reduce((a, p) => a + Math.max(0, Number(p.stock) || 0), 0);
+    $('#invInfo').textContent = `${rows.length} ${rows.length === 1 ? 'producto' : 'productos'} · ${nfmt(cajas)} cajas${R.catAt ? ` · existencia de InSitu de las ${fmtTs(R.catAt).split(' ').pop()}` : ''}`;
+    const show = rows.slice(0, INV.n);
+    box.innerHTML = show.map((p) => {
+      const sku = skuFech(p.id), d = proxima[skuKey(p.id)], dd = d ? daysTo(d) : null;
+      return `<div class="inv-r${p.stock > 0 ? '' : ' cero'}">
+        <span class="inv-ph">${p.photo ? `<img src="${esc(p.photo)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>
+        <div class="inv-m">${sku ? `<small class="rec-row-sku">${esc(sku)}</small>` : ''}<b>${esc(p.name)}</b>
+          <span class="meta">${esc(p.cat || 'Otros')}${p.pack ? ' · ' + esc(p.pack) : ''}${d ? ` · vence ${esc(fmtLong(d))}${dd <= 60 ? ` <span class="warn">(${dd} días)</span>` : ''}` : ''}</span></div>
+        <div class="inv-q"><b>${nfmt(Math.max(0, Number(p.stock) || 0))}</b><small>${Number(p.stock) === 1 ? 'caja' : 'cajas'}</small></div>
+      </div>`;
+    }).join('') + (rows.length > INV.n ? `<button type="button" class="btn btn-ghost" data-imore>Ver más (${rows.length - INV.n})</button>` : '') || '<p class="data-info">Nada con esa búsqueda.</p>';
+  }
+  $('#invQ').addEventListener('input', (e) => { INV.q = e.target.value; INV.n = 60; renderInventario(false); });
+  $('#invStock').addEventListener('change', (e) => { INV.soloStock = e.target.checked; renderInventario(false); });
+  $('#invDeps').addEventListener('click', (e) => { const b = e.target.closest('[data-idep]'); if (!b) return; INV.dep = b.dataset.idep; INV.n = 60; renderInventario(false); });
+  $('#invList').addEventListener('click', (e) => { if (e.target.closest('[data-imore]')) { INV.n += 120; renderInventario(false); } });
+  $('#invXls').addEventListener('click', async () => {
+    if (!window.XLSX) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
+    const proxima = {};
+    lotRows().forEach((r) => { if (r.dias >= 0 && (!proxima[r.sku] || r.d < proxima[r.sku])) proxima[r.sku] = r.d; });
+    const data = fechProds().filter((p) => !isCredito(p) && (!INV.soloStock || p.stock > 0) && (!INV.dep || (p.cat || 'Otros') === INV.dep))
+      .sort((a, b) => (a.cat || '').localeCompare(b.cat || '') || a.name.localeCompare(b.name))
+      .map((p) => ({ Departamento: p.cat || 'Otros', SKU: skuFech(p.id) || '', Producto: p.name, 'Código de barras': p.ean || (/^\d{8,14}$/.test(p.upc || '') ? p.upc : ''), Empaque: p.pack || '', Existencia: Math.max(0, Number(p.stock) || 0), 'Vence primero': proxima[skuKey(p.id)] ? fmtLong(proxima[skuKey(p.id)]) : '' }));
+    const ws = XLSX.utils.json_to_sheet(data), wb = XLSX.utils.book_new();
+    ws['!cols'] = [{ wch: 16 }, { wch: 12 }, { wch: 46 }, { wch: 16 }, { wch: 10 }, { wch: 11 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'Inventario');
+    const d = new Date();
+    XLSX.writeFile(wb, `Inventario-CTD-${d.getDate()}${MES[d.getMonth()]}${d.getFullYear()}.xlsx`);
+  });
+
   /* ================= CRÉDITOS A CLIENTES =================
    * Rocío (o Oscar/Luis/Diego) captura el crédito que pide el vendedor: cliente + productos CR- en piezas.
    * La IA revisa con las facturas de InSitu (12 meses) cuántas veces y a qué precio se le vendió, avisa si
@@ -4866,12 +4922,14 @@
     if ($('#workspace').hidden) return;
     const ov = onlyView();
     if (ov && !ov.includes(S.view)) S.view = ov[0];
-    const ord = S.view === 'ord', cos = S.view === 'cos', ven = S.view === 'ven', rec = S.view === 'rec', fech = S.view === 'fech', cat = S.view === 'cat', cred = S.view === 'cred';
+    const ord = S.view === 'ord', cos = S.view === 'cos', ven = S.view === 'ven', rec = S.view === 'rec', fech = S.view === 'fech', cat = S.view === 'cat', cred = S.view === 'cred', inv = S.view === 'inv';
     $$('#viewTabs button').forEach((b) => { const on = b.dataset.v === S.view; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
     // En el celular las pestañas se deslizan: la activa siempre a la vista (y el botón de salir fijo a la derecha)
     const act = $('#viewTabs button.on'), bar = $('#viewTabs');
     if (act) bar.scrollLeft = Math.max(0, act.offsetLeft - (bar.clientWidth - act.offsetWidth) / 2);
-    $('#espView').hidden = ord || cos || ven || rec || fech || cat || cred;
+    $('#espView').hidden = ord || cos || ven || rec || fech || cat || cred || inv;
+    $('#invView').hidden = !inv;
+    if (inv) renderInventario(true);
     $('#credView').hidden = !cred;
     if (cred) { CR.list = null; renderCreditos(); }
     $('#catView').hidden = !cat;
@@ -4883,11 +4941,11 @@
     if (rec) { R.list = null; renderRecibo(); }
     $('#ordView').hidden = !ord;
     $('#cosView').hidden = !cos;
-    $('#dock').hidden = ord || cos || ven || rec || fech || cat || cred;
+    $('#dock').hidden = ord || cos || ven || rec || fech || cat || cred || inv;
     $('#ordDock').hidden = !ord || O.vendor === null;
     $('#cosDock').hidden = !cos;
     if (cos) renderCosteo();
-    if (!ord && !cos && !ven && !rec && !fech && !cat && !cred) loadVigentes();
+    if (!ord && !cos && !ven && !rec && !fech && !cat && !cred && !inv) loadVigentes();
     if (ven) renderVendors();
     if (ord) {
       if (!O.lines.length && !O.touched) suggestOrder(); else renderOrders();

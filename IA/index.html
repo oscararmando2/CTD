@@ -72,6 +72,7 @@
       <button type="button" role="tab" data-v="rec">Recibo</button>
       <button type="button" role="tab" data-v="fech">Fechas</button>
       <button type="button" role="tab" data-v="cos">Costeo</button>
+      <button type="button" role="tab" data-v="inv">Inventario</button>
       <button type="button" role="tab" data-v="cred">Créditos</button>
       <button type="button" role="tab" data-v="ven">Vendors</button>
       <button type="button" role="tab" data-v="cat">Catálogo</button>
@@ -256,6 +257,20 @@
     </section>
    </div>
    <!-- Créditos a clientes (Rocío) -->
+   <!-- Inventario: lo que hay en existencia (InSitu), con buscador por SKU, nombre o código de barras -->
+   <div id="invView" hidden>
+    <section class="hero">
+      <h1 class="display">Inventario</h1>
+      <p id="invInfo" class="status"></p>
+      <div class="fech-ctl">
+        <label class="field fech-search"><span>Buscar</span><input id="invQ" type="search" placeholder="SKU, nombre o código de barras" autocomplete="off" enterkeyhint="search"></label>
+        <label class="inv-chk"><input id="invStock" type="checkbox" checked> Solo con existencia</label>
+        <button id="invXls" class="btn btn-ghost btn-sm" type="button"><i data-icon="download"></i>Bajar Excel</button>
+      </div>
+      <div id="invDeps" class="pills inv-deps"></div>
+    </section>
+    <section id="invList" class="inv-list"></section>
+   </div>
    <div id="credView" hidden>
     <section class="hero" id="crHero">
       <h1 class="display">Créditos</h1>
