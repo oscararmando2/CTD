@@ -2615,6 +2615,40 @@
   }
   const cleanTitle = (s) => String(s || '').replace(/\s+/g, ' ').trim().toUpperCase().slice(0, 100);
 
+  // ---- SKU CTD-#### en todos los productos: los que son solo número (6330, el de Cortes) → CTD-6330 ----
+  const SKU = { r: null, all: false };
+  function renderSku() {
+    const box = $('#skuBox'), r = SKU.r; if (!box || !r) return;
+    const ok = r.numero.filter((x) => !x.choca), malos = r.numero.filter((x) => x.choca);
+    const lista = SKU.all ? ok : ok.slice(0, 15);
+    box.innerHTML = `<p class="status">De <b>${r.total}</b> productos: <b>${r.ctd}</b> ya tienen CTD · <b>${r.numero.length}</b> tienen solo el número · <b>${r.vacio.length}</b> sin SKU · ${r.otroN} con otro código (UPC, etc.)</p>
+      ${ok.length ? `<div class="sku-l">${lista.map((x) => `<div class="sku-r"><span>${esc(x.name)}</span><b>${esc(x.sku)} → ${esc(x.nuevo)}</b></div>`).join('')}</div>
+        ${ok.length > 15 ? `<button type="button" class="btn-link sm" data-skuall>${SKU.all ? 'ver menos' : `ver los ${ok.length}`}</button>` : ''}
+        <button type="button" class="btn btn-oro btn-sm" data-skugo>Poner CTD- a ${ok.length} ${ok.length === 1 ? 'producto' : 'productos'} en QuickBooks</button>` : '<p class="status">✓ No hay productos con SKU de solo número.</p>'}
+      ${malos.length ? `<p class="qb-warn">${malos.length} no se pueden cambiar porque ese CTD ya lo tiene otro producto: ${malos.slice(0, 5).map((x) => esc(`${x.name} (${x.nuevo})`)).join(', ')}${malos.length > 5 ? '…' : ''}</p>` : ''}
+      ${r.vacio.length ? `<details><summary class="status">${r.vacio.length} sin SKU (hay que ponerlo a mano)</summary><div class="sku-l">${r.vacio.slice(0, 200).map((x) => `<div class="sku-r"><span>${esc(x.name)}</span><b>código ${esc(x.id)}</b></div>`).join('')}</div></details>` : ''}
+      <button id="skuRev" class="btn-link sm" type="button">volver a revisar</button>`;
+  }
+  $('#skuSec').addEventListener('click', async (e) => {
+    if (e.target.closest('#skuRev')) {
+      $('#skuBox').innerHTML = '<p class="status">Revisando productos en QuickBooks…</p>';
+      try { SKU.r = await cosCall('sku_revision'); renderSku(); } catch (err) { $('#skuBox').innerHTML = `<p class="qb-warn">${esc(err.message)}</p><button id="skuRev" class="btn-link sm" type="button">intentar otra vez</button>`; }
+      return;
+    }
+    if (e.target.closest('[data-skuall]')) { SKU.all = !SKU.all; renderSku(); return; }
+    const go = e.target.closest('[data-skugo]'); if (!go) return;
+    const ok = SKU.r.numero.filter((x) => !x.choca);
+    if (!confirm(`¿Cambiar el SKU de ${ok.length} productos en QuickBooks?\n\nEjemplo: ${ok.slice(0, 3).map((x) => `${x.sku} → ${x.nuevo}`).join(', ')}\n\nInSitu los toma en su siguiente sincronización (Barcode).`)) return;
+    go.disabled = true;
+    let hechos = 0; const errores = [];
+    for (let i = 0; i < ok.length; i += 40) {
+      go.textContent = `Cambiando… ${Math.min(i + 40, ok.length)} de ${ok.length}`;
+      try { const d = await cosCall('sku_poner_ctd', { ids: ok.slice(i, i + 40).map((x) => x.id) }); hechos += d.hechos.length; errores.push(...d.errores); } catch (err) { errores.push({ error: err.message }); break; }
+    }
+    alert(`Listo ✓ ${hechos} productos con CTD- en QuickBooks.${errores.length ? `\n\n${errores.length} no se cambiaron:\n` + errores.slice(0, 10).map((x) => `• ${x.name || x.id || ''}: ${x.error}`).join('\n') : ''}\n\nInSitu los toma en su siguiente sincronización.`);
+    try { SKU.r = await cosCall('sku_revision'); renderSku(); } catch (err) { /* */ }
+  });
+
   // ---- Pantalla ----
   const K_DRAFT = 'ctdIA.cosDraft';
   function cosDraftSave() {
