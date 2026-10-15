@@ -2779,7 +2779,7 @@
         ${!(l.nuevo && creado(l)) && saboresDe(l.producto).length >= 2 ? '<button type="button" class="btn btn-oro btn-sm" data-mix>Separar en sabores</button> ' : ''}
         ${C.applied ? '' : `<button type="button" class="btn-link sm cos-pz" data-pz>${l.pz > 1 ? 'Se vende por caja, no por pieza' : `¿Lo vendes por pieza?${l.pzCaja > 1 ? ` (${l.pzCaja} por caja)` : ''}`}</button>`}
         ${nuevo}
-        ${!l.nuevo && !(l.result && l.result.ok) ? '<button class="btn-link sm" type="button" data-link>¿Es otro producto? cambiar</button>' : ''}
+        ${!l.nuevo ? '<button class="btn-link sm" type="button" data-link>¿Es otro producto? buscar y ligar</button>' : ''}
         ${!l.nuevo && qbIdOf(l) || !l.nuevo && l.sku ? `<button class="btn-link sm" type="button" data-comp>${l.comp ? 'Cerrar' : datosCompletos(l) ? `✓ ${esc(skuDe(prodSrv(l)))} · ${esc(prodSrv(l).cat)} · ${esc(prodSrv(l).brand)} · ${esc(prodSrv(l).units)} (editar)` : 'Completar categoría, marca y unidad'}</button>` : ''}
         ${l.comp ? `<div class="cos-alta">
           <label class="field"><span>Categoría</span><select data-c="cat"><option value="">Elige…</option>${altaCats().map((c) => `<option${c === l.comp.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
