@@ -22,7 +22,7 @@
   const INSITU = 'https://app.b2bmobilesales.com/api/v1';
   const PEOPLE = ['Oscar', 'Luis', 'Diego', 'Jonathan', 'Rocio'];
   // Usuarios con una sola sección: Jonathan (bodega) → Recibo; Rocío → Costeo
-  const ONLY = { Jonathan: ['rec', 'fech', 'inv'], Rocio: ['cos', 'cred', 'cat', 'fech', 'inv'] };
+  const ONLY = { Jonathan: ['rec', 'fech', 'inv', 'ord'], Rocio: ['cos', 'cred', 'cat', 'fech', 'inv'] };
   // Secciones que un usuario solo puede ver, sin cambiar nada (Rocío ve las fechas pero no las mueve)
   const READ_ONLY = { Rocio: ['fech'] };
   const soloVer = (v) => (READ_ONLY[S.who] || []).includes(v);
@@ -277,6 +277,16 @@
           S.products = (d.items || []).map((x) => ({ id: String(x.id), name: x.name, upc: x.upc || '', ean: x.ean || '', photo: x.photo || '', price: x.price || 0, cost: 0, pack: x.pack || '', cat: x.cat || '', brand: x.brand || '', stock: x.stock ?? null, fromCat: true }));
           if (S.view === 'cat') renderCatalogo();
         }).catch(() => {});
+      }
+      if (only.includes('ord') && !S.products.length) {
+        // Órdenes sin InSitu: la copia con ventas, existencia y proveedores que sube Oscar/Luis/Diego al sincronizar
+        cosCall('ordenes_data').then((d) => {
+          S.products = (d.items || []).map((x) => ({ ...x, id: String(x.id), fromCat: true }));
+          S.ordAt = d.at || null;
+          if (S.view === 'ord') applyView();
+          if (S.view === 'inv') renderInventario(false);
+        }).catch((e) => toast('Órdenes: ' + e.message));
+        listenOrders();
       }
       applyView();
       return;
@@ -719,7 +729,7 @@
   function showWorkspace() {
     stockTrusted = null;
     if (!R.lotes) loadLotes().then(() => { if (S.cards.length) render(); });
-    pushCatalog();
+    pushCatalog(); pushOrdenes();
     shareInsituSession();
     $('#dropzone').hidden = true;
     $('#workspace').hidden = false;
@@ -3204,6 +3214,17 @@
       store.set(k, S.meta.at);
     } catch (e) { /* se intenta en la siguiente */ }
   }
+  // Copia para Órdenes de los usuarios sin InSitu (Jonathan): ventas, existencia y proveedor de cada producto
+  async function pushOrdenes() {
+    if (onlyView() || !S.products.length || !S.meta || S.meta.source !== 'InSitu') return;
+    const k = 'ctdIA.ordPushed1';
+    if (store.get(k, 0) === S.meta.at || !S.products.some((p) => p.st)) return;
+    try {
+      await cosCall('ordenes_save', { items: S.products.map((p) => ({ id: p.id, name: p.name, key: p.key, upc: p.upc, ean: p.ean, photo: p.photo, price: p.price, cost: p.cost, cat: p.cat, pack: p.pack, brand: p.brand, vendor: p.vendor, stock: p.stock, why: p.why,
+        st: p.st ? { u30: p.st.u30, u90: p.st.u90, uPrev90: p.st.uPrev90, u365: p.st.u365, days: p.st.days, last: p.st.last, clients: p.st.clients, m: p.st.m } : null, buy: p.buy || null })) });
+      store.set(k, S.meta.at);
+    } catch (e) { /* se intenta en la siguiente */ }
+  }
   async function loadLotes(force) {
     if (R.lotes && !force) return R.lotes;
     try { R.lotes = (await cosCall('lotes')).lotes || {}; } catch (e) { R.lotes = R.lotes || {}; }
@@ -5030,7 +5051,7 @@
       const diff = l.qty - l.sug;
       if (diff > 0) {
         const extra = c - coverDays(l, l.sug);
-        txt += ` Son ${diff} más de lo sugerido: ${span(extra)} extra de inventario (+${money(diff * (l.cost || 0))}).`;
+        txt += ` Son ${diff} más de lo sugerido: ${span(extra)} extra de inventario${canMoney() ? ` (+${money(diff * (l.cost || 0))})` : ''}.`;
       } else {
         const falta = targetDays(l) - c;
         txt += ` Son ${-diff} menos de lo sugerido: ` + (falta > 0 ? `te quedas corto ~${falta} días antes de que llegue el siguiente pedido.` : 'todavía alcanza para el siguiente pedido.');
@@ -5108,7 +5129,7 @@
     const sinProv = vs.find((v) => v.name === 'Sin proveedor');
     const total = vs.reduce((a, v) => a + v.n, 0);
     const m = S.meta || {};
-    $('#ordPickInfo').innerHTML = m.receipts
+    $('#ordPickInfo').innerHTML = S.ordAt ? `Según las ventas, el inventario y las compras de InSitu · datos de las ${esc(fmtTs(S.ordAt))}.` : m.receipts
       ? `Según tus ventas, inventario y <b>${m.receipts} compras</b> registradas en InSitu.`
       : (syncing ? 'Bajando tus compras de InSitu…' : 'Todavía no se bajan tus compras de InSitu, por eso no salen tus proveedores.') +
         (Insitu.token() && !syncing ? ' <button id="ordSync" class="btn-link" type="button">Bajar compras ahora</button>' : '');
@@ -5147,7 +5168,7 @@
     if (picking) { renderPicker(); return; }
     $('#ordTitle').textContent = O.vendor || 'Todos los proveedores';
     const m = S.meta || {};
-    $('#ordInfo').innerHTML = m.receipts
+    $('#ordInfo').innerHTML = S.ordAt ? `Calculado con las ventas y compras de InSitu · datos de las ${esc(fmtTs(S.ordAt))}` : m.receipts
       ? `Calculado con tus ventas y <b>${m.receipts} recepciones</b> de InSitu · stock al ${fmtTs(m.at)}`
       : (syncing ? 'Bajando tus compras de InSitu…' : 'Todavía no se bajan tus compras de InSitu, por eso todo sale "Sin proveedor".') +
         (Insitu.token() && !syncing ? ' <button id="ordSync" class="btn-link" type="button">Bajar compras ahora</button>' : '');
@@ -5200,7 +5221,7 @@
     $('#ordKpis').innerHTML = `
       <div class="kpi"><span class="lbl">Productos</span><div class="kpi-v">${ls.length}</div></div>
       <div class="kpi"><span class="lbl">Cajas</span><div class="kpi-v">${nfmt(cj)}</div></div>
-      <div class="kpi"><span class="lbl">Costo estimado</span><div class="kpi-v">${money(cost)}</div></div>
+      ${canMoney() ? `<div class="kpi"><span class="lbl">Costo estimado</span><div class="kpi-v">${money(cost)}</div></div>` : ''}
       <div class="kpi"><span class="lbl">Proveedores</span><div class="kpi-v">${nv}</div></div>`;
     const has = ls.length > 0;
     $('#ordSend').disabled = !has; $('#ordSave').disabled = !has; $('#ordPdf').disabled = !has;
