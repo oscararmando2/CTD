@@ -3217,13 +3217,15 @@
   // Copia para Órdenes de los usuarios sin InSitu (Jonathan): ventas, existencia y proveedor de cada producto
   async function pushOrdenes() {
     if (onlyView() || !S.products.length || !S.meta || S.meta.source !== 'InSitu') return;
-    const k = 'ctdIA.ordPushed1';
-    if (store.get(k, 0) === S.meta.at || !S.products.some((p) => p.st)) return;
+    const k = 'ctdIA.ordPushed2';
+    if (store.get(k, 0) === S.meta.at || !S.products.some((p) => p.st) || pushOrdenes.busy) return;
+    pushOrdenes.busy = true;
     try {
       await cosCall('ordenes_save', { items: S.products.map((p) => ({ id: p.id, name: p.name, key: p.key, upc: p.upc, ean: p.ean, photo: p.photo, price: p.price, cost: p.cost, cat: p.cat, pack: p.pack, brand: p.brand, vendor: p.vendor, stock: p.stock, why: p.why,
         st: p.st ? { u30: p.st.u30, u90: p.st.u90, uPrev90: p.st.uPrev90, u365: p.st.u365, days: p.st.days, last: p.st.last, clients: p.st.clients, m: p.st.m } : null, buy: p.buy || null })) });
       store.set(k, S.meta.at);
-    } catch (e) { /* se intenta en la siguiente */ }
+    } catch (e) { console.warn('Copia de Órdenes', e); } // se intenta en la siguiente
+    pushOrdenes.busy = false;
   }
   async function loadLotes(force) {
     if (R.lotes && !force) return R.lotes;
@@ -4950,6 +4952,7 @@
     if (act) bar.scrollLeft = Math.max(0, act.offsetLeft - (bar.clientWidth - act.offsetWidth) / 2);
     $('#espView').hidden = ord || cos || ven || rec || fech || cat || cred || inv;
     $('#invView').hidden = !inv;
+    if (ord && !onlyView()) pushOrdenes(); // la copia para Órdenes de Jonathan se renueva al entrar a Órdenes
     if (inv) renderInventario(true);
     $('#credView').hidden = !cred;
     if (cred) { CR.list = null; renderCreditos(); }
