@@ -3078,7 +3078,7 @@
       const { recibo: r } = await cosCall('recibo_get', { id: b.closest('.hist-item').dataset.rid });
       const L = r.lines || [];
       await loadInvoice({ proveedor: r.proveedor, factura: r.factura, fecha: r.fecha, ...(r.head || {}), dudas: [],
-        items: L.map((l) => ({ upc: l.upc, codigo_proveedor: l.codigo_proveedor, producto: l.producto, cantidad: l.cantidad, empaque: l.empaque, unidades_por_caja: l.unidades_por_caja, costo_caja: l.costo_caja, total_linea: l.total_linea })) });
+        items: L.filter((l) => l.how !== 'agregado').map((l) => ({ upc: l.upc, codigo_proveedor: l.codigo_proveedor, producto: l.producto, cantidad: l.cantidad, empaque: l.empaque, unidades_por_caja: l.unidades_por_caja, costo_caja: l.costo_caja, total_linea: l.total_linea })) });
       attachRecibo(r);
       renderCosteo();
     } catch (err) { toast(err.message); C.busy = false; renderCosteo(); }
@@ -3475,6 +3475,7 @@
           <div class="rec-pinfo">
             <h3 class="rec-name">${esc(l.sku ? l.nombre : l.producto)}</h3>
             ${l.sku ? `<p class="meta">${l.upcSis || l.upc ? 'UPC ' + esc(l.upcSis || l.upc) + ' · ' : ''}SKU ${esc(l.sku)}</p>` : '<p class="meta"><span class="pill warn">no está en el sistema</span></p>'}
+            ${l.how === 'agregado' ? `<p class="meta"><span class="pill warn">sobrante · no viene en la factura · costo $0</span> <button type="button" class="btn-link sm" data-r="quitar" data-i="${R.cur}">Quitar</button></p>` : ''}
             ${l.sku && !same ? `<p class="meta">Factura: ${esc(l.producto)}</p>` : ''}
           </div>
         </div>
@@ -3591,6 +3592,7 @@
         const q = l.estado === 'parcial' ? Number(l.recibido) || 0 : Number(l.cantidad) || 0;
         if (q > 0) out.push({ ...base, razon: 'short date format', cant: q, um: 'CASE', obs: 'FECHA CORTA', fotos: [] });
       }
+      if (l.how === 'agregado' && !l.nov) { const q = l.estado === 'parcial' ? Number(l.recibido) || 0 : l.estado === 'ok' ? Number(l.recibido ?? l.cantidad) || 0 : 0; if (q > 0) out.push({ ...base, razon: 'spare', cant: q, um: 'CASE', obs: 'SOBRANTE: no viene en la factura', fotos: [] }); }
       if (l.nov) out.push({ ...base, razon: l.nov.tipo, cant: l.nov.cant, um: l.nov.um === 'each' ? 'EA' : 'CASE', obs: l.nov.nota || NOV_ES[l.nov.tipo], fotos: l.nov.fotos || [] });
     });
     return out;
@@ -3671,6 +3673,7 @@
         <span class="rec-row-n">${recSku(l) ? `<small class="rec-row-sku">${esc(recSku(l))}</small>` : ''}${esc(l.sku ? l.nombre : l.producto)}</span>
         <span class="rec-row-d">${l.estado === 'parcial' ? nfmt(l.recibido || 0) + '/' : ''}${nfmt(l.cantidad)}${l.caducidad ? ' · ' + esc(fmtD(l.caducidad)) + ' ' + parseYmd(l.caducidad).getFullYear() % 100 : ''}</span>
       </button>`).join('')}
+      ${R.rec.status === 'costeado' ? '' : `<button type="button" class="rec-row" data-r="add"><span class="rec-dot none" aria-hidden="true"></span><span class="rec-row-n"><b>+ Agregar producto (por SKU)</b><small style="display:block;opacity:.7">llegó y no viene en la factura (sobrante)</small></span></button>`}
       <button type="button" class="rec-row${R.cur >= R.rec.lines.length ? ' cur' : ''}" data-r="go" data-i="${R.rec.lines.length}"><span class="rec-dot fin" aria-hidden="true"></span><span class="rec-row-n"><b>Terminar</b></span></button>
     </div>`;
   }
@@ -3813,6 +3816,30 @@
     const a = b.dataset.r, L = R.rec.lines, l = L[R.cur];
     if (a === 'close') { if (R.sheet) closeSheet(); R.rec = null; store.del(K_REC); renderRecibo(); window.scrollTo({ top: 0 }); return; }
     if (a === 'go') { R.noteOpen = false; R.cur = Number(b.dataset.i); renderRecibo(); toCard(); return; }
+    if (a === 'add') {
+      // Sobrante: llegó y no viene en la factura. Solo por SKU (el código del producto en InSitu, ej. 23 o CTD-1352)
+      const q = (prompt('SKU del producto que llegó de más (ej. 23 o CTD-1352):') || '').trim();
+      if (!q) return;
+      const list = await recProducts();
+      const k = q.toUpperCase().replace(/\s+/g, '');
+      const hits = list.filter((p) => String(p.id).toUpperCase() === k || String(p.upc || '').toUpperCase().replace(/\s+/g, '') === k);
+      if (!hits.length) { alert(`No encontré el SKU "${q}" en el sistema.`); return; }
+      const p = hits.length === 1 ? hits[0] : hits[Number(prompt(hits.map((x, i) => `${i + 1}. ${x.name} (SKU ${x.id}${x.upc ? ' · ' + x.upc : ''})`).join('\n') + '\n\nEscribe el número:', '1')) - 1];
+      if (!p) return;
+      const n = Number(String(prompt(`${p.name}\n\n¿Cuántas cajas llegaron?`, '') || '').replace(',', '.'));
+      if (!(n > 0)) return;
+      if (L.some((x) => x.how === 'agregado' && String(x.sku) === String(p.id)) && !confirm('Ese producto ya está agregado como sobrante. ¿Agregarlo otra vez?')) return;
+      L.push({ producto: p.name, upc: p.ean || '', codigo_proveedor: '', cantidad: n, empaque: p.pack || '', unidades_por_caja: null, costo_caja: 0, total_linea: 0,
+        sku: String(p.id), nombre: p.name, how: 'agregado', photo: p.photo || '', upcSis: p.upc || '', estado: '', recibido: null, caducidad: '', leida: '', nota: 'Sobrante: llegó y no viene en la factura' });
+      R.noteOpen = false; R.cur = L.length - 1; touchRec(); renderRecibo(); toCard();
+      toast('Agregado como sobrante: marca si llegó completo y su caducidad');
+      return;
+    }
+    if (a === 'quitar') {
+      const i = Number(b.dataset.i), x = L[i];
+      if (!x || x.how !== 'agregado' || !confirm(`¿Quitar "${x.nombre || x.producto}" de este recibo?`)) return;
+      L.splice(i, 1); R.cur = Math.min(i, L.length); touchRec(); renderRecibo(); return;
+    }
     if (a === 'prev') { R.noteOpen = false; R.cur = Math.max(0, R.cur - 1); renderRecibo(); toCard(); return; }
     if (a === 'next') { R.noteOpen = false; nextCard(); renderRecibo(); toCard(); return; }
     if (a === 'finish') {
@@ -3934,7 +3961,7 @@
     (rec.lines || []).forEach((l) => {
       const cajas = l.estado === 'ok' ? Number(l.recibido ?? l.cantidad) || 0 : l.estado === 'parcial' ? Number(l.recibido) || 0 : 0;
       const sku = l.upcSis || pOf(l).upc || l.sku || l.codigo_proveedor || '';
-      const desc = (l.nombre || l.producto || '') + (l.estado === 'no' ? '  (NO LLEGÓ)' : l.estado === 'parcial' ? `  (llegaron ${cajas} de ${l.cantidad})` : l.estado === 'pendiente' ? '  (PENDIENTE)' : '');
+      const desc = (l.nombre || l.producto || '') + (l.how === 'agregado' ? '  (SOBRANTE: no viene en la factura)' : '') + (l.estado === 'no' ? '  (NO LLEGÓ)' : l.estado === 'parcial' ? `  (llegaron ${cajas} de ${l.cantidad})` : l.estado === 'pendiente' ? '  (PENDIENTE)' : '');
       const fds = Array.isArray(l.fechas) && l.fechas.length > 1 ? l.fechas : [{ f: l.caducidad || '', q: cajas }];
       fds.forEach((x) => filas.push({ sku, desc, q: x.q, f: x.f ? fmtLong(x.f) : '' })); // con nombre del mes (lo pidió Jonathan)
     });

@@ -591,12 +591,20 @@ module.exports = async (req, res) => {
         ((cat && cat.items) || []).forEach((p) => { units[String(p.id)] = String(p.units || ''); });
         const skuCos = {};
         ((cos && cos.lines) || []).forEach((l) => { const s = l.qbId || l.sku; if (s) skuCos[norm(l.producto)] = { sku: String(s), pz: l.pz || 0 }; });
-        const lines = [], faltan = [];
+        const lines = [], faltan = [], sinLigarNo = [];
+        // Todo tal cual como lo revisó bodega: lo que no llegó va en 0 y lo que sobró (agregado) va con su nota
         ((rec && rec.lines) || (cos && cos.lines) || []).forEach((l) => {
           const cajas = revisado ? (l.estado === 'ok' ? Number(l.recibido ?? l.cantidad) || 0 : l.estado === 'parcial' ? Number(l.recibido) || 0 : 0) : Number(l.cantidad) || 0;
-          if (!(cajas > 0)) return;
           const cs = skuCos[norm(l.producto)] || {};
           const sku = String(l.qbId || l.sku || cs.sku || '');
+          const tag = l.how === 'agregado' ? 'SOBRANTE (no viene en la factura) · ' : '';
+          if (!(cajas > 0)) {
+            if (!revisado) return;
+            const que = l.estado === 'no' ? 'NO LLEGÓ' : l.estado === 'pendiente' ? 'PENDIENTE' : 'SIN REVISAR';
+            if (/^\d+$/.test(sku)) lines.push({ DetailType: 'ItemBasedExpenseLineDetail', Amount: 0, Description: `${tag}${que} · ${l.nombre || l.producto || ''}`.slice(0, 4000), ItemBasedExpenseLineDetail: { ItemRef: { value: sku }, Qty: 0, UnitPrice: r2(Number(l.costo_caja) || 0) } });
+            else sinLigarNo.push(`${que}: ${l.producto || l.nombre || ''} (${nfmtSrv(l.cantidad)} cajas)`);
+            return;
+          }
           if (!/^\d+$/.test(sku)) { faltan.push(l.nombre || l.producto); return; }
           const mem = (pzMem || {})[codeKey(sku)];
           const pzL = cs.pz > 1 ? cs.pz : mem > 1 ? mem : 0;
@@ -605,11 +613,11 @@ module.exports = async (req, res) => {
           if (porPieza && !(n > 1)) { faltan.push(`${l.nombre || l.producto} (por pieza: no sé cuántas trae la caja)`); return; }
           const costo = Number(l.costo_caja) || 0;
           const qty = porPieza ? cajas * n : cajas, price = porPieza ? r2(costo / n) : r2(costo);
-          lines.push({ DetailType: 'ItemBasedExpenseLineDetail', Amount: r2(qty * price), Description: String(l.nombre || l.producto || '').slice(0, 4000),
+          lines.push({ DetailType: 'ItemBasedExpenseLineDetail', Amount: r2(qty * price), Description: (tag + String(l.nombre || l.producto || '') + (l.estado === 'parcial' ? ` · LLEGARON ${cajas} DE ${l.cantidad}` : '')).slice(0, 4000),
             ItemBasedExpenseLineDetail: { ItemRef: { value: sku }, Qty: qty, UnitPrice: price } });
         });
         if (faltan.length) return res.status(409).json({ error: `Faltan productos por ligar: ${faltan.slice(0, 8).join(' · ')}${faltan.length > 8 ? '…' : ''}`, code: 'faltan' });
-        if (!lines.length) return res.status(400).json({ error: 'No hay nada recibido para la factura' });
+        if (!lines.some((x) => x.ItemBasedExpenseLineDetail.Qty > 0)) return res.status(400).json({ error: 'No hay nada recibido para la factura' });
         // Fecha: el día que llegó la mercancía (bodega terminó el recibo), como lo hace Jona; si no, la de la factura
         const ctDate = (ms) => new Date(ms).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
         const fecha = revisado && rec.doneAt ? ctDate(rec.doneAt) : /^\d{4}-\d{2}-\d{2}$/.test(src.fecha || '') ? src.fecha : todayCT();
@@ -653,7 +661,7 @@ module.exports = async (req, res) => {
             await log({ action: 'qb-inv-start', name: it.Name, qbId: it.Id, de: it.InvStartDate, a: fecha, by: who });
           }
         }
-        const nota = `Creada por la IA (${who}) · ${revisado ? 'cantidades recibidas en bodega' : 'cantidades de la factura'}${esPO ? ' · recíbela en Recibo de artículo' : ''}`.slice(0, 4000);
+        const nota = `Creada por la IA (${who}) · ${revisado ? 'cantidades recibidas en bodega' : 'cantidades de la factura'}${esPO ? ' · recíbela en Recibo de artículo' : ''}${sinLigarNo.length ? ' · Sin producto en QuickBooks: ' + sinLigarNo.join(' · ') : ''}`.slice(0, 4000);
         const payload = { VendorRef: { value: vendorId }, TxnDate: fecha, Line: lines, PrivateNote: nota };
         if (esPO) Object.assign(payload, { POStatus: 'Open', Memo: `Factura ${doc}`.slice(0, 4000) });
         if (doc) payload.DocNumber = doc;
@@ -1001,6 +1009,7 @@ const ymdOk = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : 
 
 // Costeo cambió renglones (separó un mix, ligó a otro producto…): bodega ve lo mismo sin recargar nada.
 // Lo que bodega ya revisó en un renglón que sigue igual se conserva.
+const nfmtSrv = (n) => String(Math.round((Number(n) || 0) * 100) / 100);
 function reciboAlDia(recibo, lines) {
   const nk = (s) => String(s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9]+/g, ' ').trim();
   const viejos = (recibo.lines || []).slice();
@@ -1013,6 +1022,7 @@ function reciboAlDia(recibo, lines) {
     if (o && Number(o.cantidad) === Number(l.cantidad)) return { ...o, ...base, how: o.how || 'costeo' };
     return { ...base, estado: '', recibido: null, caducidad: l.caducidad || '', leida: l.caducidad || '', nota: '' };
   });
+  out.push(...viejos.filter((o) => o && o.how === 'agregado')); // sobrantes que agregó bodega (no vienen en la factura)
   const igual = out.length === (recibo.lines || []).length && out.every((x, i) => nk(x.producto) === nk(recibo.lines[i].producto) && String(x.sku || '') === String(recibo.lines[i].sku || '') && x.nombre === recibo.lines[i].nombre);
   return igual ? {} : { lines: out, updated: Date.now(), updatedBy: 'costeo' };
 }
