@@ -468,6 +468,34 @@ module.exports = async (req, res) => {
             grupo: e.grupo || '', grupoTitulo: e.grupoTitulo || '', grupoCorto: e.grupoCorto || '' }));
         return res.json({ list, today });
       }
+      case 'vend_probe': {
+        // TEMPORAL (16 oct 2026, pedido por Oscar): qué datos de actividad de vendedores trae InSitu.
+        // Solo devuelve nombres de campos, cuántos registros hay y rango de fechas (sin nombres, clientes ni ubicaciones).
+        const keysOf = (o) => (o && typeof o === 'object' ? Object.keys(o).map((k) => (o[k] && typeof o[k] === 'object' && !Array.isArray(o[k]) ? `${k}{${Object.keys(o[k]).join(',')}}` : Array.isArray(o[k]) ? `${k}[${o[k].length}${o[k][0] && typeof o[k][0] === 'object' ? ':' + Object.keys(o[k][0]).join(',') : ''}]` : k)) : []);
+        const fechas = (arr) => { const ts = arr.map((x) => Date.parse(String(x.visit_date || x.start_date || x.created_at || x.date || x.trn_date || x.order_date || x.updated_at || '').replace(' ', 'T'))).filter(isFinite).sort(); return ts.length ? [new Date(ts[0]).toISOString().slice(0, 10), new Date(ts[ts.length - 1]).toISOString().slice(0, 10)] : null; };
+        const out = {};
+        const hoy = new Date(), hace = new Date(Date.now() - 30 * DAY_MS);
+        const f = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
+        for (const [path, params] of [['/visits', { limit: 200, order: JSON.stringify([['id', 'DESC']]) }], ['/mobile_users', { limit: 50 }], ['/route_mobile', { limit: 50 }], ['/sdv_routes', { limit: 50 }], ['/tasks', { limit: 50 }], ['/surveys', { limit: 50 }], ['/orders', { limit: 200, fromDate: f(hace), toDate: f(hoy) }]]) {
+          try {
+            const j = await insituGet(path, params);
+            const arr = Object.values(j).find(Array.isArray) || [];
+            out[path] = { topKeys: Object.keys(j), n: arr.length, total: j.total ?? j.count ?? null, campos: keysOf(arr[0]), fechas: fechas(arr) };
+            if (path === '/visits') out[path].porUsuario = Object.values(arr.reduce((a, x) => { const k = x.mobile_user_login || x.user_login || x.mobile_user_id || '?'; a[k] = (a[k] || 0) + 1; return a; }, {}));
+            if (path === '/mobile_users') out.logins = arr.map((x) => x.login || x.mobile_user_login).filter(Boolean);
+          } catch (e) { out[path] = { error: String(e.message || e).slice(0, 120) }; }
+        }
+        const logins = out.logins || []; delete out.logins;
+        out.tracking = [];
+        for (const login of logins.slice(0, 6)) {
+          try {
+            const j = await insituGet('/user_tracking', { mobile_user_login: login, fromDate: f(new Date(Date.now() - 7 * DAY_MS)), toDate: f(hoy) });
+            const arr = Array.isArray(j) ? j : Object.values(j).find(Array.isArray) || [];
+            out.tracking.push({ puntos7dias: arr.length, campos: keysOf(arr[0]), fechas: fechas(arr) });
+          } catch (e) { out.tracking.push({ error: String(e.message || e).slice(0, 120) }); }
+        }
+        return res.json(out);
+      }
       case 'catalogo': {
         // Primero la copia de InSitu (trae fotos); si no hay, la lista de QuickBooks (el Id es el mismo código que en InSitu)
         const snap = await db('GET', 'catalogo');
@@ -1003,7 +1031,8 @@ async function avisosTienda() {
   return out.sort((a, b) => a.dias - b.dias || a.tienda.localeCompare(b.tienda)).slice(0, 300);
 }
 const NOV_TIPOS = ['damaged', 'missing item', 'short date format', 'spare'];
-const RECIBO_ACTIONS = ['ord_list', 'ord_save', 'ordenes_data', 'novedad_num', 'qb_bill', 'recibo_inventario', 'parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'lote_add', 'lote_del', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
+const RECIBO_ACTIONS = ['vend_probe', 'ord_list', 'ord_save', 'ordenes_data', 'novedad_num', 'qb_bill', 'recibo_inventario', 'parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'lote_add', 'lote_del', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
+const DAY_MS = 86400000;
 const ESTADOS = ['', 'ok', 'parcial', 'no', 'pendiente'];
 const ymdOk = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '');
 
