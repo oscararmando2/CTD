@@ -468,27 +468,6 @@ module.exports = async (req, res) => {
             grupo: e.grupo || '', grupoTitulo: e.grupoTitulo || '', grupoCorto: e.grupoCorto || '' }));
         return res.json({ list, today });
       }
-      case 'vend_probe': {
-        // TEMPORAL (16 oct 2026, pedido por Oscar): qué datos de actividad de vendedores trae InSitu.
-        // Un endpoint por llamada; solo nombres de campos, conteos y rango de fechas (sin nombres, clientes ni ubicaciones).
-        const keysOf = (o) => (o && typeof o === 'object' ? Object.keys(o).map((k) => (o[k] && typeof o[k] === 'object' && !Array.isArray(o[k]) ? `${k}{${Object.keys(o[k]).join(',')}}` : Array.isArray(o[k]) ? `${k}[${o[k].length}${o[k][0] && typeof o[k][0] === 'object' ? ':' + Object.keys(o[k][0]).join(',') : ''}]` : k)) : []);
-        const fechas = (arr) => { const ts = arr.map((x) => Date.parse(String(x.visit_date || x.check_in || x.start_date || x.created_at || x.date || x.order_date || x.timestamp || x.updated_at || '').replace(' ', 'T'))).filter(isFinite).sort(); return ts.length ? [new Date(ts[0]).toISOString().slice(0, 10), new Date(ts[ts.length - 1]).toISOString().slice(0, 10)] : null; };
-        const f = (d) => d.toISOString().slice(0, 19).replace('T', ' ');
-        const tok = await db('GET', 'insitu/token');
-        const path = ['/visits', '/mobile_users', '/route_mobile', '/sdv_routes', '/tasks', '/surveys', '/orders', '/user_tracking'].includes(body.path) ? body.path : '/visits';
-        let params = { limit: 100 };
-        if (path === '/orders') params = { limit: 100, fromDate: f(new Date(Date.now() - 30 * DAY_MS)), toDate: f(new Date()) };
-        if (path === '/user_tracking') params = { mobile_user_login: String(body.login || ''), fromDate: f(new Date(Date.now() - 7 * DAY_MS)), toDate: f(new Date()) };
-        try {
-          const r = await fetch(`https://app.b2bmobilesales.com/api/v1${path}?${new URLSearchParams(params)}`, { headers: { Authorization: (tok.scheme ?? 'Bearer ') + tok.token }, signal: AbortSignal.timeout(20000) });
-          const j = await r.json().catch(() => null);
-          const arr = Array.isArray(j) ? j : (j && Object.values(j).find(Array.isArray)) || [];
-          const out = { path, status: r.status, topKeys: j && !Array.isArray(j) ? Object.keys(j) : 'array', n: arr.length, total: j && (j.total ?? j.count ?? null), campos: keysOf(arr[0]), fechas: fechas(arr) };
-          if (path === '/mobile_users') out.logins = arr.map((x) => x.login || x.mobile_user_login).filter(Boolean); // solo el login (para probar el rastreo)
-          if (path === '/visits') out.porUsuario = Object.values(arr.reduce((a, x) => { const k = x.mobile_user_login || x.user_login || x.mobile_user_id || '?'; a[k] = (a[k] || 0) + 1; return a; }, {}));
-          return res.json(out);
-        } catch (e) { return res.json({ path, error: String(e.message || e).slice(0, 160) }); }
-      }
       case 'catalogo': {
         // Primero la copia de InSitu (trae fotos); si no hay, la lista de QuickBooks (el Id es el mismo código que en InSitu)
         const snap = await db('GET', 'catalogo');
@@ -1024,7 +1003,7 @@ async function avisosTienda() {
   return out.sort((a, b) => a.dias - b.dias || a.tienda.localeCompare(b.tienda)).slice(0, 300);
 }
 const NOV_TIPOS = ['damaged', 'missing item', 'short date format', 'spare'];
-const RECIBO_ACTIONS = ['vend_probe', 'ord_list', 'ord_save', 'ordenes_data', 'novedad_num', 'qb_bill', 'recibo_inventario', 'parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'lote_add', 'lote_del', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
+const RECIBO_ACTIONS = ['ord_list', 'ord_save', 'ordenes_data', 'novedad_num', 'qb_bill', 'recibo_inventario', 'parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'lote_add', 'lote_del', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
 const DAY_MS = 86400000;
 const ESTADOS = ['', 'ok', 'parcial', 'no', 'pendiente'];
 const ymdOk = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '');
