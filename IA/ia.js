@@ -2491,7 +2491,7 @@
       const p = S.products.find((x) => String(x.upc || '').toLowerCase().replace(/[^a-z0-9]/g, '') === cc && sameSize(l.producto, x.name) && nameScore(l.producto, x.name) >= 0.34);
       if (p) return { p, how: 'código' };
     }
-    if (l.upc) { const p = S.products.find((x) => sameUpc(x.upc, l.upc)); if (p) return { p, how: 'UPC' }; }
+    if (l.upc) { const p = S.products.find((x) => sameUpc(x.upc, l.upc) || (x.ean && sameUpc(x.ean, l.upc))); if (p) return { p, how: 'UPC' }; }
     let best = null;
     const lineUpc = upcCore(l.upc).length >= 8;
     S.products.forEach((p) => {
@@ -3281,7 +3281,7 @@
       const p = list.find((x) => codeCore(x.upc) === cc && sameSize(l.producto, x.name) && nameScore(l.producto, x.name) >= 0.34);
       if (p) return { p, how: 'código' };
     }
-    if (l.upc) { const p = list.find((x) => sameUpc(x.upc, l.upc)); if (p) return { p, how: 'UPC' }; }
+    if (l.upc) { const p = list.find((x) => sameUpc(x.upc, l.upc) || (x.ean && sameUpc(x.ean, l.upc))); if (p) return { p, how: 'UPC' }; }
     let best = null;
     list.forEach((p) => {
       if (!sameSize(l.producto, p.name) || otroProducto(l.producto, p.name)) return;
