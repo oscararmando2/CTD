@@ -524,6 +524,11 @@ module.exports = async (req, res) => {
           novedad: (prev && prev.novedad) || null,
           recv: r.recv && typeof r.recv === 'object' ? { pallets: str(r.recv.pallets, 10), combinados: str(r.recv.combinados, 10), temp: str(r.recv.temp, 20), por: str(r.recv.por, 80) } : (prev && prev.recv) || null,
         };
+        // Los renglones los manda Costeo: una copia vieja del teléfono (ej. el mix sin separar) no los regresa
+        if (costeoId && prev && prev.updatedBy === 'costeo' && Number(r.updated || 0) < Number(prev.updated || 0)) {
+          const cl = await db('GET', 'costeoFacturas/' + codeKey(costeoId) + '/lines');
+          if (Array.isArray(cl) && cl.length) { const up = reciboAlDia(rec, cl); if (up.lines) rec.lines = up.lines; }
+        }
         await db('PUT', 'recibos/' + id, rec);
         if (final) await syncLotes(id, prev, rec);
         // Inventario: lo que llegó entra a InSitu (ajuste), en piezas o cajas según se venda el producto
@@ -719,6 +724,11 @@ module.exports = async (req, res) => {
       case 'recibo_get': {
         const f = await db('GET', 'recibos/' + codeKey(body.id));
         if (!f) return res.status(404).json({ error: 'No existe' });
+        // Si Costeo ya cambió los renglones (separó un mix, ligó otro producto), se pone al día al abrirlo
+        if (f.status === 'borrador' && f.costeoId) {
+          const cl = await db('GET', 'costeoFacturas/' + codeKey(f.costeoId) + '/lines');
+          if (Array.isArray(cl) && cl.length) { const up = reciboAlDia(f, cl); if (up.lines) { await db('PATCH', 'recibos/' + f.id, up); Object.assign(f, up); } }
+        }
         return res.json({ recibo: f });
       }
       case 'recibo_costeado': {

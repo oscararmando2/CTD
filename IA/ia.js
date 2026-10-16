@@ -3349,6 +3349,21 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  // La factura abierta en este teléfono se pone al día con lo del servidor (Costeo pudo separar o ligar renglones)
+  async function recAlDia() {
+    if (!R.rec || !R.rec.id) return;
+    try {
+      const { recibo } = await cosCall('recibo_get', { id: R.rec.id });
+      if (!recibo || !R.rec || recibo.id !== R.rec.id) return;
+      const firma = (L) => (L || []).map((l) => `${l.producto}|${l.sku || ''}|${l.cantidad}`).join('~');
+      if (firma(recibo.lines) === firma(R.rec.lines)) return;
+      R.rec = { ...recibo, lines: recibo.lines || [] };
+      const list = await recProducts();
+      R.rec.lines.forEach((l) => { if (l.sku && !l.photo) { const p = list.find((x) => String(x.id) === String(l.sku)); if (p) { l.photo = p.photo || ''; l.upcSis = l.upcSis || p.upc || ''; } } });
+      R.cur = 0; nextCard(); store.set(K_REC, R.rec); renderRecibo();
+      toast('La factura se actualizó con los cambios de Costeo');
+    } catch (e) { /* sin red: se queda la copia */ }
+  }
   // Guardado: en este dispositivo al instante y en la nube (para seguir en otro teléfono / que lo vea Costeo)
   function touchRec() {
     store.set(K_REC, R.rec);
@@ -4994,7 +5009,7 @@
     $('#recView').hidden = !rec;
     $('#fechView').hidden = !fech;
     if (fech) renderFechas(true);
-    if (rec) { R.list = null; renderRecibo(); }
+    if (rec) { R.list = null; renderRecibo(); recAlDia(); }
     $('#ordView').hidden = !ord;
     $('#cosView').hidden = !cos;
     $('#dock').hidden = ord || cos || ven || rec || fech || cat || cred || inv;
