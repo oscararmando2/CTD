@@ -265,7 +265,7 @@ module.exports = async (req, res) => {
         if (recibo) {
           recStatus = recibo.status;
           if (recibo.status === 'revisado') { await db('PATCH', 'recibos/' + recibo.id, { status: 'costeado', costeoId: id, costeadoBy: who, costeadoAt: Date.now() }); recStatus = 'costeado'; }
-          else if (recibo.status === 'borrador') await db('PATCH', 'recibos/' + recibo.id, { costeoId: id });
+          else if (recibo.status === 'borrador') await db('PATCH', 'recibos/' + recibo.id, { costeoId: id, ...reciboAlDia(recibo, rec.lines) });
         } else {
           const rid = Date.now().toString(36) + crypto.randomBytes(3).toString('hex');
           recibo = {
@@ -989,6 +989,23 @@ const RECIBO_ACTIONS = ['ord_list', 'ord_save', 'ordenes_data', 'novedad_num', '
 const ESTADOS = ['', 'ok', 'parcial', 'no', 'pendiente'];
 const ymdOk = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '');
 
+// Costeo cambió renglones (separó un mix, ligó a otro producto…): bodega ve lo mismo sin recargar nada.
+// Lo que bodega ya revisó en un renglón que sigue igual se conserva.
+function reciboAlDia(recibo, lines) {
+  const nk = (s) => String(s || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9]+/g, ' ').trim();
+  const viejos = (recibo.lines || []).slice();
+  const out = lines.map((l) => {
+    const sku = l.sku || (l.nuevo && l.aplicado ? l.qbId : '');
+    let j = viejos.findIndex((o) => nk(o.producto) === nk(l.producto) && sku && String(o.sku) === String(sku));
+    if (j < 0) j = viejos.findIndex((o) => nk(o.producto) === nk(l.producto));
+    const o = j >= 0 ? viejos.splice(j, 1)[0] : null;
+    const base = { producto: l.producto, upc: l.upc, codigo_proveedor: l.codigo_proveedor, cantidad: l.cantidad, empaque: l.empaque, costo_caja: l.costo_caja, sku, nombre: l.nombre, how: 'costeo' };
+    if (o && Number(o.cantidad) === Number(l.cantidad)) return { ...o, ...base, how: o.how || 'costeo' };
+    return { ...base, estado: '', recibido: null, caducidad: l.caducidad || '', leida: l.caducidad || '', nota: '' };
+  });
+  const igual = out.length === (recibo.lines || []).length && out.every((x, i) => nk(x.producto) === nk(recibo.lines[i].producto) && String(x.sku || '') === String(recibo.lines[i].sku || '') && x.nombre === recibo.lines[i].nombre);
+  return igual ? {} : { lines: out, updated: Date.now(), updatedBy: 'costeo' };
+}
 async function findRecibo(key) {
   if (!key || /\|$/.test(key)) return null;
   const all = (await db('GET', 'recibos')) || {};
