@@ -2533,6 +2533,7 @@
   // El costo SIEMPRE se actualiza si cambió (salvo que lo desmarques a mano); el precio solo si escribes uno nuevo
   function decide(l) {
     if (l.offManual) { l.aplicar = false; return; }
+    if (l.nuevo && !creado(l) && l.rec && l.rec.estado === 'no') { l.aplicar = false; return; } // bodega dice que no llegó: no se da de alta
     if (l.nuevo) { l.aplicar = !creado(l) || priceChanged(l) || !same2(cu(l), l.costo_antes); return; }
     l.aplicar = priceChanged(l) || !same2(cu(l), l.costo_antes);
   }
@@ -2990,11 +2991,15 @@
       const dud = C.lines.filter((l) => l.aplicar && l.nuevo && !creado(l) && l.parecidoQb);
       if (dud.length && !confirm(`Ojo: en QuickBooks ya hay productos parecidos:\n\n${dud.map((l) => `• ${l.alta.name}\n   parecido a: ${l.parecidoQb}`).join('\n')}\n\n¿Darlos de alta de todos modos? (Cancelar para revisarlos con "¿Ya existe? buscar y ligar")`)) return;
     }
-    const faltan = sel.filter((l) => l.nuevo && !creado(l) && (!ctdOk(l.alta.sku) || !l.alta.cat || !String(l.alta.brand || '').trim() || !l.alta.vendorId));
+    // El mismo producto nuevo en dos renglones (ej. la factura lo repite): se da de alta una sola vez
+    const altaKey = (l) => cleanTitle(l.alta.name || l.producto);
+    const vistos = new Set(), repetidos = new Set();
+    sel.filter((l) => l.nuevo && !creado(l)).forEach((l) => { const k = altaKey(l); if (vistos.has(k)) repetidos.add(l); else vistos.add(k); });
+    const faltan = sel.filter((l) => l.nuevo && !creado(l) && !repetidos.has(l) && (!ctdOk(l.alta.sku) || !l.alta.cat || !String(l.alta.brand || '').trim() || !l.alta.vendorId));
     if (faltan.length) { toast(`Falta SKU (CTD-####), categoría, marca o proveedor en ${faltan.length} ${faltan.length === 1 ? 'producto nuevo' : 'productos nuevos'}`); const el = $(`.cos-l[data-i="${faltan[0].i}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
-    const creates = sel.filter((l) => l.nuevo && !creado(l)).map((l) => ({ name: l.alta.name, sku: l.alta.sku, price: effPrice(l), cost: cu(l), photo: l.alta.photo, description: l.producto,
+    const creates = sel.filter((l) => l.nuevo && !creado(l) && !repetidos.has(l)).map((l) => ({ name: l.alta.name, sku: l.alta.sku, price: effPrice(l), cost: cu(l), photo: l.alta.photo, description: l.producto,
       barcode: String(l.alta.barcode || '').trim(), cat: l.alta.cat, brand: String(l.alta.brand || '').trim(), vendorId: l.alta.vendorId, units: l.alta.units || '' }));
-    const sinPrecio = sel.filter((l) => l.nuevo && !creado(l) && l.precio_nuevo == null).length;
+    const sinPrecio = sel.filter((l) => l.nuevo && !creado(l) && !repetidos.has(l) && l.precio_nuevo == null).length;
     const nP = changes.filter((c) => c.price != null).length, nC = changes.filter((c) => c.cost != null).length;
     if (!changes.length && !creates.length) { toast('No hay cambios que aplicar'); return; }
     if (!confirm(`¿Aplicar en QuickBooks?\n\n• ${nP} cambios de precio\n• ${nC} cambios de costo\n• ${creates.length} productos nuevos${sinPrecio ? ` (${sinPrecio} sin precio escrito: se usa el sugerido de ${CS.target}%)` : ''}\n\nInSitu los recibe en su siguiente sincronización (máx. 1 hora).`)) return;
@@ -3008,6 +3013,8 @@
           l.result = r; if (r.qbId && l.nuevo) l.qbId = r.qbId; if (r.note) l.duda = r.note;
           // Lo aplicado pasa a ser lo "de antes" (por si se corrige otra vez)
           if (r.ok) { l.costo_antes = cu(l); if (l.precio_nuevo != null && !(l.qb && l.qb.special)) l.precio_antes = l.precio_nuevo; else if (l.nuevo) l.precio_antes = effPrice(l); l.aplicar = false; }
+          // los otros renglones del mismo producto nuevo quedan ligados al que se acaba de dar de alta
+          if (r.create && r.ok && r.qbId) C.lines.filter((x) => x !== l && x.nuevo && !creado(x) && x.alta && cleanTitle(x.alta.name || x.producto) === cleanTitle(r.create)).forEach((x) => { x.qbId = r.qbId; x.result = r; x.aplicar = false; x.costo_antes = cu(x); x.precio_antes = l.precio_antes; });
         }
       });
       const bad = d.results.filter((r) => !r.ok).length;
@@ -3093,6 +3100,7 @@
       used.add(k);
       const x = L[k];
       l.rec = { estado: x.estado || '', recibido: x.recibido, caducidad: x.caducidad, nota: x.nota };
+      if (l.nuevo && !creado(l) && x.estado === 'no') l.aplicar = false; // no llegó: no se da de alta
       // Bodega ya lo ligó a un producto y aquí no se encontró: se usa el de bodega
       const p = (l.nuevo || l.review) && x.sku && !/revisa/.test(x.how || '') ? S.products.find((q) => String(q.id) === String(x.sku)) : null;
       if (p) { Object.assign(l, { nuevo: false, sku: String(p.id), nombre: p.name, photo: p.photo, pack: p.pack, costo_antes: r2(p.cost || 0), precio_antes: r2(p.price || 0), how: 'bodega', review: false }); delete l.alta; decide(l); }
