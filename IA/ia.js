@@ -5268,22 +5268,33 @@
     return ids;
   }
 
+  // Productos que se venden por pieza pero se compran por caja (ej. Mayonesa BB, CJ 32 UNDS): la orden va en cajas
+  function pzPorCaja(p) {
+    if (!/pieza/i.test(p.pack || '') && !/each|count/i.test(p.units || '')) return 0;
+    const mem = store.get(PZ_KEY, {})[String(p.id)];
+    if (mem > 1) return mem;
+    const s = String(p.name || '');
+    const m = s.match(/\bCJ\.?\s*(\d{1,3})\b/i) || s.match(/\b(\d{1,3})\s*(?:UNDS?|UDS|UNIDADES|PZAS?|PIEZAS|PCS|CT)\b/i);
+    const n = m ? Number(m[1]) : 0;
+    return n > 1 ? n : 0;
+  }
   function lineFor(p, special) {
     const st = p.st;
     if (!st) return null;
-    const rate = weeklyRate(st);
+    const pzc = pzPorCaja(p), f = pzc > 1 ? pzc : 1; // ventas y existencia vienen en piezas → se pasan a cajas
+    const rate = weeklyRate(st) / f;
     const cycle = Math.min(42, (p.buy && p.buy.cycle) || 21); // tope 6 semanas: compras muy espaciadas no disparan órdenes enormes
     const days = cycle + OS.lead;
     const boost = special.has(String(p.id)) ? 1.3 : 1;
     const need = (rate / 7) * days * (1 + OS.safety / 100) * boost;
-    const stock = p.stock != null ? Math.max(0, p.stock) : 0;
+    const stock = p.stock != null ? Math.max(0, p.stock) / f : 0;
     const qty = Math.ceil(need - stock - 1e-9);
     const left = rate > 0 ? stock / (rate / 7) : Infinity;
     return {
-      id: String(p.id), name: p.name, upc: p.upc || '', pack: p.pack || '', photo: p.photo || '',
+      id: String(p.id), name: p.name, upc: p.upc || '', pack: pzc > 1 ? `Caja ${pzc} (se vende por pieza)` : p.pack || '', photo: p.photo || '',
       vendor: (p.buy && p.buy.vendor) || p.vendor || 'Sin proveedor',
-      cost: (p.buy && p.buy.lastCost) || p.cost || 0,
-      qty, sug: qty, rate: r2(rate), stock: p.stock, left: isFinite(left) ? Math.round(left) : null,
+      cost: ((p.buy && p.buy.lastCost) || p.cost || 0) * f, pzCaja: pzc > 1 ? pzc : 0,
+      qty, sug: qty, rate: r2(rate), stock: p.stock != null ? r2(p.stock / f) : p.stock, left: isFinite(left) ? Math.round(left) : null,
       cycle, cycleOwn: !!(p.buy && p.buy.cycleOwn), lastBuy: p.buy ? p.buy.last : null, boost: boost > 1,
     };
   }
@@ -5305,7 +5316,7 @@
     const st = Number(l.stock) || 0;
     const left = l.rate > 0 && st > 0 ? Math.round(st / (l.rate / 7)) : 0;
     const stockTxt = st < 0 ? `no hay (InSitu marca ${nfmt(st)})` : st === 0 ? 'ya no hay' : `quedan ${cajas(st)} (${span(left)})`;
-    const base = l.rate > 0 ? `Vendes ~${nfmt(l.rate)} cajas/semana y ${stockTxt}.` : '';
+    const base = l.rate > 0 ? (l.pzCaja ? `Vendes ~${nfmt(l.rate * l.pzCaja)} piezas/semana (~${nfmt(l.rate)} cajas de ${l.pzCaja}) y ${stockTxt}.` : `Vendes ~${nfmt(l.rate)} cajas/semana y ${stockTxt}.`) : '';
     if (l.manual && !base) return `Agregado a mano. Con ${cajas(l.qty)}.`;
     const cyc = l.cycleOwn ? `Le compras cada ~${l.cycle} días` : `Se compra cada ~${l.cycle} días (${l.lastBuy ? 'promedio del proveedor' : 'estimado'})`;
     if (!l.manual && l.qty === l.sug) {
