@@ -650,8 +650,10 @@ module.exports = async (req, res) => {
           }
           if (!/^\d+$/.test(sku)) { faltan.push(l.nombre || l.producto); return; }
           const mem = (pzMem || {})[codeKey(sku)];
-          const pzL = cs.pz > 1 ? cs.pz : mem > 1 ? mem : 0;
-          const porPieza = pzL > 1 || (mem == null && /each|count|pieza|unit/i.test(units[sku] || ''));
+          // Lo que decidió Costeo para ESTE renglón manda (la factura puede venir en cajas o ya en piezas); la memoria solo si no hay Costeo
+          const deCosteo = cs.sku != null && cs.pz != null;
+          const pzL = deCosteo ? (cs.pz > 1 ? cs.pz : 0) : mem > 1 ? mem : 0;
+          const porPieza = pzL > 1 || (!deCosteo && mem == null && /each|count|pieza|unit/i.test(units[sku] || ''));
           const n = pzL > 1 ? pzL : piezasDe(l);
           if (porPieza && !(n > 1)) { faltan.push(`${l.nombre || l.producto} (por pieza: no sé cuántas trae la caja)`); return; }
           const costo = Number(l.costo_caja) || 0;
