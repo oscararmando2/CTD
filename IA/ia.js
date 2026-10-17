@@ -2011,10 +2011,18 @@
   /* ================= CATÁLOGO DESCARGABLE =================
    * PDF para vendedores/clientes: primero las promociones activas (mismo diseño de especiales) y luego
    * todo el catálogo por departamento con foto, empaque y precio. Sin costos y sin productos CR- (crédito). */
-  const CT = { deps: new Set(), stock: true, promos: true, vig: null }; // deps vacío = todos los departamentos
+  const CT = { deps: new Set(), stock: true, promos: true, vig: null, altas: null }; // deps vacío = todos los departamentos
   const depOn = (d) => !CT.deps.size || CT.deps.has(d);
+  // Recién dados de alta (Costeo, últimos 30 días): salen aunque todavía no tengan existencia y van primero en el PDF
+  const NUEVO_DIAS = 30;
+  const altaDe = (p) => p.alta || (CT.altas && CT.altas[String(p.id)]) || 0;
+  const esNuevoCat = (p) => { const t = altaDe(p); return t && Date.now() - t < NUEVO_DIAS * DAY; };
+  function loadCatAltas() {
+    if (CT.altas) return Promise.resolve();
+    return cosCall('catalogo').then((d) => { CT.altas = {}; (d.items || []).forEach((x) => { if (x.alta) CT.altas[String(x.id)] = x.alta; }); }).catch(() => { CT.altas = {}; });
+  }
   function catalogItems() {
-    return S.products.filter((p) => p.price > 0 && !isCredito(p) && !EXCLUDE_CATS.includes(p.cat) && (!CT.stock || p.stock == null || p.stock > 0));
+    return S.products.filter((p) => p.price > 0 && !isCredito(p) && !EXCLUDE_CATS.includes(p.cat) && (!CT.stock || p.stock == null || p.stock > 0 || esNuevoCat(p)));
   }
   function catalogDeps() {
     const m = new Map();
@@ -2034,7 +2042,10 @@
     $('#catDeps').innerHTML = `<button type="button" class="${CT.deps.size ? '' : 'on'}" data-d="">Todos<small>${catalogItems().length}</small></button>`
       + deps.map(([d, c]) => `<button type="button" class="${CT.deps.has(d) ? 'on' : ''}" data-d="${esc(d)}">${esc(d)}<small>${c}</small></button>`).join('');
     $('#catStock').checked = CT.stock; $('#catPromos').checked = CT.promos;
+    const nn = catalogItems().filter((p) => esNuevoCat(p) && depOn(p.cat || 'Otros')).length;
+    if (nn) $('#catInfo').innerHTML += ` · <b>${nn} ${nn === 1 ? 'producto nuevo' : 'productos nuevos'}</b> (van primero, en "Lo más nuevo")`;
     if (!CT.vig) loadCatVig().then(renderCatalogo);
+    if (!CT.altas) loadCatAltas().then(renderCatalogo);
   }
   $('#catDeps').addEventListener('click', (e) => {
     const b = e.target.closest('[data-d]'); if (!b) return;
@@ -2048,6 +2059,7 @@
     const items = catalogItems().filter((p) => depOn(p.cat || 'Otros'));
     if (!items.length) { toast(S.products.length ? 'No hay productos con esos filtros' : 'Todavía se están cargando los productos'); return; }
     if (CT.promos && !CT.vig) await loadCatVig();
+    if (!CT.altas) await loadCatAltas();
     vigData = CT.promos ? (CT.vig || []) : [];
     sheetCards = vigToCards(); sheetCat = items; sheetReport = null; sheetTheme = null;
     buildSheet(); openModal('#clientModal'); fitPages();
@@ -2055,6 +2067,8 @@
   // Páginas del catálogo: departamentos en orden, 4 columnas; el título del departamento se repite si continúa
   function catalogPages(items, style, t, startIdx) {
     const byDep = new Map();
+    const nuevos = items.filter(esNuevoCat).sort((a, b) => altaDe(b) - altaDe(a));
+    if (nuevos.length) byDep.set('Lo más nuevo', nuevos);
     [...items].sort((a, b) => (a.cat || 'Otros').localeCompare(b.cat || 'Otros') || a.name.localeCompare(b.name))
       .forEach((p) => { const d = p.cat || 'Otros'; (byDep.get(d) || byDep.set(d, []).get(d)).push(p); });
     const COLS = 4, ROW = 206, HEAD = 46, AVAIL = 1056 - 116 - 70; // alto útil de la hoja
@@ -2073,7 +2087,7 @@
     flush();
     const date = new Date(), dtxt = `${date.getDate()} de ${MESES[date.getMonth()]} de ${date.getFullYear()}`;
     const item = (p) => `<div class="ct-i">
-        <div class="ct-ph">${p.photo ? `<img src="${esc(proxied(p.photo))}" crossorigin="anonymous" alt="">` : ''}</div>
+        <div class="ct-ph">${p.photo ? `<img src="${esc(proxied(p.photo))}" crossorigin="anonymous" alt="">` : ''}${esNuevoCat(p) ? '<span class="ct-new">NUEVO</span>' : ''}</div>
         <div class="ct-n">${esc(p.name.length > 54 ? p.name.slice(0, 52).trim() + '…' : p.name)}</div>
         <div class="ct-f"><span class="ct-pk">${esc(p.pack || '')}</span><b class="ct-pr">${money(p.price)}</b></div>
       </div>`;
