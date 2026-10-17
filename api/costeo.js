@@ -620,8 +620,8 @@ module.exports = async (req, res) => {
         }
         // Renglones: lo recibido (si bodega ya revisó) o lo de la factura; en piezas si se vende por pieza
         const [pzMem, cat] = await Promise.all([db('GET', 'costeoPz'), db('GET', 'catalogo')]);
-        const units = {};
-        ((cat && cat.items) || []).forEach((p) => { units[String(p.id)] = String(p.units || ''); });
+        const units = {}, precioPz = {};
+        ((cat && cat.items) || []).forEach((p) => { units[String(p.id)] = String(p.units || ''); precioPz[String(p.id)] = Number(p.price) || 0; });
         const skuCos = {};
         ((cos && cos.lines) || []).forEach((l) => { const s = l.qbId || l.sku; if (s) skuCos[norm(l.producto)] = { sku: String(s), pz: l.pz || 0 }; });
         // Renglones sin ligar: se buscan en QuickBooks por SKU (código del proveedor, ej. 5205) o UPC — ej. recién dado de alta en Costeo
@@ -652,7 +652,9 @@ module.exports = async (req, res) => {
           const mem = (pzMem || {})[codeKey(sku)];
           // Lo que decidió Costeo para ESTE renglón manda (la factura puede venir en cajas o ya en piezas); la memoria solo si no hay Costeo
           const deCosteo = cs.sku != null && cs.pz != null;
-          const pzL = deCosteo ? (cs.pz > 1 ? cs.pz : 0) : mem > 1 ? mem : 0;
+          let pzL = deCosteo ? (cs.pz > 1 ? cs.pz : 0) : mem > 1 ? mem : 0;
+          // Si el costo del renglón no llega ni al precio de venta de UNA pieza, la factura ya viene en piezas: no se multiplica
+          if (pzL > 1 && precioPz[sku] > 0 && (Number(l.costo_caja) || 0) <= precioPz[sku] * 1.2) pzL = 0;
           const porPieza = pzL > 1 || (!deCosteo && mem == null && /each|count|pieza|unit/i.test(units[sku] || ''));
           const n = pzL > 1 ? pzL : piezasDe(l);
           if (porPieza && !(n > 1)) { faltan.push(`${l.nombre || l.producto} (por pieza: no sé cuántas trae la caja)`); return; }
