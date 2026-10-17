@@ -2534,7 +2534,12 @@
     const n = piezasCaja(l), local = store.get(PZ_KEY, {})[l.sku], srv = (C.pzMem || {})[String(l.sku || '').replace(/[.#$/[\]\s]+/g, '_')];
     const man = local != null ? local : srv; // lo que ya se eligió/aprendió en Costeo
     l.pzCaja = n;
-    if (man != null && !l.nuevo) { l.pz = man > 1 ? man : 0; l.pzSet = true; return; }
+    l.factPieza = 0;
+    if (man != null && !l.nuevo) {
+      // Se vende por pieza, pero esta factura ya viene en piezas (precio ≈ costo de una pieza, ej. Cortes: Mayonesa BB 320 a $1.63): no se divide
+      if (man > 1 && l.costo_antes > 0) { const r = l.costo_caja / l.costo_antes; if (r > 0.6 && r < 1.6) { l.pz = 0; l.pzSet = false; l.factPieza = man; return; } }
+      l.pz = man > 1 ? man : 0; l.pzSet = true; return;
+    }
     if (n < 2) { l.pz = 0; return; }
     // Se vende por pieza si en InSitu es "Pieza" o si el costo de QuickBooks es ~ el de la caja entre las piezas
     const r = l.costo_antes > 0 ? l.costo_caja / l.costo_antes : 0;
@@ -2824,6 +2829,7 @@
     const badges = [
       l.nuevo ? '<span class="pill new">NUEVO</span>' : '',
       l.pz > 1 ? `<span class="pill">se vende por pieza · ${l.pz} por caja</span>` : '',
+      l.factPieza ? `<span class="pill">la factura ya viene en piezas (${l.factPieza} por caja)</span>` : '',
       !l.nuevo && delta > 0.005 ? `<span class="pill bad">▲ costo +${money(delta)} (${pct(pctD)})</span>` : '',
       !l.nuevo && delta < -0.005 ? `<span class="pill ok">▼ costo ${money(delta)} (${pct(pctD)})</span>` : '',
       m1 < CS.target / 100 - 1e-9 ? `<span class="pill warn">margen ${pct(m1)} &lt; ${CS.target}%</span>` : '',
