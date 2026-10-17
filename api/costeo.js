@@ -517,7 +517,22 @@ module.exports = async (req, res) => {
         const r = body.recibo || {};
         const id = /^[a-z0-9]{6,32}$/.test(String(r.id || '')) ? String(r.id) : Date.now().toString(36) + crypto.randomBytes(3).toString('hex');
         const prev = await db('GET', 'recibos/' + id);
-        if (prev && prev.status === 'costeado') return res.status(409).json({ error: 'Este recibo ya se costeó; ya no se puede cambiar.' });
+        if (prev && prev.status === 'costeado') {
+          // Ya costeado: solo se deja corregir el costo de los sobrantes que agregó bodega
+          const nuevos = (Array.isArray(r.lines) ? r.lines : []).filter((l) => l && l.how === 'agregado');
+          let cambio = false;
+          const lines = (prev.lines || []).map((o) => {
+            if (o.how !== 'agregado') return o;
+            const n = nuevos.find((x) => String(x.sku) === String(o.sku));
+            if (!n || num(n.costo_caja) === num(o.costo_caja)) return o;
+            cambio = true;
+            const c = Math.max(0, num(n.costo_caja) || 0);
+            return { ...o, costo_caja: c, total_linea: Math.round(c * (Number(o.recibido ?? o.cantidad) || 0) * 100) / 100, nota: str(n.nota, 300) || o.nota };
+          });
+          if (!cambio) return res.status(409).json({ error: 'Este recibo ya se costeó; ya no se puede cambiar.' });
+          await db('PATCH', 'recibos/' + id, { lines, updated: Date.now(), updatedBy: who });
+          return res.json({ id, status: 'costeado' });
+        }
         const final = body.final === true || (prev && prev.status === 'revisado');
         const now = Date.now();
         const h = r.head || {};
