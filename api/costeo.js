@@ -175,6 +175,30 @@ module.exports = async (req, res) => {
         }
         return res.json({ items: out });
       }
+      case 'costos_subieron': {
+        // Productos de una factura guardada que subieron de costo: del registro de cambios aplicados en QuickBooks
+        // (costo antes → nuevo) y, si no se aplicaron, de los renglones guardados
+        if (RECIBO_ONLY.includes(who)) return res.status(403).json({ error: 'Sin permiso' });
+        const f = await db('GET', 'costeoFacturas/' + codeKey(body.id));
+        if (!f) return res.status(404).json({ error: 'No existe' });
+        const tag = `${f.proveedor} #${f.factura}`;
+        const qlog = (await db('GET', 'qbLog')) || {};
+        const cambio = {};
+        Object.values(qlog).filter((x) => x && x.action === 'costeo-cambio' && x.factura === tag && x.to && x.to.cost != null)
+          .sort((a, b) => a.ts - b.ts).forEach((x) => { const k = String(x.qbId); cambio[k] = { antes: cambio[k] ? cambio[k].antes : r2(x.from.cost), nuevo: r2(x.to.cost), precio: cambio[k] ? cambio[k].precio : r2(x.from.price), name: x.name }; });
+        const rows = [], vistos = new Set();
+        (f.lines || []).forEach((l) => {
+          const k = String(l.qbId || l.sku || '');
+          const pz = l.pz > 1 ? l.pz : 1, unidad = r2((Number(l.costo_caja) || 0) / pz);
+          let antes = null, nuevo = null, precio = Number(l.precio_antes) || 0;
+          if (k && cambio[k]) ({ antes, nuevo, precio } = cambio[k]);
+          else if (!l.nuevo && l.costo_antes != null && unidad > Number(l.costo_antes) + 0.005) { antes = r2(l.costo_antes); nuevo = unidad; }
+          if (antes == null || !(nuevo > antes + 0.005) || vistos.has(k + '|' + nuevo)) return;
+          vistos.add(k + '|' + nuevo);
+          rows.push({ sku: k, nombre: l.nombre || (cambio[k] && cambio[k].name) || l.producto, producto: l.producto, codigo: l.codigo_proveedor || l.upc || '', cajas: Number(l.cantidad) || 0, pz, antes, nuevo, precio });
+        });
+        return res.json({ proveedor: f.proveedor, factura: f.factura, fecha: f.fecha, rows });
+      }
       case 'apply': {
         const changes = (Array.isArray(body.changes) ? body.changes : []).slice(0, 150);
         const creates = (Array.isArray(body.creates) ? body.creates : []).slice(0, 50);

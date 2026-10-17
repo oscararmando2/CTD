@@ -2736,6 +2736,40 @@
     $('#cosList').innerHTML = C.lines.map(lineCosHTML).join('');
   }
 
+  // PDF (desde Facturas guardadas) de lo que subió de costo; "Precio nuevo" va vacío para escribirlo a mano
+  async function pdfCostosSubieron(id) {
+    toast('Armando el reporte…');
+    const d = await cosCall('costos_subieron', { id });
+    if (!d.rows.length) { toast('En esta factura ningún producto subió de costo'); return; }
+    const rows = d.rows.map((x) => ({ ...x, dif: r2(x.nuevo - x.antes), p: x.antes ? (x.nuevo - x.antes) / x.antes : 0 })).sort((a, b) => b.p - a.p);
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'landscape' });
+    const W = doc.internal.pageSize.getWidth();
+    doc.setFillColor(15, 13, 10); doc.rect(0, 0, W, 70, 'F');
+    doc.setTextColor(242, 163, 30); doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text('CENTRAL TRADE DISTRIBUTION', 36, 26);
+    doc.setTextColor(255, 255, 255); doc.setFontSize(18); doc.text('Productos que subieron de costo', 36, 50);
+    doc.setTextColor(40, 40, 40); doc.setFontSize(11);
+    doc.text(`${d.proveedor} · Factura #${d.factura}${d.fecha ? ' · ' + fmtLong(d.fecha) : ''}`, 36, 92);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(110, 110, 110);
+    doc.text(`${rows.length} ${rows.length === 1 ? 'producto subió' : 'productos subieron'} · margen objetivo ${CS.target}% · ${fmtLong(ymd(new Date()))}`, 36, 108);
+    doc.autoTable({
+      startY: 120, margin: { left: 36, right: 36 },
+      head: [['#', 'SKU', 'Producto', 'Cajas', 'Costo antes', 'Costo nuevo', 'Subió', '%', 'Precio actual', 'Margen con precio actual', `Sugerido ${CS.target}%`, 'Precio nuevo']],
+      body: rows.map((x, i) => [i + 1, x.sku, x.nombre + (x.pz > 1 ? `\n(por pieza · ${x.pz} por caja)` : ''), nfmt(x.cajas), money(x.antes), money(x.nuevo), '+' + money(x.dif), pct(x.p), x.precio ? money(x.precio) : '—', x.precio ? pct(marginOf(x.precio, x.nuevo)) : '—', money(priceFor(x.nuevo)), '']),
+      styles: { fontSize: 8.5, cellPadding: 5, valign: 'middle', lineColor: [225, 222, 215], lineWidth: 0.5 },
+      headStyles: { fillColor: [15, 13, 10], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+      columnStyles: { 0: { cellWidth: 22, halign: 'right' }, 1: { cellWidth: 52 }, 3: { cellWidth: 38, halign: 'right' }, 4: { cellWidth: 56, halign: 'right' }, 5: { cellWidth: 56, halign: 'right', fontStyle: 'bold' }, 6: { cellWidth: 50, halign: 'right', textColor: [216, 51, 27], fontStyle: 'bold' }, 7: { cellWidth: 40, halign: 'right', textColor: [216, 51, 27], fontStyle: 'bold' }, 8: { cellWidth: 56, halign: 'right' }, 9: { cellWidth: 62, halign: 'right' }, 10: { cellWidth: 56, halign: 'right' }, 11: { cellWidth: 70, fillColor: [255, 248, 230] } },
+      alternateRowStyles: { fillColor: [250, 248, 243] },
+      didParseCell: (h) => { if (h.section === 'body' && h.column.index === 9) { const x = rows[h.row.index]; if (x.precio && marginOf(x.precio, x.nuevo) < CS.target / 100 - 1e-9) { h.cell.styles.textColor = [180, 83, 9]; h.cell.styles.fontStyle = 'bold'; } } },
+    });
+    const pages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pages; i++) { doc.setPage(i); doc.setFontSize(8); doc.setTextColor(150, 150, 150); doc.text(`Hoja ${i} de ${pages}`, W - 36, doc.internal.pageSize.getHeight() - 18, { align: 'right' }); }
+    download(doc.output('blob'), `Costos-subieron-${normTxt(d.proveedor || '').replace(/[^a-z0-9]+/g, '-').slice(0, 24)}-${String(d.factura || '').replace(/[^\w-]+/g, '')}.pdf`);
+    toast('PDF de costos que subieron descargado');
+  }
+
   // Excel de los productos que subieron de costo en esta factura
   $('#cosKpis').addEventListener('click', (e) => { if (e.target.closest('#cosUpXls')) excelCostosSubieron().catch((err) => toast('No se pudo: ' + err.message)); });
   async function excelCostosSubieron() {
@@ -3060,11 +3094,13 @@
       const d = await cosCall('list');
       const bod = (f) => f.bodega ? (f.bodega.dif ? `<span class="pill warn">bodega: ${f.bodega.dif} ${f.bodega.dif === 1 ? 'diferencia' : 'diferencias'}</span>` : '<span class="pill ok">bodega: todo llegó</span>')
         : f.bodegaStatus === 'borrador' ? `<span class="pill">bodega: por revisar</span>` : '';
-      box.innerHTML = d.list.length ? d.list.map((f) => `<div class="hist-item" data-cid="${esc(f.id)}"><div class="hi-txt"><b>${esc(f.proveedor)} · #${esc(f.factura)}</b>${esc(f.fecha || '')} · ${f.lines} renglones · ${f.total_factura != null ? money(f.total_factura) : ''} · ${esc(f.by || '')} · ${fmtTs(f.ts)} ${bod(f)}</div><button class="icon-btn" data-c="del" type="button" title="Borrar factura" aria-label="Borrar factura">${icon('trash')}</button><button class="btn btn-ghost btn-sm" data-c="open" type="button">Ver</button></div>`).join('')
+      box.innerHTML = d.list.length ? d.list.map((f) => `<div class="hist-item" data-cid="${esc(f.id)}"><div class="hi-txt"><b>${esc(f.proveedor)} · #${esc(f.factura)}</b>${esc(f.fecha || '')} · ${f.lines} renglones · ${f.total_factura != null ? money(f.total_factura) : ''} · ${esc(f.by || '')} · ${fmtTs(f.ts)} ${bod(f)}</div><button class="icon-btn" data-c="del" type="button" title="Borrar factura" aria-label="Borrar factura">${icon('trash')}</button><button class="btn btn-ghost btn-sm" data-c="pdfup" type="button" title="PDF de los productos que subieron de costo">PDF costos</button><button class="btn btn-ghost btn-sm" data-c="open" type="button">Ver</button></div>`).join('')
         : '<p class="data-info">Todavía no hay facturas guardadas.</p>';
     } catch (e) { box.innerHTML = `<p class="data-info">${esc(e.message)}</p>`; }
   }
   $('#cosRecent').addEventListener('click', async (e) => {
+    const pu = e.target.closest('[data-c="pdfup"]');
+    if (pu) { pu.disabled = true; pdfCostosSubieron(pu.closest('.hist-item').dataset.cid).catch((err) => toast('No se pudo: ' + err.message)).finally(() => { pu.disabled = false; }); return; }
     const del = e.target.closest('[data-c="del"]');
     if (del) {
       const row = del.closest('.hist-item'), name = row.querySelector('b').textContent;
