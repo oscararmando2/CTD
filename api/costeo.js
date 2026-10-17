@@ -323,16 +323,16 @@ module.exports = async (req, res) => {
         }
         // SKU de CTD (CTD-####) en QuickBooks: de ahí InSitu lo pone en Barcode
         let qbSku = '';
-        const sku = ctdNorm(body.sku);
-        if (String(body.sku || '').trim() && !sku) return res.status(400).json({ error: `"${str(body.sku, 30)}" no es un SKU de CTD (ej. CTD-1345)` });
-        if (/^CTD-\d+$/.test(sku) && sku !== String(it.Sku || '').toUpperCase()) {
+        const sku = ctdNorm(body.sku) || (/^\d{2,6}$/.test(String(body.sku || '').trim()) ? String(body.sku).trim() : '');
+        if (String(body.sku || '').trim() && !sku) return res.status(400).json({ error: `"${str(body.sku, 30)}" no es un SKU válido (ej. CTD-1345 o 5205)` });
+        if (sku && sku !== String(it.Sku || '').toUpperCase()) {
           const dupe = ((await qbQuery(`select Id, Name from Item where Sku = '${sku}'`)).Item || []).filter((x) => x.Id !== it.Id);
           if (dupe.length) return res.status(409).json({ error: `El SKU ${sku} ya lo tiene "${dupe[0].Name}" en QuickBooks` });
           const fresh = await qbItem(id);
           await qb('POST', 'item', { Id: fresh.Id, SyncToken: fresh.SyncToken, sparse: true, Sku: sku });
           qbSku = sku;
         }
-        const extra = { photo: /^https?:\/\//.test(String(body.photo || '')) ? String(body.photo).trim().slice(0, 1000) : '', upc: str(body.barcode, 40), cat: str(body.cat, 80), brand: str(body.brand, 80), units: str(body.units, 40), sku: /^CTD-\d+$/.test(sku) ? sku : '' };
+        const extra = { photo: /^https?:\/\//.test(String(body.photo || '')) ? String(body.photo).trim().slice(0, 1000) : '', upc: str(body.barcode, 40), cat: str(body.cat, 80), brand: str(body.brand, 80), units: str(body.units, 40), sku };
         Object.keys(extra).forEach((k) => { if (!extra[k]) delete extra[k]; });
         if (Object.keys(extra).length) await db('PUT', 'costeoFotos/' + id, { ...extra, name: it.Name, ts: Date.now(), by: who });
         await log({ action: 'costeo-completar', name: it.Name, qbId: id, ...extra, qbCat, by: who });

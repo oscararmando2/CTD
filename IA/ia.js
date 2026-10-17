@@ -2808,7 +2808,7 @@
     const nuevo = l.nuevo ? `
       <div class="cos-alta">
         <label class="field alta-n"><span>Nombre en QuickBooks</span><input data-a="name" value="${esc(l.alta.name)}"></label>
-        <label class="field${ctdOk(l.alta.sku) ? '' : ' falta'}"><span>SKU (CTD-####)</span><input data-a="sku" placeholder="CTD-####" value="${esc(ctdOk(l.alta.sku) ? l.alta.sku : (l.alta.sku = ''))}"></label>
+        <label class="field${skuAltaOk(l.alta.sku) ? '' : ' falta'}"><span>SKU (CTD-#### o número)</span><input data-a="sku" placeholder="CTD-#### o 5205" value="${esc(skuAltaOk(l.alta.sku) ? l.alta.sku : (l.alta.sku = ''))}"></label>
         <label class="field"><span>Código de barras (UPC) → Barcode 2</span><input data-a="barcode" inputmode="numeric" value="${esc(l.alta.barcode || '')}"></label>
         <label class="field${l.alta.cat ? '' : ' falta'}"><span>Categoría</span><select data-a="cat"><option value="">Elige…</option>${altaCats().map((c) => `<option${c === l.alta.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
         <label class="field${l.alta.brand ? '' : ' falta'}"><span>Marca</span><input data-a="brand" list="altaBrands" placeholder="Ej. La Costeña" value="${esc(l.alta.brand || '')}"></label>
@@ -2867,7 +2867,7 @@
     else if (f === 'aplicar') { l.aplicar = e.target.checked; l.offManual = !e.target.checked; }
     else if (a) {
       l.alta[a] = e.target.value; if (a === 'photo') el.querySelector('.ol-ph').innerHTML = cosImg(cosPhoto(l));
-      if (a === 'sku') e.target.closest('.field').classList.toggle('falta', !ctdOk(e.target.value));
+      if (a === 'sku') e.target.closest('.field').classList.toggle('falta', !skuAltaOk(e.target.value));
       if (['cat', 'brand', 'vendorId', 'units'].includes(a)) e.target.closest('.field').classList.toggle('falta', !String(e.target.value).trim());
       if (a === 'vendorId') { const m = store.get('ctdIA.altaVendor', {}); m[normTxt(C.head.proveedor || '')] = e.target.value; store.set('ctdIA.altaVendor', m); }
     }
@@ -2893,7 +2893,7 @@
     }
     const box = b.closest('.cos-alta');
     $$('[data-c]', box).forEach((x) => { l.comp[x.dataset.c] = x.value.trim(); });
-    if (l.comp.sku && !ctdOk(l.comp.sku)) { alert(`"${l.comp.sku}" no es un SKU de CTD. Escríbelo así: CTD-1345`); return; }
+    if (l.comp.sku && !skuAltaOk(l.comp.sku)) { alert(`"${l.comp.sku}" no es un SKU válido. Escríbelo así: CTD-1345 o solo el número (ej. 5205)`); return; }
     l.comp.sku = l.comp.sku ? ctdFmt(l.comp.sku) : '';
     b.disabled = true; b.textContent = 'Guardando…';
     try {
@@ -3009,8 +3009,8 @@
     const altaKey = (l) => cleanTitle(l.alta.name || l.producto);
     const vistos = new Set(), repetidos = new Set();
     sel.filter((l) => l.nuevo && !creado(l)).forEach((l) => { const k = altaKey(l); if (vistos.has(k)) repetidos.add(l); else vistos.add(k); });
-    const faltan = sel.filter((l) => l.nuevo && !creado(l) && !repetidos.has(l) && (!ctdOk(l.alta.sku) || !l.alta.cat || !String(l.alta.brand || '').trim() || !l.alta.vendorId));
-    if (faltan.length) { toast(`Falta SKU (CTD-####), categoría, marca o proveedor en ${faltan.length} ${faltan.length === 1 ? 'producto nuevo' : 'productos nuevos'}`); const el = $(`.cos-l[data-i="${faltan[0].i}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+    const faltan = sel.filter((l) => l.nuevo && !creado(l) && !repetidos.has(l) && (!skuAltaOk(l.alta.sku) || !l.alta.cat || !String(l.alta.brand || '').trim() || !l.alta.vendorId));
+    if (faltan.length) { toast(`Falta SKU (CTD-#### o número), categoría, marca o proveedor en ${faltan.length} ${faltan.length === 1 ? 'producto nuevo' : 'productos nuevos'}`); const el = $(`.cos-l[data-i="${faltan[0].i}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
     const creates = sel.filter((l) => l.nuevo && !creado(l) && !repetidos.has(l)).map((l) => ({ name: l.alta.name, sku: l.alta.sku, price: effPrice(l), cost: cu(l), photo: l.alta.photo, description: l.producto,
       barcode: String(l.alta.barcode || '').trim(), cat: l.alta.cat, brand: String(l.alta.brand || '').trim(), vendorId: l.alta.vendorId, units: l.alta.units || '' }));
     const sinPrecio = sel.filter((l) => l.nuevo && !creado(l) && !repetidos.has(l) && l.precio_nuevo == null).length;
@@ -3189,6 +3189,9 @@
     return max ? 'CTD-' + (max + 1) : '';
   }
   const ctdOk = (v) => /^CTD\s*-?\s*\d{1,6}$/i.test(String(v || '').trim());
+  // SKU para dar de alta: CTD-#### o solo el número (ej. 5205, 6330: así están algunos en InSitu). Son productos distintos.
+  const skuAltaOk = (v) => ctdOk(v) || /^\d{2,6}$/.test(String(v || '').trim());
+  const skuAltaFmt = (v) => (ctdOk(v) ? ctdFmt(v) : String(v || '').trim());
   const ctdFmt = (v) => { const m = String(v || '').trim().match(/^CTD\s*-?\s*(\d{1,6})$/i); return m ? 'CTD-' + m[1] : String(v || '').trim(); };
   // Siguiente CTD según QuickBooks (más seguro que la copia de InSitu); se guarda unos minutos
   async function loadCtdNext() {
