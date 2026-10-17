@@ -145,6 +145,13 @@ module.exports = async (req, res) => {
       pack: packLabel(p.units), units: String(p.units || '').trim(), brand: String(p.brand_name || '').trim(), stock: r2(stockBy[p.id] || 0),
     }));
     if (!items.length || !stocks.length) throw new Error('InSitu regresó sin productos o sin inventario');
+    // Productos dados de alta desde la IA (Costeo) en los últimos 60 días: el catálogo los marca como "nuevo"
+    try {
+      const qlog = (await db('GET', 'qbLog')) || {};
+      const alta = {};
+      Object.values(qlog).forEach((x) => { if (x && x.action === 'costeo-alta' && x.qbId && x.ts > Date.now() - 60 * 864e5) alta[String(x.qbId)] = Math.min(alta[String(x.qbId)] || Infinity, x.ts); });
+      items.forEach((p) => { if (alta[p.id]) p.alta = alta[p.id]; });
+    } catch (e) { /* sin marca de nuevos */ }
     await db('PUT', 'catalogo', { at: Date.now(), by: 'auto', items });
 
     // Fechas de caducidad siguen a la existencia
