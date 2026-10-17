@@ -2715,10 +2715,52 @@
     const cambiosP = C.lines.filter((l) => !l.nuevo && l.aplicar && priceChanged(l)).length;
     $('#cosKpis').innerHTML = `
       <div class="kpi"><span class="lbl">Renglones</span><div class="kpi-v">${C.lines.length}</div></div>
-      <div class="kpi"><span class="lbl">Costo subió</span><div class="kpi-v">${up}</div></div>
+      <div class="kpi"><span class="lbl">Costo subió</span><div class="kpi-v">${up}</div>${up ? '<button id="cosUpXls" type="button" class="btn-link sm">Descargar Excel</button>' : ''}</div>
       <div class="kpi"><span class="lbl">Cambios de precio</span><div class="kpi-v">${cambiosP}</div></div>
       <div class="kpi"><span class="lbl">Productos nuevos</span><div class="kpi-v">${nuevos}</div></div>`;
     $('#cosList').innerHTML = C.lines.map(lineCosHTML).join('');
+  }
+
+  // Excel de los productos que subieron de costo en esta factura
+  $('#cosKpis').addEventListener('click', (e) => { if (e.target.closest('#cosUpXls')) excelCostosSubieron().catch((err) => toast('No se pudo: ' + err.message)); });
+  async function excelCostosSubieron() {
+    const h = C.head || {};
+    const L = C.lines.filter((l) => !l.nuevo && cu(l) > (l.costo_antes || 0) + 0.005).map((l) => {
+      const antes = r2(l.costo_antes || 0), nuevo = r2(cu(l)), d = r2(nuevo - antes), pz = l.pz > 1 ? l.pz : 1;
+      return { sku: String(prodSrv(l).upc || '').trim() || skuDe(prodSrv(l)) || l.sku, prod: l.nombre || l.producto, fact: l.producto, cod: l.codigo_proveedor || l.upc || '', unidad: pz > 1 ? `Pieza (${pz} por caja)` : 'Caja',
+        cant: Number(l.cantidad) || 0, antes, nuevo, d, p: antes ? d / antes : 0, impacto: r2(d * (Number(l.cantidad) || 0) * pz),
+        pa: r2(l.precio_antes || 0), pn: r2(effPrice(l)), m0: l.precio_antes ? marginOf(l.precio_antes, antes) : null, m1: marginOf(effPrice(l), nuevo) };
+    }).sort((a, b) => b.p - a.p);
+    if (!L.length) { toast('Ningún producto subió de costo'); return; }
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
+    const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('Costos que subieron', { views: [{ state: 'frozen', ySplit: 5 }], pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
+    const cols = [['#', 5], ['SKU', 11], ['Producto', 40], ['Código / UPC', 16], ['Unidad', 16], ['Cajas', 8], ['Costo antes', 12], ['Costo nuevo', 12], ['Subió $', 11], ['Subió %', 10], ['Impacto factura', 14], ['Precio actual', 13], ['Precio nuevo', 13], ['Margen antes', 12], ['Margen nuevo', 12]];
+    ws.columns = cols.map(([, w]) => ({ width: w }));
+    ws.mergeCells(1, 1, 1, cols.length); ws.getCell(1, 1).value = 'PRODUCTOS QUE SUBIERON DE COSTO';
+    ws.getCell(1, 1).font = { bold: true, size: 15, color: { argb: 'FFD8331B' } };
+    ws.mergeCells(2, 1, 2, cols.length); ws.getCell(2, 1).value = `${h.proveedor || ''} · Factura #${h.factura || '—'} · ${h.fecha ? fmtLong(h.fecha) : ''}`;
+    ws.getCell(2, 1).font = { bold: true, size: 12 };
+    ws.mergeCells(3, 1, 3, cols.length); ws.getCell(3, 1).value = `${L.length} ${L.length === 1 ? 'producto subió' : 'productos subieron'} · impacto en esta factura ${money(L.reduce((a, x) => a + x.impacto, 0))} · margen objetivo ${CS.target}% · ${fmtLong(ymd(new Date()))}`;
+    ws.getCell(3, 1).font = { size: 11, color: { argb: 'FF555555' } };
+    const hr = ws.getRow(5);
+    cols.forEach(([n], i) => { const c = hr.getCell(i + 1); c.value = n; c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F0D0A' } }; c.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }; });
+    hr.height = 30;
+    const thin = { style: 'thin', color: { argb: 'FFD9D9D9' } };
+    L.forEach((x, i) => {
+      const r = ws.getRow(6 + i);
+      [i + 1, /^\d+$/.test(String(x.sku)) ? Number(x.sku) : x.sku, x.prod, x.cod, x.unidad, x.cant, x.antes, x.nuevo, x.d, x.p, x.impacto, x.pa, x.pn, x.m0, x.m1].forEach((v, j) => { r.getCell(j + 1).value = v; });
+      [7, 8, 9, 11, 12, 13].forEach((j) => { r.getCell(j).numFmt = '$#,##0.00'; });
+      [10, 14, 15].forEach((j) => { r.getCell(j).numFmt = '0.0%'; });
+      r.getCell(9).font = { bold: true, color: { argb: 'FFD8331B' } }; r.getCell(10).font = { bold: true, color: { argb: 'FFD8331B' } };
+      if (x.p >= 0.1) r.getCell(10).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFDE2DD' } };
+      if (x.m1 < CS.target / 100 - 1e-9) { r.getCell(15).font = { bold: true, color: { argb: 'FFB45309' } }; r.getCell(15).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF1D6' } }; }
+      for (let j = 1; j <= cols.length; j++) r.getCell(j).border = { top: thin, bottom: thin, left: thin, right: thin };
+      r.getCell(3).alignment = { wrapText: true, vertical: 'middle' };
+      if (i % 2) for (let j = 1; j <= cols.length; j++) if (!r.getCell(j).fill) r.getCell(j).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF7F5F0' } };
+    });
+    const buf = await wb.xlsx.writeBuffer();
+    download(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `Costos-subieron-${normTxt(h.proveedor || '').replace(/[^a-z0-9]+/g, '-').slice(0, 24)}-${String(h.factura || '').replace(/[^\w-]+/g, '')}.xlsx`);
+    toast('Excel de costos que subieron descargado');
   }
 
   // Foto: la del producto; si es nuevo, la del link que se escribió para darlo de alta
