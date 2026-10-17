@@ -5749,13 +5749,13 @@
       doc.text(v, 40, y + 14);
       doc.autoTable({
         startY: y + 22, margin: { left: 40, right: 40 },
-        head: [['#', 'SKU', 'UPC', 'Producto', 'Empaque', 'Cant.']],
-        body: ls.map((l, i) => [i + 1, l.id, l.upc || '', l.name, l.pack || '', l.qty]),
-        foot: [['', '', '', 'Total cajas', '', ls.reduce((a, l) => a + l.qty, 0)]],
+        head: [['#', 'SKU', 'Producto', 'Cant.']],
+        body: ls.map((l, i) => [i + 1, l.id, l.name, l.qty]),
+        foot: [['', '', 'Total cajas', ls.reduce((a, l) => a + l.qty, 0)]],
         styles: { font: 'helvetica', fontSize: 9, cellPadding: 5, textColor: [20, 18, 12] },
         headStyles: { fillColor: [15, 13, 10], textColor: [242, 163, 30], fontStyle: 'bold' },
         footStyles: { fillColor: [246, 242, 233], textColor: [20, 18, 12], fontStyle: 'bold' },
-        columnStyles: { 0: { cellWidth: 30, halign: 'right', overflow: 'visible' }, 1: { cellWidth: 52 }, 2: { cellWidth: 88 }, 4: { cellWidth: 60 }, 5: { cellWidth: 42, halign: 'right', fontStyle: 'bold' } },
+        columnStyles: { 0: { cellWidth: 30, halign: 'right', overflow: 'visible' }, 1: { cellWidth: 56 }, 3: { cellWidth: 48, halign: 'right', fontStyle: 'bold' } },
         showFoot: 'lastPage', // el total solo al final, no en cada hoja
         alternateRowStyles: { fillColor: [250, 248, 243] },
       });
