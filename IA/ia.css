@@ -977,3 +977,34 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .inv-q{flex:none;text-align:right}
 .inv-q b{display:block;font-family:var(--display);font-weight:800;font-size:22px}
 .inv-q small{font-size:11px;color:var(--muted)}
+
+/* Vendedores: cómo trabajó (visitas de InSitu) */
+.vcard .va-hoy{color:var(--hueso)}.vcard .va-hoy em{font-style:normal}.vcard .va-hoy em.dn{color:#ff9a88}
+.va-box{margin-top:26px;padding:18px;border-radius:22px;background:rgba(246,242,233,.04)}
+.va-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.va-head .lbl{margin:0}
+.va-tabs{display:inline-flex;gap:4px;padding:4px;border-radius:99px;background:rgba(246,242,233,.06)}
+.va-tabs button{border:0;background:none;color:var(--muted);font-weight:700;font-size:13px;min-height:36px;padding:0 14px;border-radius:99px}
+.va-tabs button.on{background:var(--oro);color:#1a1206}
+.va-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:16px}
+.va-kpis span{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:16px;background:rgba(246,242,233,.05)}
+.va-kpis small{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-2)}
+.va-kpis b{font-family:var(--display);font-size:20px;font-weight:800;color:var(--hueso)}
+.va-kpis em{font-style:normal;font-size:12.5px;color:var(--muted)}
+.va-kpis em.dn,.va-r em.dn{color:#ff9a88;font-style:normal}
+.va-list{margin-top:14px}
+.va-v{display:grid;grid-template-columns:72px 1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--linea);font-size:14px}
+.va-v .va-h{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.va-v .va-t{display:flex;flex-direction:column;min-width:0}
+.va-v .va-t b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.va-v .va-t small{color:var(--muted);font-size:12.5px}
+.va-v .va-d{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.va-v .va-p{font-weight:700;color:var(--verde-2);text-align:right}
+.va-v.sin .va-p{color:var(--muted);font-weight:500}
+.va-v.corta .va-d{color:#ff9a88}
+.va-tabla{margin-top:14px;font-size:14px}
+.va-r{display:grid;grid-template-columns:1fr 1.4fr .9fr .9fr 1fr;gap:8px;padding:9px 0;border-top:1px solid var(--linea)}
+.va-r.va-hd{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted-2);border-top:0}
+.va-lbl{margin-top:18px}
+.va-falt{font-size:13.5px;color:var(--hueso);margin:6px 0 0}
+@media (max-width:640px){.va-v{grid-template-columns:58px 1fr auto}.va-v .va-d{display:none}.va-r{grid-template-columns:1fr 1.3fr .8fr .8fr;font-size:13px}.va-r span:nth-child(5){display:none}}
