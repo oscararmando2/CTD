@@ -468,6 +468,14 @@ module.exports = async (req, res) => {
             grupo: e.grupo || '', grupoTitulo: e.grupoTitulo || '', grupoCorto: e.grupoCorto || '' }));
         return res.json({ list, today });
       }
+      case 'vend_actividad': {
+        // Comportamiento del vendedor (InSitu): visitas, pedidos y rastreo por día. Solo Oscar, Luis y Diego.
+        if (RECIBO_ONLY.includes(who) || COSTEO_ONLY.includes(who)) return res.status(403).json({ error: 'Sin permiso' });
+        const hoy = todayCT();
+        const desde = ymdOk(body.desde) || hoy, hasta = ymdOk(body.hasta) || desde;
+        if (hasta < desde || (Date.parse(hasta) - Date.parse(desde)) / 864e5 > 31) return res.status(400).json({ error: 'Rango de fechas inválido (máximo 31 días)' });
+        return res.json(await vendActividad(desde, hasta, !!body.muestra));
+      }
       case 'catalogo': {
         // Primero la copia de InSitu (trae fotos); si no hay, la lista de QuickBooks (el Id es el mismo código que en InSitu)
         const snap = await db('GET', 'catalogo');
@@ -1026,6 +1034,74 @@ function reciboAlDia(recibo, lines) {
   out.push(...viejos.filter((o) => o && o.how === 'agregado')); // sobrantes que agregó bodega (no vienen en la factura)
   const igual = out.length === (recibo.lines || []).length && out.every((x, i) => nk(x.producto) === nk(recibo.lines[i].producto) && String(x.sku || '') === String(recibo.lines[i].sku || '') && x.nombre === recibo.lines[i].nombre);
   return igual ? {} : { lines: out, updated: Date.now(), updatedBy: 'costeo' };
+}
+// ---- Comportamiento del vendedor ----
+const TZ_CT = 'America/Chicago';
+const ctParts = (ms) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: TZ_CT, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date(ms)).map((x) => [x.type, x.value])); return { dia: `${p.year}-${p.month}-${p.day}`, hm: `${p.hour === '24' ? '00' : p.hour}:${p.minute}` }; };
+// Fecha de InSitu → ms. Con zona (Z / +hh) se respeta; sin zona se toma como UTC (así guarda InSitu sus fechas de servidor)
+const isMs = (v) => { if (v == null || v === '') return NaN; if (typeof v === 'number') return v > 1e12 ? v : v * 1000; const s = String(v).trim().replace(' ', 'T'); return Date.parse(/[zZ]|[+-]\d{2}:?\d{2}$/.test(s) ? s : s + 'Z'); };
+const ctOffsetMin = (ymd) => { const d = new Date(ymd + 'T12:00:00Z'); const loc = new Date(d.toLocaleString('en-US', { timeZone: TZ_CT })); return Math.round((loc - new Date(d.toLocaleString('en-US', { timeZone: 'UTC' }))) / 60000); };
+const utcStr = (ms) => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
+async function vendActividad(desde, hasta, muestra) {
+  const ini = Date.parse(desde + 'T00:00:00Z') - ctOffsetMin(desde) * 60000;
+  const fin = Date.parse(hasta + 'T23:59:59Z') - ctOffsetMin(hasta) * 60000;
+  const arrOf = (j) => (Array.isArray(j) ? j : (j && Object.values(j).find(Array.isArray)) || []);
+  const users = arrOf(await insituGet('/mobile_users', { limit: 100 })).filter((u) => u && u.login && !u.disabled && u.enabled !== false)
+    .map((u) => ({ login: String(u.login), name: String(u.name || u.login), driver: !!u.is_driver, picker: !!u.is_picker }));
+  // Visitas: de la más nueva hacia atrás hasta salir del rango
+  const visits = [];
+  for (let off = 0; off < 6000; off += 500) {
+    const page = arrOf(await insituGet('/visits', { limit: 500, offset: off, order: JSON.stringify([['id', 'DESC']]) }));
+    let viejas = 0;
+    page.forEach((v) => { const t = isMs(v.date_from ?? v.time_stamp); if (!isFinite(t)) return; if (t < ini) { viejas++; return; } if (t <= fin) visits.push({ ...v, _t: t }); });
+    if (page.length < 500 || viejas === page.length) break;
+  }
+  const orders = (await insituGet('/orders', { fromDate: utcStr(ini - 864e5), toDate: utcStr(fin + 864e5) }, true))
+    .filter((o) => !(o.cancelled === true || o.cancelled === 1)).map((o) => ({ ...o, _t: isMs(o.order_date ?? o.trn_date) })).filter((o) => o._t >= ini && o._t <= fin);
+  const porVisita = {};
+  orders.forEach((o) => { if (o.visit_id) (porVisita[String(o.visit_id)] = porVisita[String(o.visit_id)] || []).push(o); });
+  // Rastreo: primera y última señal del día (para inicio / fin de jornada)
+  const track = {};
+  await Promise.all(users.map(async (u) => {
+    try {
+      const pts = arrOf(await insituGet('/user_tracking', { mobile_user_login: u.login, fromDate: utcStr(ini), toDate: utcStr(fin) }));
+      pts.forEach((p) => { const t = isMs(p.mobile_date); if (!isFinite(t)) return; const { dia } = ctParts(t); const k = u.login + '|' + dia; const x = (track[k] = track[k] || { a: t, b: t, n: 0 }); x.a = Math.min(x.a, t); x.b = Math.max(x.b, t); x.n++; });
+    } catch (e) { /* sin rastreo de ese usuario */ }
+  }));
+  const loginDe = (v) => String(v.mobile_user_login || (v.mobile_user && v.mobile_user.login) || '');
+  const idLogin = {}; visits.forEach((v) => { if (v.mobile_user_id && loginDe(v)) idLogin[String(v.mobile_user_id)] = loginDe(v); });
+  // Duración: por la hora de salida si viene como fecha; si no, "length" (segundos si es grande, minutos si es chico)
+  const durMin = (v) => { const f = typeof v.finished === 'string' && /\d{4}-\d{2}-\d{2}/.test(v.finished) ? isMs(v.finished) : NaN; if (isFinite(f) && f > v._t) return Math.round((f - v._t) / 60000); const L = Number(v.length); if (isFinite(L) && L > 0) return L >= 120 ? Math.round(L / 60) : Math.round(L); return null; };
+  const out = users.map((u) => {
+    const dias = {};
+    const dia = (d) => (dias[d] = dias[d] || { dia: d, visitas: [], pedidos: 0, venta: 0, pedidosSinVisita: 0 });
+    visits.filter((v) => (loginDe(v) || idLogin[String(v.mobile_user_id)]) === u.login).sort((a, b) => a._t - b._t).forEach((v) => {
+      const { dia: d, hm } = ctParts(v._t);
+      const os = porVisita[String(v.id)] || [];
+      dia(d).visitas.push({ id: String(v.id), hora: hm, tienda: String(v.place_name || v.place_code || '—').slice(0, 80), codigo: String(v.place_code || ''), min: durMin(v),
+        pedido: os.length ? r2(os.reduce((a, o) => a + (Number(o.order_netvalue) || 0), 0)) : 0, tipo: String(v.visit_type ?? ''), motivo: String(v.newness_msg || v.newness_msg2 || v.remark || '').slice(0, 160) });
+    });
+    orders.filter((o) => String(o.mobile_user_login || '') === u.login).forEach((o) => { const x = dia(ctParts(o._t).dia); x.pedidos++; x.venta = r2(x.venta + (Number(o.order_netvalue) || 0)); if (!o.visit_id) x.pedidosSinVisita++; });
+    Object.values(dias).forEach((x) => {
+      const tk = track[u.login + '|' + x.dia];
+      const ts = x.visitas.map((v) => v.hora).sort();
+      x.inicio = tk ? ctParts(tk.a).hm : ts[0] || null; x.fin = tk ? ctParts(tk.b).hm : ts[ts.length - 1] || null;
+      x.horas = tk ? r2((tk.b - tk.a) / 36e5) : null;
+      x.tiendas = new Set(x.visitas.map((v) => v.codigo || v.tienda)).size;
+      x.conPedido = x.visitas.filter((v) => v.pedido > 0).length;
+      const ds = x.visitas.map((v) => v.min).filter((m) => m != null);
+      x.minProm = ds.length ? Math.round(ds.reduce((a, b) => a + b, 0) / ds.length) : null;
+      x.cortas = x.visitas.filter((v) => v.min != null && v.min < 3).length;
+    });
+    const L = Object.values(dias).sort((a, b) => a.dia.localeCompare(b.dia));
+    const sum = (k) => L.reduce((a, x) => a + (x[k] || 0), 0);
+    const nv = L.reduce((a, x) => a + x.visitas.length, 0);
+    return { login: u.login, name: u.name, driver: u.driver, picker: u.picker, dias: L,
+      tot: { dias: L.filter((x) => x.visitas.length || x.pedidos).length, visitas: nv, conPedido: sum('conPedido'), pedidos: sum('pedidos'), venta: r2(sum('venta')), cortas: sum('cortas') } };
+  }).filter((u) => u.dias.length);
+  const res = { desde, hasta, at: Date.now(), vendedores: out };
+  if (muestra) { const v = visits[0] || {}; res.muestra = { date_from: v.date_from, finished: v.finished, length: v.length, time_stamp: v.time_stamp, visit_type: v.visit_type, tracking_type: v.tracking_type, mobile_date_sync: v.mobile_date_sync, order_date: (orders[0] || {}).order_date, nVisitas: visits.length, nPedidos: orders.length }; }
+  return res;
 }
 async function findRecibo(key) {
   if (!key || /\|$/.test(key)) return null;

@@ -4948,6 +4948,69 @@
     return { at: Date.now(), sellers: sellerList, clients: clientList, buyers };
   }
 
+  /* ---- Comportamiento del vendedor (InSitu: visitas, pedidos y rastreo) ---- */
+  const VA = { data: {}, busy: {}, err: {}, rango: 'hoy' };
+  const vaFechas = (r) => { const d = new Date(); const hoy = ymd(d); if (r === 'ayer') { const y = ymd(new Date(d.getTime() - DAY)); return [y, y]; } if (r === '7') return [ymd(new Date(d.getTime() - 6 * DAY)), hoy]; return [hoy, hoy]; };
+  const vaKey = (r) => vaFechas(r).join('|');
+  async function vaLoad(r) {
+    const k = vaKey(r); if (VA.busy[k]) return VA.busy[k];
+    const [desde, hasta] = vaFechas(r);
+    VA.busy[k] = cosCall('vend_actividad', { desde, hasta }).then((d) => { VA.data[k] = d; delete VA.err[k]; }).catch((e) => { VA.err[k] = e.message; }).finally(() => { delete VA.busy[k]; });
+    return VA.busy[k];
+  }
+  const vaDe = (r, login) => { const d = VA.data[vaKey(r)]; return d ? (d.vendedores || []).find((v) => v.login === login) || { dias: [], tot: { visitas: 0, conPedido: 0, pedidos: 0, venta: 0, cortas: 0 } } : null; };
+  const h12 = (hm) => { if (!hm) return '—'; const [h, m] = hm.split(':').map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`; };
+  const pctV = (a, b) => (b ? Math.round((a / b) * 100) + '%' : '—');
+  function vaHoyLinea(login) {
+    const v = vaDe('hoy', login); if (!v) return '';
+    const x = v.dias[0];
+    if (!x || !(x.visitas.length || x.pedidos)) return '<span class="vm va-hoy">Hoy: sin visitas registradas</span>';
+    return `<span class="vm va-hoy">Hoy: ${x.visitas.length} visitas · ${x.conPedido} con pedido · ${money(x.venta)}${x.inicio ? ` · empezó ${h12(x.inicio)}` : ''}${x.cortas ? ` · <em class="dn">${x.cortas} muy cortas</em>` : ''}</span>`;
+  }
+  function renderVA(s, mine) {
+    const box = $('#vaBox'); if (!box) return;
+    const k = vaKey(VA.rango), v = vaDe(VA.rango, s.id);
+    const tabs = `<div class="va-tabs">${[['hoy', 'Hoy'], ['ayer', 'Ayer'], ['7', '7 días']].map(([r, n]) => `<button type="button" data-va="${r}" class="${VA.rango === r ? 'on' : ''}">${n}</button>`).join('')}</div>`;
+    let body = '';
+    if (!v) {
+      if (VA.err[k]) body = `<p class="data-info">No se pudo leer InSitu: ${esc(VA.err[k])} <button type="button" class="btn-link" data-va="${VA.rango}">reintentar</button></p>`;
+      else { body = '<p class="data-info">Leyendo visitas y pedidos de InSitu…</p>'; vaLoad(VA.rango).then(() => { if (venSel === s.id) renderVA(s, mine); }); }
+    } else if (!v.dias.some((x) => x.visitas.length || x.pedidos)) {
+      body = '<p class="data-info">Sin visitas ni pedidos registrados en InSitu en estas fechas.</p>';
+    } else if (VA.rango !== '7') {
+      const x = v.dias[v.dias.length - 1];
+      body = `<div class="va-kpis">
+          <span><small>Jornada</small><b>${h12(x.inicio)} – ${h12(x.fin)}</b>${x.horas != null ? `<em>${nfmt(x.horas)} h en la calle</em>` : ''}</span>
+          <span><small>Visitas</small><b>${x.visitas.length}</b><em>${x.tiendas} tiendas</em></span>
+          <span><small>Con pedido</small><b>${pctV(x.conPedido, x.visitas.length)}</b><em>${x.conPedido} de ${x.visitas.length}</em></span>
+          <span><small>Pedidos</small><b>${money(x.venta)}</b><em>${x.pedidos} pedidos${x.pedidosSinVisita ? ` · ${x.pedidosSinVisita} sin visita` : ''}</em></span>
+          <span><small>Tiempo por tienda</small><b>${x.minProm != null ? x.minProm + ' min' : '—'}</b>${x.cortas ? `<em class="dn">${x.cortas} de menos de 3 min</em>` : '<em>promedio</em>'}</span>
+        </div>
+        <div class="va-list">${x.visitas.map((w) => `<div class="va-v${w.pedido ? '' : ' sin'}${w.min != null && w.min < 3 ? ' corta' : ''}">
+          <span class="va-h">${h12(w.hora)}</span>
+          <span class="va-t"><b>${esc(w.tienda)}</b>${w.motivo ? `<small>${esc(w.motivo)}</small>` : ''}</span>
+          <span class="va-d">${w.min != null ? w.min + ' min' : ''}</span>
+          <span class="va-p">${w.pedido ? money(w.pedido) : 'sin pedido'}</span></div>`).join('')}</div>`;
+    } else {
+      const T = v.tot;
+      body = `<div class="va-kpis">
+          <span><small>Días trabajados</small><b>${T.dias}</b></span>
+          <span><small>Visitas</small><b>${T.visitas}</b><em>${T.dias ? nfmt(r2(T.visitas / T.dias)) : 0} por día</em></span>
+          <span><small>Con pedido</small><b>${pctV(T.conPedido, T.visitas)}</b><em>${T.conPedido} de ${T.visitas}</em></span>
+          <span><small>Pedidos</small><b>${money(T.venta)}</b><em>${T.pedidos} pedidos</em></span>
+          <span><small>Visitas muy cortas</small><b>${T.cortas}</b><em>menos de 3 min</em></span>
+        </div>
+        <div class="va-tabla"><div class="va-r va-hd"><span>Día</span><span>Jornada</span><span>Visitas</span><span>Con pedido</span><span>Pedidos</span></div>
+        ${v.dias.map((x) => `<div class="va-r"><span>${esc(fmtD(x.dia))}</span><span>${h12(x.inicio)} – ${h12(x.fin)}</span><span>${x.visitas.length}${x.cortas ? ` <em class="dn">(${x.cortas} cortas)</em>` : ''}</span><span>${pctV(x.conPedido, x.visitas.length)}</span><span>${money(x.venta)}</span></div>`).join('')}</div>`;
+      // A quién ya le toca pedir y no visitó en la semana
+      const vis = new Set(v.dias.flatMap((x) => x.visitas.map((w) => normTxt(w.tienda))));
+      const falt = (mine || []).filter((c) => c.due && !vis.has(normTxt(c.name))).slice(0, 12);
+      if (falt.length) body += `<p class="lbl va-lbl">Ya les toca pedir y no los visitó en 7 días <small>(${falt.length})</small></p><p class="va-falt">${falt.map((c) => esc(c.name)).join(' · ')}</p>`;
+    }
+    box.innerHTML = `<div class="va-head"><p class="lbl">Cómo trabajó <small>(visitas y pedidos de InSitu)</small></p>${tabs}</div>${body}`;
+    box.querySelectorAll('[data-va]').forEach((b) => b.addEventListener('click', () => { VA.rango = b.dataset.va; delete VA.err[vaKey(VA.rango)]; renderVA(s, mine); }));
+  }
+
   let venSel = null;
   function renderVendors() {
     const sd = S.sales;
@@ -4961,6 +5024,7 @@
     if (avOk() && !AV.list && !AV.busy) loadAvisos().then(() => { if (S.view === 'ven') renderVendors(); });
     if (venSel) { renderVenDetail(); return; }
     $('#venDetail').hidden = true; $('#venGrid').hidden = false;
+    const kh = vaKey('hoy'); if (!VA.data[kh] && !VA.busy[kh] && !VA.err[kh]) vaLoad('hoy').then(() => { if (S.view === 'ven' && !venSel) renderVendors(); });
     $('#venGrid').innerHTML = sd.sellers.map((s) => {
       const ch = s.p30 ? (s.s30 - s.p30) / s.p30 : null;
       return `<button type="button" class="vcard" data-sid="${esc(s.id)}">
@@ -4969,6 +5033,7 @@
         <span class="vn">${esc(s.name)}</span>
         <span class="vs"><b>${money(s.s30)}</b> en 30 días${ch != null ? ` <em class="${ch >= 0 ? 'up' : 'dn'}">${ch >= 0 ? '▲' : '▼'} ${pct(Math.abs(ch), 0)}</em>` : ''}</span>
         <span class="vm">${s.inv30} facturas · ticket ${money(s.inv30 ? s.s30 / s.inv30 : 0)} · ${s.active90} clientes activos (90 días)</span>
+        ${vaHoyLinea(s.id)}
       </button>`;
     }).join('');
   }
@@ -4990,6 +5055,7 @@
       <div class="cos-h1"><div><p class="hud">Vendedor</p><h2 class="ven-h">${esc(s.name)}</h2>
         <p class="status">${money(s.s30)} en 30 días · ${money(s.s90)} en 90 · ${mine.length} clientes · <b>${s.due}</b> ya les toca pedir</p></div>
         <button id="venSend" class="btn btn-oro" type="button"><i data-icon="send"></i>Mandar a ${esc(s.name.split(' ')[0])}</button></div>
+      <div id="vaBox" class="va-box"></div>
       ${avs.length ? `<div class="av-box"><p class="lbl">Producto por vencer en sus tiendas <small>(${avs.length})</small></p>${avHTML(avs)}</div>` : ''}
       <div class="ven-list">${mine.map((c) => `
         <div class="ven-c${c.due ? ' due' : ''}">
@@ -4998,6 +5064,7 @@
           ${c.lost.length ? `<div class="ven-lost"><small>Dejó de comprar:</small> ${c.lost.map((x) => esc(x.name)).join(' · ')}</div>` : ''}
         </div>`).join('') || '<p class="data-info">Sin clientes en las facturas.</p>'}</div>`;
     fillIcons(box);
+    renderVA(s, mine);
     $('#venBack').addEventListener('click', () => { venSel = null; renderVendors(); });
     $('#venSend').addEventListener('click', async () => {
       const due = mine.filter((c) => c.due).slice(0, 15);
