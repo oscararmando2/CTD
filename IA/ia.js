@@ -3585,7 +3585,8 @@
           <div class="rec-pinfo">
             <h3 class="rec-name">${esc(l.sku ? l.nombre : l.producto)}</h3>
             ${l.sku ? `<p class="meta">${l.upcSis || l.upc ? 'UPC ' + esc(l.upcSis || l.upc) + ' · ' : ''}SKU ${esc(l.sku)}</p>` : '<p class="meta"><span class="pill warn">no está en el sistema</span></p>'}
-            ${l.how === 'agregado' ? `<p class="meta"><span class="pill warn">sobrante · no viene en la factura · costo $0</span> <button type="button" class="btn-link sm" data-r="quitar" data-i="${R.cur}">Quitar</button></p>` : ''}
+            ${l.how === 'agregado' ? `<p class="meta"><span class="pill warn">sobrante · no viene en la factura</span> <button type="button" class="btn-link sm" data-r="quitar" data-i="${R.cur}">Quitar</button></p>
+              <label class="field rec-agcost"><span>Costo por caja (si Cortes lo cobró; si no, déjalo en 0)</span><input data-agcost type="number" step="0.01" min="0" inputmode="decimal" value="${Number(l.costo_caja) || 0}"></label>` : ''}
             ${l.sku && !same ? `<p class="meta">Factura: ${esc(l.producto)}</p>` : ''}
           </div>
         </div>
@@ -4000,6 +4001,12 @@
   });
   $('#recWork').addEventListener('change', async (e) => {
     const el = e.target, l = R.rec && R.rec.lines[R.cur]; if (!l) return;
+    if (el.matches('[data-agcost]') && l.how === 'agregado') {
+      const v = Math.max(0, Math.round((parseFloat(el.value) || 0) * 100) / 100);
+      l.costo_caja = v; l.total_linea = Math.round(v * (Number(l.recibido ?? l.cantidad) || 0) * 100) / 100;
+      l.nota = v > 0 ? 'Sobrante: llegó y no viene en la factura (cobrado en el total)' : 'Sobrante: llegó y no viene en la factura';
+      touchRec(); toast(v > 0 ? `Costo ${money(v)} por caja guardado` : 'Sin costo'); return;
+    }
     if (el.id === 'fcFile') {
       for (const file of [...el.files].slice(0, 3 - (l.fcFotos || []).length)) {
         try { l.fcFotos = [...(l.fcFotos || []), await fotoChica(file)]; } catch (err) { toast('No se pudo leer la foto'); }
