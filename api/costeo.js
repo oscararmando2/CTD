@@ -520,6 +520,7 @@ module.exports = async (req, res) => {
             caducidad: ymdOk(l.caducidad), leida: ymdOk(l.leida), nota: str(l.nota, 300),
             nov: l.nov && typeof l.nov === 'object' && NOV_TIPOS.includes(l.nov.tipo) ? { tipo: l.nov.tipo, cant: num(Number(l.nov.cant)), um: str(l.nov.um, 10), nota: str(l.nov.nota, 300),
               fotos: (Array.isArray(l.nov.fotos) ? l.nov.fotos : []).filter((f) => typeof f === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(f) && f.length < 400000).slice(0, 3) } : null,
+            fcFotos: (Array.isArray(l.fcFotos) ? l.fcFotos : []).filter((f) => typeof f === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(f) && f.length < 400000).slice(0, 3),
             fechas: Array.isArray(l.fechas) && l.fechas.length > 1 ? l.fechas.slice(0, 6).map((x) => ({ f: ymdOk(x && x.f), q: num(Number(x && x.q)) })).filter((x) => x.f && x.q > 0) : null,
           })),
           nota: str(r.nota, 1500),

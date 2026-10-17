@@ -3549,12 +3549,24 @@
   const esCortes = (rec) => /cortes/i.test(String((rec && rec.proveedor) || ''));
   const diasEntre = (a, b) => Math.round((parseYmd(b) - parseYmd(a)) / 864e5);
   const recDia = (rec) => ymd(rec.doneAt ? new Date(rec.doneAt) : new Date());
+  // Lo que viene con fecha corta en un renglón: si trae varias fechas, solo las cajas de la fecha corta
+  function cortasDe(l, rec) {
+    const dia = recDia(rec);
+    const llego = l.estado === 'parcial' ? Number(l.recibido) || 0 : l.estado === 'no' ? 0 : Number(l.recibido ?? l.cantidad) || 0;
+    const fs = Array.isArray(l.fechas) && l.fechas.length > 1 ? l.fechas : l.caducidad ? [{ f: l.caducidad, q: llego }] : [];
+    const out = {};
+    fs.forEach((x) => { if (x && x.f && x.q > 0 && diasEntre(dia, x.f) < FECHA_CORTA) out[x.f] = (out[x.f] || 0) + Number(x.q); });
+    return Object.entries(out).sort((a, b) => a[0].localeCompare(b[0])).map(([f, q]) => ({ f, q }));
+  }
   function novPanelHTML(l) {
-    const corta = l.caducidad && diasEntre(recDia(R.rec), l.caducidad) < FECHA_CORTA;
-    const auto = [l.estado === 'no' ? `Faltante: ${nfmt(l.cantidad)}` : '', l.estado === 'parcial' ? `Faltante: ${nfmt((l.cantidad || 0) - (l.recibido || 0))}` : '', corta ? `Fecha corta (vence en ${diasEntre(recDia(R.rec), l.caducidad)} días)` : ''].filter(Boolean);
-    if (!l.nov) return `<div class="nov-auto">${auto.length ? `<span class="pill warn">Se reporta a Cortes: ${esc(auto.join(' · '))}</span>` : ''}<button type="button" class="btn-link rec-addnote" data-r="nov">⚠ Reportar (dañado, sobrante…) con foto</button></div>`;
+    const cortas = cortasDe(l, R.rec);
+    const auto = [l.estado === 'no' ? `Faltante: ${nfmt(l.cantidad)}` : '', l.estado === 'parcial' ? `Faltante: ${nfmt((l.cantidad || 0) - (l.recibido || 0))}` : '',
+      ...cortas.map((x) => `Fecha corta: ${nfmt(x.q)} ${x.q === 1 ? 'caja' : 'cajas'} vencen ${fmtD(x.f)} (en ${diasEntre(recDia(R.rec), x.f)} días)`)].filter(Boolean);
+    const fc = cortas.length ? `<div class="nov-fotos"><small class="nov-fc">Foto de la fecha corta:</small>${(l.fcFotos || []).map((f, k) => `<span class="nov-f"><img src="${f}" alt=""><button type="button" class="g-x" data-r="fcfotoquitar" data-k="${k}" aria-label="Quitar">×</button></span>`).join('')}
+        ${(l.fcFotos || []).length < 3 ? '<button type="button" class="btn btn-ghost btn-sm" data-r="fcfoto">📷 Foto</button>' : ''}<input id="fcFile" type="file" accept="image/*" capture="environment" multiple hidden></div>` : '';
+    if (!l.nov) return `<div class="nov-auto">${auto.length ? `<span class="pill warn">Se reporta a Cortes: ${esc(auto.join(' · '))}</span>` : ''}${fc}<button type="button" class="btn-link rec-addnote" data-r="nov">⚠ Reportar (dañado, sobrante…) con foto</button></div>`;
     const n = l.nov;
-    return `<div class="nov-box">
+    return `<div class="nov-box">${fc}
       ${auto.length ? `<p class="status">También se reporta solo: ${esc(auto.join(' · '))}</p>` : ''}
       <div class="nov-grid">
         <label class="field"><span>Motivo</span><select data-nov="tipo">${Object.entries(NOV_ES).map(([k, v]) => `<option value="${k}"${n.tipo === k ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
@@ -3588,9 +3600,8 @@
       const base = { sku, prod: l.producto || l.nombre || '', exp: l.caducidad ? fmtLong(l.caducidad) : '', fact: rec.factura || '' };
       const falta = l.estado === 'no' ? Number(l.cantidad) || 0 : l.estado === 'parcial' ? (Number(l.cantidad) || 0) - (Number(l.recibido) || 0) : 0;
       if (falta > 0 && !(l.nov && l.nov.tipo === 'missing item')) out.push({ ...base, razon: 'missing item', cant: falta, um: 'CASE', obs: `falto ${nfmt(falta)} ${falta === 1 ? 'caja' : 'cajas'}`, fotos: [] });
-      if (l.caducidad && diasEntre(dia, l.caducidad) < FECHA_CORTA && !(l.nov && l.nov.tipo === 'short date format')) {
-        const q = l.estado === 'parcial' ? Number(l.recibido) || 0 : Number(l.cantidad) || 0;
-        if (q > 0) out.push({ ...base, razon: 'short date format', cant: q, um: 'CASE', obs: 'FECHA CORTA', fotos: [] });
+      if (!(l.nov && l.nov.tipo === 'short date format')) {
+        cortasDe(l, rec).forEach((x, k) => out.push({ ...base, exp: fmtLong(x.f), razon: 'short date format', cant: x.q, um: 'CASE', obs: 'FECHA CORTA', fotos: k === 0 ? (l.fcFotos || []) : [] }));
       }
       if (l.how === 'agregado' && !l.nov) { const q = l.estado === 'parcial' ? Number(l.recibido) || 0 : l.estado === 'ok' ? Number(l.recibido ?? l.cantidad) || 0 : 0; if (q > 0) out.push({ ...base, razon: 'spare', cant: q, um: 'CASE', obs: 'SOBRANTE: no viene en la factura', fotos: [] }); }
       if (l.nov) out.push({ ...base, razon: l.nov.tipo, cant: l.nov.cant, um: l.nov.um === 'each' ? 'EA' : 'CASE', obs: l.nov.nota || NOV_ES[l.nov.tipo], fotos: l.nov.fotos || [] });
@@ -3874,9 +3885,18 @@
     if (a === 'novquitar') { if (confirm('¿Quitar el reporte de este producto?')) { l.nov = null; touchRec(); renderRecibo(); } return; }
     if (a === 'novfotoquitar') { l.nov.fotos.splice(Number(b.dataset.k), 1); touchRec(); renderRecibo(); return; }
     if (a === 'novfoto') { const f = $('#novFile'); if (f) f.click(); return; }
+    if (a === 'fcfoto') { const f = $('#fcFile'); if (f) f.click(); return; }
+    if (a === 'fcfotoquitar') { (l.fcFotos || []).splice(Number(b.dataset.k), 1); touchRec(); renderRecibo(); return; }
   });
   $('#recWork').addEventListener('change', async (e) => {
-    const el = e.target, l = R.rec && R.rec.lines[R.cur]; if (!l || !l.nov) return;
+    const el = e.target, l = R.rec && R.rec.lines[R.cur]; if (!l) return;
+    if (el.id === 'fcFile') {
+      for (const file of [...el.files].slice(0, 3 - (l.fcFotos || []).length)) {
+        try { l.fcFotos = [...(l.fcFotos || []), await fotoChica(file)]; } catch (err) { toast('No se pudo leer la foto'); }
+      }
+      touchRec(); renderRecibo(); return;
+    }
+    if (!l.nov) return;
     if (el.id === 'novFile') {
       for (const file of [...el.files].slice(0, 3 - (l.nov.fotos || []).length)) {
         try { l.nov.fotos = [...(l.nov.fotos || []), await fotoChica(file)]; } catch (err) { toast('No se pudo leer la foto'); }

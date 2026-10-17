@@ -1008,3 +1008,5 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .va-lbl{margin-top:18px}
 .va-falt{font-size:13.5px;color:var(--hueso);margin:6px 0 0}
 @media (max-width:640px){.va-v{grid-template-columns:58px 1fr auto}.va-v .va-d{display:none}.va-r{grid-template-columns:1fr 1.3fr .8fr .8fr;font-size:13px}.va-r span:nth-child(5){display:none}}
+
+.nov-fc{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--oro);align-self:center}
