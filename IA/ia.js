@@ -2537,7 +2537,8 @@
     l.factPieza = 0;
     if (man != null && !l.nuevo) {
       // Se vende por pieza, pero esta factura ya viene en piezas (precio ≈ costo de una pieza, ej. Cortes: Mayonesa BB 320 a $1.63): no se divide
-      if (man > 1 && l.costo_antes > 0) { const r = l.costo_caja / l.costo_antes; if (r > 0.6 && r < 1.6) { l.pz = 0; l.pzSet = false; l.factPieza = man; return; } }
+      const r = l.costo_antes > 0 ? l.costo_caja / l.costo_antes : 0;
+      if (man > 1 && ((r > 0.6 && r < 1.6) || (l.precio_antes > 0 && l.costo_caja <= l.precio_antes * 1.2))) { l.pz = 0; l.pzSet = false; l.factPieza = man; return; }
       l.pz = man > 1 ? man : 0; l.pzSet = true; return;
     }
     if (n < 2) { l.pz = 0; return; }
