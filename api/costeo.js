@@ -640,7 +640,7 @@ module.exports = async (req, res) => {
           const cajas = revisado ? (l.estado === 'ok' ? Number(l.recibido ?? l.cantidad) || 0 : l.estado === 'parcial' ? Number(l.recibido) || 0 : 0) : Number(l.cantidad) || 0;
           const cs = skuCos[norm(l.producto)] || {};
           const sku = String(l.qbId || l.sku || cs.sku || '');
-          const tag = l.how === 'agregado' ? 'SOBRANTE (no viene en la factura) · ' : '';
+          const tag = l.how === 'agregado' ? `SOBRANTE (no viene en la factura${Number(l.costo_caja) > 0 ? ', cobrado' : ''}) · ` : '';
           if (!(cajas > 0)) {
             if (!revisado) return;
             const que = l.estado === 'no' ? 'NO LLEGÓ' : l.estado === 'pendiente' ? 'PENDIENTE' : 'SIN REVISAR';
