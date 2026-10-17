@@ -624,6 +624,16 @@ module.exports = async (req, res) => {
         ((cat && cat.items) || []).forEach((p) => { units[String(p.id)] = String(p.units || ''); });
         const skuCos = {};
         ((cos && cos.lines) || []).forEach((l) => { const s = l.qbId || l.sku; if (s) skuCos[norm(l.producto)] = { sku: String(s), pz: l.pz || 0 }; });
+        // Renglones sin ligar: se buscan en QuickBooks por SKU (código del proveedor, ej. 5205) o UPC — ej. recién dado de alta en Costeo
+        for (const l of ((rec && rec.lines) || (cos && cos.lines) || [])) {
+          if (l.qbId || l.sku || skuCos[norm(l.producto)]) continue;
+          for (const c of [l.codigo_proveedor, l.upc].map((x) => String(x || '').trim()).filter((x) => /^[\w-]{2,40}$/.test(x))) {
+            try {
+              const hit = ((await qbQuery(`select Id, Name, Active from Item where Sku = '${c.replace(/'/g, '')}'`)).Item || []).filter((x) => x.Active !== false);
+              if (hit.length === 1) { skuCos[norm(l.producto)] = { sku: String(hit[0].Id), pz: 0 }; break; }
+            } catch (e) { /* sigue */ }
+          }
+        }
         const lines = [], faltan = [], sinLigarNo = [];
         // Todo tal cual como lo revisó bodega: lo que no llegó va en 0 y lo que sobró (agregado) va con su nota
         ((rec && rec.lines) || (cos && cos.lines) || []).forEach((l) => {
