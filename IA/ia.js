@@ -5273,6 +5273,10 @@
   O.recent = [];
   let unOrd = null;
 
+  // Veladoras (14 días y 395 Stella): en QuickBooks/InSitu están con CORDIALSA, pero se le piden a Místicas → proveedor aparte solo en la IA
+  const VELAS_V = 'Místicas (veladoras)';
+  const VELAS_RE = /\b(14\s*D[IÍ]AS|STELLA|VELADORAS?|VELAS?)\b/i;
+  const vendorOf = (p) => (VELAS_RE.test(p.name || '') ? VELAS_V : (p.buy && p.buy.vendor) || p.vendor || 'Sin proveedor');
   const weeklyRate = (st) => (0.6 * (st.u30 / 30) + 0.4 * (st.u90 / 90)) * 7; // pesa más lo reciente
   // Productos que están en un especial guardado vigente → se venderá más
   function inSpecial() {
@@ -5306,7 +5310,7 @@
     const left = rate > 0 ? stock / (rate / 7) : Infinity;
     return {
       id: String(p.id), name: p.name, upc: p.upc || '', pack: pzc > 1 ? `Caja ${pzc} (se vende por pieza)` : p.pack || '', photo: p.photo || '',
-      vendor: (p.buy && p.buy.vendor) || p.vendor || 'Sin proveedor',
+      vendor: vendorOf(p),
       cost: ((p.buy && p.buy.lastCost) || p.cost || 0) * f, pzCaja: pzc > 1 ? pzc : 0,
       qty, sug: qty, rate: r2(rate), stock: p.stock != null ? r2(p.stock / f) : p.stock, left: isFinite(left) ? Math.round(left) : null,
       cycle, cycleOwn: !!(p.buy && p.buy.cycleOwn), lastBuy: p.buy ? p.buy.last : null, boost: boost > 1,
@@ -5402,7 +5406,7 @@
     const get = (v) => (V[v] = V[v] || { name: v, n: 0, cajas: 0, last: null, cycles: [] });
     S.products.forEach((p) => {
       if (!p.buy || !p.buy.vendor) return;
-      const x = get(p.buy.vendor);
+      const x = get(VELAS_RE.test(p.name || '') ? VELAS_V : p.buy.vendor);
       if (!x.last || p.buy.last > x.last) x.last = p.buy.last;
       if (p.buy.cycle) x.cycles.push(p.buy.cycle);
     });
@@ -5583,7 +5587,7 @@
       const base = lineFor(p, inSpecial()) || {};
       const q = Math.max(1, Math.round((p.buy && p.buy.typQty) || base.qty || 1));
       O.lines.push({ ...base, id: String(p.id), name: p.name, upc: p.upc || '', pack: p.pack || '', photo: p.photo || '',
-        vendor: (p.buy && p.buy.vendor) || p.vendor || O.vendor || 'Sin proveedor', cost: (p.buy && p.buy.lastCost) || p.cost || 0,
+        vendor: (VELAS_RE.test(p.name || '') ? VELAS_V : (p.buy && p.buy.vendor) || p.vendor || O.vendor || 'Sin proveedor'), cost: (p.buy && p.buy.lastCost) || p.cost || 0,
         qty: q, sug: q, manual: true });
       O.touched = true; saveDraft(); renderOrders();
       toast('Agregado: ' + p.name);
@@ -5606,8 +5610,8 @@
     const inOrder = new Set(ls.map((l) => l.id));
     const vendors = new Set(ls.map((l) => l.vendor));
     const context = S.products
-      .filter((p) => p.st && p.st.u90 > 0 && !inOrder.has(String(p.id)) && vendors.has((p.buy && p.buy.vendor) || p.vendor || 'Sin proveedor'))
-      .map((p) => ({ sku: String(p.id), name: p.name, vendor: (p.buy && p.buy.vendor) || p.vendor || 'Sin proveedor', stock: p.stock, rate: r2(weeklyRate(p.st)), cycle: p.buy ? p.buy.cycle : null }))
+      .filter((p) => p.st && p.st.u90 > 0 && !inOrder.has(String(p.id)) && vendors.has(vendorOf(p)))
+      .map((p) => ({ sku: String(p.id), name: p.name, vendor: vendorOf(p), stock: p.stock, rate: r2(weeklyRate(p.st)), cycle: p.buy ? p.buy.cycle : null }))
       .sort((a, b) => b.rate - a.rate).slice(0, 60);
     try {
       const token = await auth.currentUser.getIdToken();
@@ -5655,7 +5659,7 @@
       if (!p) { toast('No encontré ese producto'); return; }
       const base = lineFor(p, inSpecial()) || {};
       line = { ...base, id: sku, name: p.name, upc: p.upc || '', pack: p.pack || '', photo: p.photo || '',
-        vendor: (p.buy && p.buy.vendor) || p.vendor || 'Sin proveedor', cost: (p.buy && p.buy.lastCost) || p.cost || 0, qty: 0, sug: 0, manual: true };
+        vendor: vendorOf(p), cost: (p.buy && p.buy.lastCost) || p.cost || 0, qty: 0, sug: 0, manual: true };
       O.lines.push(line);
     }
     if (!line) { toast('Ese producto ya no está en la orden'); return; }
