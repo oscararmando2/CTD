@@ -451,7 +451,7 @@ module.exports = async (req, res) => {
         const d = (await db('GET', 'ordenesData')) || {};
         let items = Array.isArray(d.items) ? d.items : [];
         // Bodega no ve dinero
-        if (RECIBO_ONLY.includes(who)) items = items.map((x) => ({ ...x, cost: 0, price: 0, buy: x.buy ? { ...x.buy, lastCost: 0 } : null }));
+        if (RECIBO_ONLY.includes(who)) items = items.map((x) => ({ ...x, cost: 0, price: 0, activo: Number(x.price) > 0, buy: x.buy ? { ...x.buy, lastCost: 0 } : null })); // activo: tiene precio (sin decir cuánto)
         return res.json({ at: d.at || null, items });
       }
       case 'ctd_next': {
