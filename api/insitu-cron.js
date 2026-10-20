@@ -119,6 +119,33 @@ async function autoUnidades(prods) {
   return Object.keys(up).length;
 }
 
+async function especialesAInsitu(tok, prods, items) {
+  const esp = (await db('GET', 'qbEspeciales')) || {};
+  const quiere = {}; // código → precio que debe tener InSitu
+  const hace2 = Date.now() - 2 * 864e5;
+  Object.values(esp).forEach((e) => {
+    if (!e || !e.qbId) return;
+    if (e.status === 'activo' && e.special > 0) quiere[String(e.qbId)] = r2(e.special);
+    else if (e.status === 'terminado' && (e.revertedAt || 0) > hace2 && e.original > 0 && !(String(e.qbId) in quiere)) quiere[String(e.qbId)] = r2(e.original);
+  });
+  const auth = { Authorization: (tok.scheme ?? 'Bearer ') + tok.token };
+  const hechos = [], errores = [];
+  for (const [code, precio] of Object.entries(quiere)) {
+    const p = prods.find((x) => String(x.code ?? '').trim() === code);
+    if (!p || Math.abs((Number(p.default_price) || 0) - precio) < 0.005) continue;
+    const body = {};
+    PROD_KEYS.forEach((k) => { if (p[k] !== undefined && p[k] !== null) body[k] = p[k]; });
+    body.default_price = precio;
+    const r = await fetch(`${INSITU}/products/bulk/operations`, { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify([body]) });
+    if (!r.ok) { errores.push(`${code}: InSitu ${r.status}`); continue; }
+    p.default_price = precio;
+    const it = items.find((x) => x.id === code); if (it) it.price = precio;
+    hechos.push(`${p.name}: ${precio}`);
+  }
+  if (hechos.length) await db('PUT', 'insitu/especialesPrecio', { at: Date.now(), hechos, errores });
+  return { hechos, errores };
+}
+
 module.exports = async (req, res) => {
   if (req.query && req.query.ord === 'estado') { // temporal: ¿ya se subió la copia de Órdenes? (solo fecha y cantidad)
     const d = await db('GET', 'ordenesData');
@@ -152,6 +179,10 @@ module.exports = async (req, res) => {
       Object.values(qlog).forEach((x) => { if (x && x.action === 'costeo-alta' && x.qbId && x.ts > Date.now() - 60 * 864e5) alta[String(x.qbId)] = Math.min(alta[String(x.qbId)] || Infinity, x.ts); });
       items.forEach((p) => { if (alta[p.id]) p.alta = alta[p.id]; });
     } catch (e) { /* sin marca de nuevos */ }
+    // Especiales: InSitu toma el precio de QuickBooks hasta su sincronización de la madrugada.
+    // Mientras un especial está activo (o recién terminó) se le manda el precio directo a InSitu.
+    let preciosInsitu = null;
+    try { preciosInsitu = await especialesAInsitu(tok, prods, items); } catch (e) { preciosInsitu = { error: String(e.message || e).slice(0, 160) }; }
     await db('PUT', 'catalogo', { at: Date.now(), by: 'auto', items });
 
     // Fechas de caducidad siguen a la existencia
@@ -187,7 +218,7 @@ module.exports = async (req, res) => {
     try { await autoUnidades(prods); } catch (e) { /* sigue */ }
     try { altas = await completarAltas(tok, prods); } catch (e) { altas = { error: String(e.message || e).slice(0, 200) }; } // no detiene la sincronización
     await db('PUT', 'insitu/lastRun', { at: Date.now(), productos: items.length, ajustes, altas });
-    return res.json({ ok: true, productos: items.length, conExistencia: items.filter((p) => p.stock > 0).length, ajustes, altas, especiales });
+    return res.json({ ok: true, productos: items.length, conExistencia: items.filter((p) => p.stock > 0).length, ajustes, altas, especiales, preciosInsitu });
   } catch (e) {
     await db('PUT', 'insitu/lastRun', { at: Date.now(), error: String(e.message || e).slice(0, 200) }).catch(() => {});
     return res.status(e.auth ? 401 : 500).json({ ok: false, error: String(e.message || e) });
