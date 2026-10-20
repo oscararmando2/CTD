@@ -1013,3 +1013,10 @@ main{padding:8px var(--gut) calc(var(--dock-h) + 48px + env(safe-area-inset-bott
 .nov-fc{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--oro);align-self:center}
 
 .fech-sin{margin:22px 0 10px}
+
+/* Fechas: los cuadros de resumen filtran la lista */
+button.fs{font:inherit;color:inherit;text-align:left;border:0;cursor:pointer;transition:box-shadow .2s var(--ease),background .2s var(--ease)}
+button.fs:disabled{cursor:default}
+button.fs.on{box-shadow:inset 0 0 0 2px var(--oro)}
+.fs .fs-x{display:block;margin-top:6px;font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--oro)}
+.fech-bk{margin:6px 0 10px}
