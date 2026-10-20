@@ -4323,6 +4323,19 @@
         ${info.man && !ro ? `<button type="button" class="g-x" data-fdel="${esc(r.sku)}" data-d="${r.d}" title="Quitar la fecha puesta a mano" aria-label="Quitar">×</button>` : ''}
       </div>`;
     }).join('') : `<p class="data-info">${total ? 'Nada con esos filtros.' : ''}</p>`;
+    // Al buscar: también lo que hay en existencia y todavía no tiene fecha (para ponérsela desde aquí)
+    const q = normTxt(F.q || '').trim();
+    if (q && !ro) {
+      const done = fechadas(), cf = conFecha();
+      const sin = bodegaProds().filter((p) => !done.has(skuKey(p.id)) && q.split(/\s+/).every((w) => normTxt(`${p.name} ${skuFech(p.id)} ${skuFech(p.id).replace('-', '')} ${p.ean || ''} ${p.upc || ''} ${p.id}`).includes(w))).slice(0, 24);
+      if (sin.length) {
+        if (!rows.length) box.innerHTML = '';
+        box.insertAdjacentHTML('beforeend', `<p class="lbl fech-sin">Sin fecha · en existencia <small>(${sin.length}) toca uno para ponerle fecha</small></p><div class="bd-grid">${sin.map((p) => `<button type="button" class="bd-p" data-bp="${esc(p.id)}">
+          <span class="bd-ph">${p.photo ? `<img src="${esc(p.photo)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>
+          ${skuFech(p.id) ? `<span class="bd-sku">${esc(skuFech(p.id))}</span>` : ''}<span class="bd-n">${esc(p.name)}</span>
+          <span class="bd-s">${cf[skuKey(p.id)] > 0 ? `${nfmt(Math.max(0, p.stock - cf[skuKey(p.id)]))} sin fecha (llegó nuevo)` : nfmt(p.stock) + ' en existencia · sin fecha'}</span></button>`).join('')}</div>`);
+      }
+    }
   }
   $('#fechQ').addEventListener('input', (e) => { F.q = e.target.value; renderFechas(false); });
   // Con la página abierta, cada 30 min se vuelve a traer existencia y fechas
@@ -4431,7 +4444,11 @@
     if (e.target.closest('[data-bback]')) { F.bdep = null; renderBodega(); return; }
     if (e.target.closest('[data-ball]')) { F.bAll = !F.bAll; renderBodega(); return; }
     const b = e.target.closest('[data-bp]'); if (!b) return;
-    const p = fechProds().find((x) => String(x.id) === b.dataset.bp); if (!p) return;
+    ponerFechaBodega(b.dataset.bp);
+  });
+  // Tocar un producto en existencia → hoja de día/mes/año; se guarda con las cajas que todavía no tienen fecha
+  function ponerFechaBodega(id) {
+    const p = fechProds().find((x) => String(x.id) === String(id)); if (!p) return;
     const ya = conFecha()[skuKey(p.id)] || 0;
     const q = Math.max(1, Math.round((p.stock || 1) - ya)); // solo las cajas que todavía no tienen fecha
     openSheetFor({ sku: String(p.id), nombre: p.name, photo: p.photo || '', caducidad: '', leida: '' }, async (fecha) => {
@@ -4447,7 +4464,8 @@
       try { await cosCall('lote_add', { sku: String(p.id), nombre: p.name, fecha, q }); toast(`✓ ${p.name} · vence ${fmtLong(fecha)}`); }
       catch (err) { toast('No se guardó: ' + err.message); renderFechas(true); }
     });
-  });
+  }
+  $('#fechList').addEventListener('click', (e) => { const b = e.target.closest('[data-bp]'); if (b) ponerFechaBodega(b.dataset.bp); });
   /* ---- Consejos: cruzan las fechas con lo que se vende por semana y a quién ---- */
   F.tipsAll = false;
   function renderTips() {
