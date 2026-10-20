@@ -4305,14 +4305,17 @@
     // Resumen: cuántos productos/cajas (y dinero, si aplica) vencen por plazo
     const money_ = canMoney();
     const bucket = (lo, hi) => rows.filter((r) => r.dias >= lo && r.dias <= hi);
-    const tiles = [['Vencidas', rows.filter((r) => r.dias < 0), 'dead'], ['En 30 días', bucket(0, 30), 'hot'], ['En 31–60 días', bucket(31, 60), 'warm'], ['En 61–90 días', bucket(61, 90), '']];
-    $('#fechSum').innerHTML = rows.length ? tiles.map(([l, rs, cls]) => `<div class="fs ${cls}"><span class="lbl">${l}</span><b>${rs.length}</b><small>${nfmt(rs.reduce((a, r) => a + cajasDe(r), 0))} cajas${money_ ? ' · ' + money(rs.reduce((a, r) => a + valorDe(r), 0)) : ''}</small></div>`).join('') : '';
+    const tiles = [['v', 'Vencidas', rows.filter((r) => r.dias < 0), 'dead'], ['30', 'En 30 días', bucket(0, 30), 'hot'], ['60', 'En 31–60 días', bucket(31, 60), 'warm'], ['90', 'En 61–90 días', bucket(61, 90), '']];
+    // Tocar un cuadro = ver solo esos productos (otra vez = todos)
+    if (F.bk && !tiles.some(([k, , rs]) => k === F.bk && rs.length)) F.bk = '';
+    $('#fechSum').innerHTML = rows.length ? tiles.map(([k, l, rs, cls]) => `<button type="button" class="fs ${cls}${F.bk === k ? ' on' : ''}" data-bk="${k}"${rs.length ? '' : ' disabled'}><span class="lbl">${l}</span><b>${rs.length}</b><small>${nfmt(rs.reduce((a, r) => a + cajasDe(r), 0))} cajas${money_ ? ' · ' + money(rs.reduce((a, r) => a + valorDe(r), 0)) : ''}</small>${F.bk === k ? '<em class="fs-x">ver todos ✕</em>' : rs.length ? '<em class="fs-x">ver cuáles</em>' : ''}</button>`).join('') : '';
+    const lista = F.bk ? (tiles.find(([k]) => k === F.bk) || [, , rows])[2] : rows;
     const soon = rows.filter((r) => r.dias >= 0 && (r.dias <= 60 || r.riesgo));
     $('#fechActs').hidden = !rows.length;
     $('#fechEsp').hidden = !!onlyView() || !soon.length; // (los usuarios de una sección no mandan a especiales)
     $('#fechEsp').innerHTML = `${icon('sparkles')}Mandar a especiales (${soon.length})`;
     $('#fechXls').hidden = !rows.length;
-    box.innerHTML = rows.length ? rows.map((r) => {
+    box.innerHTML = lista.length ? (F.bk ? `<p class="status fech-bk">Mostrando: <b>${esc((tiles.find(([k]) => k === F.bk) || [])[1] || '')}</b> · <button type="button" class="btn-link" data-bk="${F.bk}">ver todos</button></p>` : '') + lista.map((r) => {
       const info = (R.lotes[r.sku] || { fechas: {} }).fechas[r.d] || {};
       const p = fechProd(r.sku), ph = p ? p.photo : '';
       return `<div class="lot-row fr${r.dias < 0 ? ' dead' : r.dias <= 60 || r.riesgo ? ' hot' : r.dias <= 120 ? ' warm' : ''}">
@@ -4338,6 +4341,9 @@
     }
   }
   $('#fechQ').addEventListener('input', (e) => { F.q = e.target.value; renderFechas(false); });
+  const bkClick = (e) => { const b = e.target.closest('[data-bk]'); if (!b || b.disabled) return; F.bk = F.bk === b.dataset.bk ? '' : b.dataset.bk; renderFechas(false); if (F.bk) $('#fechList').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  $('#fechSum').addEventListener('click', bkClick);
+  $('#fechList').addEventListener('click', bkClick);
   // Con la página abierta, cada 30 min se vuelve a traer existencia y fechas
   setInterval(() => { if (S.view === 'fech' && !document.hidden && S.who) { R.cat = null; renderFechas(true); } }, 30 * 60000);
   $('#fechF').addEventListener('click', (e) => {
