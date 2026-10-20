@@ -4345,7 +4345,7 @@
     const empacado = (p) => conCodigo(p) || !granel(p);
     // Tampoco llevan fecha las veladoras / velas
     const noCaduca = (p) => /\bvel(a|as|adora|adoras)\b/.test(normTxt(`${p.name} ${p.cat || ''}`));
-    const list = fechProds().filter((p) => !isCredito(p) && !EXCLUDE_CATS.includes(p.cat) && p.price > 0 && empacado(p) && !noCaduca(p));
+    const list = fechProds().filter((p) => !isCredito(p) && !EXCLUDE_CATS.includes(p.cat) && (p.price > 0 || p.activo) && empacado(p) && !noCaduca(p)); // a bodega no le llega el precio: "activo"
     const conStock = list.some((p) => p.stock != null);
     return conStock ? list.filter((p) => p.stock > 0) : [];
   }
