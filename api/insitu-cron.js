@@ -172,7 +172,7 @@ module.exports = async (req, res) => {
         // los primeros 10 días no se recorta, y si ya se había recortado a 0 en esos días, se regresa
         const recien = now - lastE < 10 * 864e5;
         const recortadoAntes = x.aj && x.aj.by === 'auto' && (x.aj.ts || 0) - lastE < 10 * 864e5 && x.aj.r < total - 0.01;
-        if (recien) { left -= Math.min(total, left); return; }
+        if (recien) { left -= Math.min(total, left); if (recortadoAntes) { up[`lotes/${sku}/f/${d}/aj`] = null; ajustes++; } return; }
         const q = recortadoAntes ? total : loteQueda(x);
         if (!(q > 0)) return;
         const queda = Math.min(q, left);
