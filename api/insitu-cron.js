@@ -164,11 +164,21 @@ module.exports = async (req, res) => {
       if (!(sku in stockSku)) return;
       let left = Math.max(0, stockSku[sku]);
       Object.keys(v.f || {}).sort().reverse().forEach((d) => { // nueva → vieja
-        const q = loteQueda(v.f[d]);
+        const x = v.f[d] || {};
+        const ents = Object.values(x.e || {});
+        const total = ents.reduce((a, e) => a + (Number(e.q) || 0), 0);
+        const lastE = ents.reduce((m, e) => Math.max(m, e.ts || 0), 0);
+        // Lo que llegó en un Recibo entra al inventario de InSitu días después (orden → recibo en QuickBooks):
+        // los primeros 10 días no se recorta, y si ya se había recortado a 0 en esos días, se regresa
+        const recien = now - lastE < 10 * 864e5;
+        const recortadoAntes = x.aj && x.aj.by === 'auto' && (x.aj.ts || 0) - lastE < 10 * 864e5 && x.aj.r < total - 0.01;
+        if (recien) { left -= Math.min(total, left); return; }
+        const q = recortadoAntes ? total : loteQueda(x);
         if (!(q > 0)) return;
         const queda = Math.min(q, left);
         left -= queda;
         if (queda < q - 0.01) { up[`lotes/${sku}/f/${d}/aj`] = { r: r2(queda), ts: now, by: 'auto' }; ajustes++; }
+        else if (recortadoAntes) { up[`lotes/${sku}/f/${d}/aj`] = null; ajustes++; } // se regresa completo
       });
     });
     if (ajustes) await db('PATCH', '', up);
