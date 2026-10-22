@@ -2562,12 +2562,15 @@
   async function loadInvoice(d) {
     let vmap = {};
     try { const mm = await cosCall('map', { proveedor: d.proveedor }); vmap = mm.map || {}; C.pzMem = mm.pz || {}; } catch (e) { /* sin memoria */ }
-    C.head = { proveedor: d.proveedor, factura: d.factura, fecha: d.fecha, total_factura: d.total_factura, total_calculado: d.total_calculado, mercancia: d.mercancia, cuadra: d.cuadra, flete: d.flete, creditos: d.creditos, otros_cargos: d.otros_cargos, dudas: d.dudas || [], modelo: d.modelo };
+    C.head = { proveedor: d.proveedor, factura: d.factura, fecha: d.fecha, total_factura: d.total_factura, total_calculado: d.total_calculado, mercancia: d.mercancia, cuadra: d.cuadra, flete: d.flete, creditos: d.creditos, otros_cargos: d.otros_cargos, dudas: d.dudas || [], modelo: d.modelo, proveedor_datos: d.proveedor_datos || null };
     C.lines = (d.items || []).map((it, i) => {
       const m = matchLine(it, vmap);
       const l = { i, ...it, precio_nuevo: null, costo_caja: r2(Number(it.costo_caja) || 0), duda: (d.dudas || []).filter((x) => x.renglon === i + 1).map((x) => x.nota).join(' ') };
       if (m) Object.assign(l, { sku: String(m.p.id), nombre: m.p.name, photo: m.p.photo, pack: m.p.pack, costo_antes: r2(m.p.cost || 0), precio_antes: r2(m.p.price || 0), how: m.how, review: !!m.review, nuevo: false });
-      else Object.assign(l, { nuevo: true, alta: { name: cleanTitle(it.producto), sku: it.upc || '', barcode: it.upc || '', photo: '', ...altaGuess(it.producto) } });
+      else {
+        const sug = String(it.sku_fabricante || '').trim();
+        Object.assign(l, { nuevo: true, alta: { name: cleanTitle(it.producto), sku: skuAltaOk(sug) ? sug : it.upc || '', skuSug: skuAltaOk(sug) ? sug : '', barcode: it.upc || '', photo: '', ...altaGuess(it.producto) } });
+      }
       return l;
     });
     // Un producto ligado a dos renglones: se queda con el que coincide por código/UPC o el nombre más parecido; el otro queda para revisar
@@ -2730,7 +2733,8 @@
       ${C.dup ? `<p class="qb-warn">⚠ Esta factura ya se guardó el ${fmtTs(C.dup.ts)} por ${esc(C.dup.by || '')}. Revisa antes de aplicar otra vez.</p>` : ''}
       ${C.bodega && !C.recibo ? `<div class="cos-bod"><p class="status">Revisada en bodega por <b>${esc(C.bodega.by || '')}</b> · ${fmtTs(C.bodega.at)}${C.bodega.nota ? ' · Nota: <b>' + esc(C.bodega.nota) + '</b>' : ''}</p>${(C.bodega.dif || []).length ? `<ul class="rec-falt">${C.bodega.dif.map((x) => `<li><b>${esc(EST[x.estado] || x.estado)}</b> · ${esc(x.producto)}${x.estado === 'parcial' ? ` — llegaron ${nfmt(x.recibido || 0)} de ${nfmt(x.cantidad)}` : ''}${x.nota ? ` · <i>${esc(x.nota)}</i>` : ''}</li>`).join('')}</ul>` : '<p class="status">Todo llegó completo.</p>'}</div>` : ''}
       ${C.recibo ? `<p class="status">Revisada en bodega${C.reciboBy ? ' por ' + esc(C.reciboBy) : ''}.${C.reciboNota ? ' Nota: <b>' + esc(C.reciboNota) + '</b>' : ''}</p>` : ''}
-      ${C.applied ? '<p class="qb-msg ok">● Cambios aplicados en QuickBooks. InSitu los recibe en su siguiente sincronización (máx. 1 hora).</p>' : ''}`;
+      ${C.applied ? '<p class="qb-msg ok">● Cambios aplicados en QuickBooks. InSitu los recibe en su siguiente sincronización (máx. 1 hora).</p>' : ''}
+      ${provNuevoHTML()}`;
     const up = C.lines.filter((l) => !l.nuevo && cu(l) > (l.costo_antes || 0) + 0.005).length;
     const nuevos = C.lines.filter((l) => l.nuevo).length;
     const cambiosP = C.lines.filter((l) => !l.nuevo && l.aplicar && priceChanged(l)).length;
@@ -2849,7 +2853,8 @@
     const nuevo = l.nuevo ? `
       <div class="cos-alta">
         <label class="field alta-n"><span>Nombre en QuickBooks</span><input data-a="name" value="${esc(l.alta.name)}"></label>
-        <label class="field${skuAltaOk(l.alta.sku) ? '' : ' falta'}"><span>SKU (CTD-#### o número)</span><input data-a="sku" placeholder="CTD-#### o 5205" value="${esc(skuAltaOk(l.alta.sku) ? l.alta.sku : (l.alta.sku = ''))}"></label>
+        <label class="field${skuAltaOk(l.alta.sku) ? '' : ' falta'}"><span>SKU (CTD-#### o número)${l.alta.skuSug && l.alta.sku === l.alta.skuSug ? ' · <em class="sug">sugerido del fabricante, cámbialo si quieres</em>' : ''}</span><input data-a="sku" placeholder="CTD-#### o 5205" value="${esc(skuAltaOk(l.alta.sku) ? l.alta.sku : (l.alta.sku = ''))}"></label>
+        <label class="field"><span>Piezas por caja</span><input data-a="pzc" type="number" min="1" step="1" inputmode="numeric" placeholder="ej. 12" value="${esc(l.alta.pzc ?? (l.pzCaja || piezasCaja(l) || ''))}"></label>
         <label class="field"><span>Código de barras (UPC) → Barcode 2</span><input data-a="barcode" inputmode="numeric" value="${esc(l.alta.barcode || '')}"></label>
         <label class="field${l.alta.cat ? '' : ' falta'}"><span>Categoría</span><select data-a="cat"><option value="">Elige…</option>${altaCats().map((c) => `<option${c === l.alta.cat ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
         <label class="field${l.alta.brand ? '' : ' falta'}"><span>Marca</span><input data-a="brand" list="altaBrands" placeholder="Ej. La Costeña" value="${esc(l.alta.brand || '')}"></label>
@@ -2911,6 +2916,15 @@
       if (a === 'sku') e.target.closest('.field').classList.toggle('falta', !skuAltaOk(e.target.value));
       if (['cat', 'brand', 'vendorId', 'units'].includes(a)) e.target.closest('.field').classList.toggle('falta', !String(e.target.value).trim());
       if (a === 'vendorId') { const m = store.get('ctdIA.altaVendor', {}); m[normTxt(C.head.proveedor || '')] = e.target.value; store.set('ctdIA.altaVendor', m); }
+      if (a === 'pzc') {
+        // Piezas por caja: la unidad de InSitu (Case12, Case96…) se ajusta sola si existe; Rocío la puede cambiar
+        const n = Math.round(Number(e.target.value) || 0);
+        l.alta.pzc = n > 0 ? n : ''; l.pzCaja = n > 1 ? n : 0;
+        if (l.pz > 1 && n > 1) l.pz = n;
+        const u = n > 1 ? altaUnits().find((x) => x.replace(/\s+/g, '').toLowerCase() === 'case' + n) : '';
+        if (u && !(l.pz > 1)) { l.alta.units = u; const s = el.querySelector('[data-a="units"]'); if (s) s.value = u; }
+        decide(l);
+      }
     }
     const m1 = marginOf(effPrice(l), cu(l)), mv = el.querySelector('[data-v="m"]');
     mv.textContent = pct(m1); mv.className = m1 < CS.target / 100 - 1e-9 ? 'warn' : 'okc';
@@ -3052,6 +3066,16 @@
     sel.filter((l) => l.nuevo && !creado(l)).forEach((l) => { const k = altaKey(l); if (vistos.has(k)) repetidos.add(l); else vistos.add(k); });
     const faltan = sel.filter((l) => l.nuevo && !creado(l) && !repetidos.has(l) && (!skuAltaOk(l.alta.sku) || !l.alta.cat || !String(l.alta.brand || '').trim() || !l.alta.vendorId));
     if (faltan.length) { toast(`Falta SKU (CTD-#### o número), categoría, marca o proveedor en ${faltan.length} ${faltan.length === 1 ? 'producto nuevo' : 'productos nuevos'}`); const el = $(`.cos-l[data-i="${faltan[0].i}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+    const skusAlta = sel.filter((l) => l.nuevo && !creado(l) && !repetidos.has(l)).map((l) => skuAltaFmt(l.alta.sku));
+    const dobles = skusAlta.filter((s, i) => skusAlta.indexOf(s) !== i);
+    if (dobles.length) { toast(`El SKU ${dobles[0]} está en dos productos nuevos: cámbialo en uno`); return; }
+    if (skusAlta.length) {
+      try {
+        const { ocupados } = await cosCall('skus_ocupados', { skus: skusAlta });
+        const ks = Object.keys(ocupados || {});
+        if (ks.length) { alert(`Estos SKU ya los tiene otro producto en QuickBooks. Cámbialos (ej. a CTD-####):\n\n${ks.map((k) => `• ${k} → ${ocupados[k]}`).join('\n')}`); return; }
+      } catch (err) { /* si no se pudo revisar, QuickBooks lo dirá */ }
+    }
     const creates = sel.filter((l) => l.nuevo && !creado(l) && !repetidos.has(l)).map((l) => ({ name: l.alta.name, sku: l.alta.sku, price: effPrice(l), cost: cu(l), photo: l.alta.photo, description: l.producto,
       barcode: String(l.alta.barcode || '').trim(), cat: l.alta.cat, brand: String(l.alta.brand || '').trim(), vendorId: l.alta.vendorId, units: l.alta.units || '' }));
     const sinPrecio = sel.filter((l) => l.nuevo && !creado(l) && !repetidos.has(l) && l.precio_nuevo == null).length;
@@ -3261,6 +3285,37 @@
     renderCosteo();
   }
   // Proveedor de la factura: el último que se eligió para ese proveedor, o el que se llame igual
+  // ¿El proveedor de la factura ya está en QuickBooks? (mismo criterio que para dar de alta productos)
+  function provEnQb() {
+    if (!ALTA.vendors || !C.head) return null;
+    const prov = normTxt(C.head.proveedor || ''), w = prov.split(/\s+/)[0] || '';
+    const last = store.get('ctdIA.altaVendor', {})[prov];
+    return (last && ALTA.vendors.find((x) => x.id === last)) || ALTA.vendors.find((x) => normTxt(x.name) === prov) || (w.length > 2 && ALTA.vendors.find((x) => normTxt(x.name).split(/\s+/)[0] === w)) || null;
+  }
+  function provNuevoHTML() {
+    if (!C.head || !ALTA.vendors || !ALTA.vendors.length || provEnQb() || C.provOmit) return '';
+    const d = C.head.proveedor_datos || {};
+    const f = (k, lbl, v, w) => `<label class="field${w ? ' ' + w : ''}"><span>${lbl}</span><input data-prov="${k}" value="${esc(v || '')}"></label>`;
+    return `<div class="prov-new"><p class="qb-warn">⚠ <b>${esc(C.head.proveedor || 'El proveedor')}</b> no está en QuickBooks. Revisa los datos y dalo de alta (o elige uno existente en cada producto nuevo).</p>
+      <div class="prov-grid">${f('name', 'Nombre', C.head.proveedor, 'alta-n')}${f('direccion', 'Dirección', d.direccion, 'alta-n')}${f('ciudad', 'Ciudad', d.ciudad)}${f('estado', 'Estado', d.estado)}${f('cp', 'C.P.', d.cp)}${f('telefono', 'Teléfono', d.telefono)}${f('email', 'Correo', d.email)}</div>
+      <div class="prov-act"><button type="button" class="btn btn-oro btn-sm" id="provAlta">Dar de alta en QuickBooks</button> <button type="button" class="btn-link sm" id="provOmit">Ya existe con otro nombre</button></div></div>`;
+  }
+  $('#cosHead').addEventListener('click', async (e) => {
+    if (e.target.closest('#provOmit')) { C.provOmit = true; renderCosteo(); toast('Elige el proveedor en cada producto nuevo'); return; }
+    const b = e.target.closest('#provAlta'); if (!b) return;
+    const v = {}; $$('#cosHead [data-prov]').forEach((x) => { v[x.dataset.prov] = x.value.trim(); });
+    if (!v.name) { toast('Falta el nombre'); return; }
+    if (!confirm(`¿Dar de alta "${v.name}" como proveedor en QuickBooks?`)) return;
+    b.disabled = true;
+    try {
+      const r = await cosCall('qb_vendor_crear', v);
+      if (!ALTA.vendors.some((x) => x.id === r.id)) ALTA.vendors.push({ id: r.id, name: r.name });
+      const m = store.get('ctdIA.altaVendor', {}); m[normTxt(C.head.proveedor || '')] = r.id; store.set('ctdIA.altaVendor', m);
+      C.lines.forEach((l) => { if (l.nuevo && l.alta) l.alta.vendorId = r.id; });
+      toast(r.ya ? `${r.name} ya existía en QuickBooks: quedó ligado` : `✓ ${r.name} dado de alta en QuickBooks`);
+      renderCosteo();
+    } catch (err) { toast('No se pudo: ' + err.message); b.disabled = false; }
+  });
   function altaVendorDefault() {
     if (!ALTA.vendors || !C.head) return;
     const prov = normTxt(C.head.proveedor || ''), w = prov.split(/\s+/)[0] || '';
@@ -5300,7 +5355,7 @@
   // Veladoras (14 días y 395 Stella): en QuickBooks/InSitu están con CORDIALSA, pero se le piden a Místicas → proveedor aparte solo en la IA
   const VELAS_V = 'Místicas (veladoras)';
   const VELAS_RE = /\b(14\s*D[IÍ]AS|STELLA|VELADORAS?|VELAS?)\b/i;
-  const vendorOf = (p) => (VELAS_RE.test(p.name || '') ? VELAS_V : (p.buy && p.buy.vendor) || p.vendor || 'Sin proveedor');
+  const vendorOf = (p) => { const v = (p.buy && p.buy.vendor) || p.vendor || ''; return VELAS_RE.test(p.name || '') || /ilumex|m[ií]sticas/i.test(v) ? VELAS_V : v || 'Sin proveedor'; }; // Ilumex factura las velas de Místicas
   const weeklyRate = (st) => (0.6 * (st.u30 / 30) + 0.4 * (st.u90 / 90)) * 7; // pesa más lo reciente
   // Productos que están en un especial guardado vigente → se venderá más
   function inSpecial() {

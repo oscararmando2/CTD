@@ -19,6 +19,7 @@ const SYSTEM = `Lees facturas de proveedores de Central Trade Distribution (CTD)
 Extrae TODOS los renglones de producto de la factura, en el orden en que aparecen. Para cada renglón:
 - upc: el código de barras / UPC si aparece (solo dígitos o como venga), si no, cadena vacía.
 - codigo_proveedor: el número de artículo / item # / SKU del proveedor, si aparece.
+- sku_fabricante: si el renglón trae ADEMÁS otro código del fabricante o de la marca (ej. entre paréntesis al final: "Clasico Liso Blanco (4204)" → "4204"), ponlo aquí; si no, cadena vacía.
 - producto: la descripción tal como viene.
 - cantidad: cantidad ENVIADA/SURTIDA (si hay columnas "ordered" y "shipped", usa shipped; si no se surtió, 0).
 - empaque: presentación tal como viene (ej. "12/16 OZ", "24 CT", "CS").
@@ -27,14 +28,18 @@ Extrae TODOS los renglones de producto de la factura, en el orden en que aparece
 - total_linea: importe del renglón.
 - caducidad: si junto al renglón hay una fecha de caducidad escrita a mano (ej. "OCT-25-27", "07-22-27", "DIC-26-26", "15-mar-28"), conviértela a YYYY-MM-DD (en EE.UU. suele ser mes-día-año; el año de 2 dígitos es 20XX). Si no hay, cadena vacía. No confundas la fecha de la factura con una caducidad.
 - PALLETS MIXTOS / SURTIDOS: si un renglón trae varios sabores o variedades con su cantidad cada uno (ej. "PEÑAFIEL 600 ML MIX – 1 PALLET (14 TWIST LIMON, 14 MANZANITA, 14 SANGRIA…)"), SEPÁRALO en un renglón por sabor: producto = marca + presentación + sabor (ej. "PEÑAFIEL 600 ML MANZANITA"), cantidad = la de ese sabor, costo_caja = el mismo precio por caja, total_linea = cantidad × costo. Si un sabor aparece dos veces, júntalo en UN solo renglón sumando las cantidades.
+Si la factura no trae número (ej. PROFORMA), usa el PO # como número de factura.
+proveedor_datos: dirección, ciudad, estado (2 letras), código postal, teléfono y correo del PROVEEDOR que vende (el que emite la factura; NO el "Bill to"/"Ship to" de CTD). Lo que no venga, cadena vacía.
 Aparte: flete/freight, otros cargos y créditos/descuentos/devoluciones NO son productos; van en sus campos.
 Si un dato no se lee con claridad, pon lo más probable y márcalo en "dudas" con el número de renglón (empezando en 1).`;
 
 const SCHEMA = {
   type: 'object', additionalProperties: false,
-  required: ['proveedor', 'factura', 'fecha', 'total_factura', 'flete', 'otros_cargos', 'creditos', 'items', 'dudas'],
+  required: ['proveedor', 'proveedor_datos', 'factura', 'fecha', 'total_factura', 'flete', 'otros_cargos', 'creditos', 'items', 'dudas'],
   properties: {
     proveedor: { type: 'string' },
+    proveedor_datos: { type: 'object', additionalProperties: false, required: ['direccion', 'ciudad', 'estado', 'cp', 'telefono', 'email'],
+      properties: { direccion: { type: 'string' }, ciudad: { type: 'string' }, estado: { type: 'string' }, cp: { type: 'string' }, telefono: { type: 'string' }, email: { type: 'string' } } },
     factura: { type: 'string', description: 'Número de factura' },
     fecha: { type: 'string', description: 'YYYY-MM-DD o vacío' },
     total_factura: { anyOf: [{ type: 'number' }, { type: 'null' }] },
@@ -45,9 +50,9 @@ const SCHEMA = {
       type: 'array',
       items: {
         type: 'object', additionalProperties: false,
-        required: ['upc', 'codigo_proveedor', 'producto', 'cantidad', 'empaque', 'unidades_por_caja', 'costo_caja', 'total_linea', 'caducidad'],
+        required: ['upc', 'codigo_proveedor', 'sku_fabricante', 'producto', 'cantidad', 'empaque', 'unidades_por_caja', 'costo_caja', 'total_linea', 'caducidad'],
         properties: {
-          upc: { type: 'string' }, codigo_proveedor: { type: 'string' }, producto: { type: 'string' },
+          upc: { type: 'string' }, codigo_proveedor: { type: 'string' }, sku_fabricante: { type: 'string' }, producto: { type: 'string' },
           cantidad: { type: 'number' }, empaque: { type: 'string' },
           unidades_por_caja: { anyOf: [{ type: 'integer' }, { type: 'null' }] },
           costo_caja: { type: 'number' }, total_linea: { type: 'number' },
@@ -463,6 +468,32 @@ module.exports = async (req, res) => {
           if ((r.Item || []).length < 1000) break;
         }
         return res.json({ next: max ? 'CTD-' + (max + 1) : '', max });
+      }
+      case 'qb_vendor_crear': {
+        // Proveedor nuevo en QuickBooks con los datos de la factura (Costeo)
+        if (RECIBO_ONLY.includes(who)) return res.status(403).json({ error: 'Sin permiso' });
+        const name = str(body.name, 100).replace(/[:\t\n\r]/g, ' ').trim();
+        if (name.length < 2) return res.status(400).json({ error: 'Falta el nombre del proveedor' });
+        const ya = ((await qbQuery(`select Id, DisplayName from Vendor where DisplayName = '${name.replace(/'/g, "\\'")}'`)).Vendor || [])[0];
+        if (ya) return res.json({ id: String(ya.Id), name: String(ya.DisplayName), ya: true });
+        const v = { DisplayName: name, CompanyName: name };
+        const addr = { Line1: str(body.direccion, 200), City: str(body.ciudad, 60), CountrySubDivisionCode: str(body.estado, 20), PostalCode: str(body.cp, 20) };
+        if (addr.Line1 || addr.City) v.BillAddr = addr;
+        if (str(body.telefono, 30)) v.PrimaryPhone = { FreeFormNumber: str(body.telefono, 30) };
+        if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(body.email || '').trim())) v.PrimaryEmailAddr = { Address: String(body.email).trim() };
+        const d = await qb('POST', 'vendor', v);
+        await log({ action: 'qb-proveedor-alta', name, qbId: d.Vendor && d.Vendor.Id, by: who });
+        return res.json({ id: String(d.Vendor.Id), name: String(d.Vendor.DisplayName) });
+      }
+      case 'skus_ocupados': {
+        // ¿Qué SKUs ya los tiene otro producto en QuickBooks? (antes de dar de alta)
+        const skus = [...new Set((Array.isArray(body.skus) ? body.skus : []).map((s) => String(s || '').trim()).filter((s) => /^[\w-]{1,30}$/.test(s)))].slice(0, 60);
+        const out = {};
+        for (const s of skus) {
+          const it = ((await qbQuery(`select Id, Name from Item where Sku = '${s}'`)).Item || [])[0];
+          if (it) out[s] = String(it.Name);
+        }
+        return res.json({ ocupados: out });
       }
       case 'qb_vendors': {
         const r = await qbQuery('select Id, DisplayName from Vendor where Active = true maxresults 1000');
