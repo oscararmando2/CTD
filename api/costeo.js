@@ -24,7 +24,7 @@ Extrae TODOS los renglones de producto de la factura, en el orden en que aparece
 - cantidad: cantidad ENVIADA/SURTIDA (si hay columnas "ordered" y "shipped", usa shipped; si no se surtió, 0).
 - empaque: presentación tal como viene (ej. "12/16 OZ", "24 CT", "CS").
 - unidades_por_caja: número de unidades en la caja si se puede saber del empaque (ej. 12/16 OZ → 12), si no null.
-- costo_caja: precio por caja (unit price de la factura; si la factura cobra por pieza y trae unidades por caja, multiplícalo).
+- costo_caja: el precio unitario TAL CUAL viene en la factura (unit price), en la MISMA unidad que la cantidad: cantidad × costo_caja debe dar el total del renglón. NO lo conviertas: si la factura cobra por pieza (ej. "MAYONESA BB CJ 32 UNDS" 96 a 1.63), deja 96 y 1.63.
 - total_linea: importe del renglón.
 - caducidad: si junto al renglón hay una fecha de caducidad escrita a mano (ej. "OCT-25-27", "07-22-27", "DIC-26-26", "15-mar-28"), conviértela a YYYY-MM-DD (en EE.UU. suele ser mes-día-año; el año de 2 dígitos es 20XX). Si no hay, cadena vacía. No confundas la fecha de la factura con una caducidad.
 - PALLETS MIXTOS / SURTIDOS: si un renglón trae varios sabores o variedades con su cantidad cada uno (ej. "PEÑAFIEL 600 ML MIX – 1 PALLET (14 TWIST LIMON, 14 MANZANITA, 14 SANGRIA…)"), SEPÁRALO en un renglón por sabor: producto = marca + presentación + sabor (ej. "PEÑAFIEL 600 ML MANZANITA"), cantidad = la de ese sabor, costo_caja = el mismo precio por caja, total_linea = cantidad × costo. Si un sabor aparece dos veces, júntalo en UN solo renglón sumando las cantidades.
@@ -699,13 +699,20 @@ module.exports = async (req, res) => {
           // Lo que decidió Costeo para ESTE renglón manda (la factura puede venir en cajas o ya en piezas); la memoria solo si no hay Costeo
           const deCosteo = cs.sku != null && cs.pz != null;
           let pzL = deCosteo ? (cs.pz > 1 ? cs.pz : 0) : mem > 1 ? mem : 0;
+          // El total impreso del renglón manda: si cuadra con "cantidad en piezas × costo de una pieza", la cantidad ya son piezas
+          // (pasó con Cortes iLAM1202: 256 piezas de Ketchup BB con el precio convertido a caja → la orden decía 8,192)
+          let yaPiezas = false;
+          const tl = Number(l.total_linea) || 0, cant = Number(l.cantidad) || 0, cc = Number(l.costo_caja) || 0;
+          const nCaja = pzL > 1 ? pzL : Number(l.unidades_por_caja) > 1 ? Number(l.unidades_por_caja) : 0;
+          if (nCaja > 1 && tl > 0 && cant > 0 && Math.abs(cant * cc / nCaja - tl) < Math.abs(cant * cc - tl)) yaPiezas = true;
           // Si el costo del renglón no llega ni al precio de venta de UNA pieza, la factura ya viene en piezas: no se multiplica
           if (pzL > 1 && precioPz[sku] > 0 && (Number(l.costo_caja) || 0) <= precioPz[sku] * 1.2) pzL = 0;
           const porPieza = pzL > 1 || (!deCosteo && mem == null && /each|count|pieza|unit/i.test(units[sku] || ''));
           const n = pzL > 1 ? pzL : piezasDe(l);
           if (porPieza && !(n > 1)) { faltan.push(`${l.nombre || l.producto} (por pieza: no sé cuántas trae la caja)`); return; }
           const costo = Number(l.costo_caja) || 0;
-          const qty = porPieza ? cajas * n : cajas, price = porPieza ? r2(costo / n) : r2(costo);
+          // yaPiezas y se vende por caja: las piezas de la factura se pasan a cajas (precio por caja)
+          const qty = porPieza ? (yaPiezas ? cajas : cajas * n) : yaPiezas ? r2(cajas / nCaja) : cajas, price = porPieza ? r2(costo / n) : r2(costo);
           lines.push({ DetailType: 'ItemBasedExpenseLineDetail', Amount: r2(qty * price), Description: (tag + String(l.nombre || l.producto || '') + (l.estado === 'parcial' ? ` · LLEGARON ${cajas} DE ${l.cantidad}` : '')).slice(0, 4000),
             ItemBasedExpenseLineDetail: { ItemRef: { value: sku }, Qty: qty, UnitPrice: price } });
         });
