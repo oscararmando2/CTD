@@ -147,33 +147,6 @@ async function especialesAInsitu(tok, prods, items) {
 }
 
 module.exports = async (req, res) => {
-  if (req.query && req.query.fix === '07e4e5f17b9cb34a') { // TEMPORAL (26 oct 2026, pedido por Oscar/Jona): conteo físico Arroz Gallo Dorado 3359 → 0, 3360 → 3
-    try {
-      const { insituPost, qbItem } = require('./_lib');
-      const tok = await db('GET', 'insitu/token');
-      const auth = { Authorization: (tok.scheme ?? 'Bearer ') + tok.token };
-      const W = (o) => encodeURIComponent(JSON.stringify(o));
-      const get = async (path) => (await fetch(INSITU + path, { headers: auth })).json();
-      const META = { '308': 0, '309': 3 };
-      const out = { prods: {}, ajustes: [] };
-      for (const [code, real] of Object.entries(META)) {
-        const p = ((await get(`/products?where=${W({ code })}`)).products || []).find((x) => String(x.code) === code);
-        const st = p ? ((await get(`/inventory_stock?where=${W({ product_id: p.id })}`)).warehouse_stocks || []).filter((x) => x.product_id === p.id) : [];
-        let qbq = null; try { qbq = (await qbItem(code)).QtyOnHand; } catch (e) { /* */ }
-        out.prods[code] = { name: p && p.name, pid: p && p.id, insitu: st.reduce((a, x) => a + (Number(x.stock) || 0), 0), qb: qbq, real };
-      }
-      if (req.query.aplicar === '1') {
-        if (await db('GET', 'fixes/conteoGallo')) return res.json({ yaHecho: true, ...(await db('GET', 'fixes/conteoGallo')) });
-        for (const x of Object.values(out.prods)) {
-          if (!x.pid) { out.ajustes.push(`${x.name}: no encontrado`); continue; }
-          if (Math.abs(x.insitu - x.real) < 0.01) { out.ajustes.push(`${x.name}: ya está en ${x.real}`); continue; }
-          try { await insituPost('/inventory_adjustment', { warehouse_id: 131733, bin_location_id: 55796, product_id: x.pid, quantity: x.real, new_quantity: x.real, remark: 'Conteo físico 26 oct 2026 (Jona/Oscar)', approved: 1 }); out.ajustes.push(`${x.name}: ${x.insitu} → ${x.real}`); } catch (e) { out.ajustes.push(`${x.name}: ${e.message}`); }
-        }
-        await db('PUT', 'fixes/conteoGallo', { at: Date.now(), out });
-      }
-      return res.json(out);
-    } catch (e) { return res.json({ error: String(e.message || e) }); }
-  }
   if (req.query && req.query.ord === 'estado') { // temporal: ¿ya se subió la copia de Órdenes? (solo fecha y cantidad)
     const d = await db('GET', 'ordenesData');
     return res.json({ at: d && d.at ? new Date(d.at).toISOString() : null, by: d && d.by, n: d && Array.isArray(d.items) ? d.items.length : 0, conVentas: d && Array.isArray(d.items) ? d.items.filter((x) => x && x.st && x.st.u90 > 0).length : 0 });
