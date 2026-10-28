@@ -3385,6 +3385,7 @@
       Object.keys(v.fechas).sort().reverse().forEach((d) => { // nueva → vieja
         const f = v.fechas[d], queda = Math.min(f.q, left);
         left -= queda;
+        if (Date.now() - (f.ts || 0) < 10 * 864e5) return; // recién puesta (Recibo o a mano): el inventario aún no llega a InSitu
         if (queda < f.q - 0.01) { items.push({ sku, fecha: d, r: queda }); if (queda > 0) f.q = r2(queda); else delete v.fechas[d]; }
       });
     });
