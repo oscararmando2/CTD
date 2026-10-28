@@ -993,9 +993,13 @@ module.exports = async (req, res) => {
         // La IA (con la existencia de InSitu) guarda cuánto queda de cada fecha; solo baja, nunca sube
         const items = (Array.isArray(body.items) ? body.items : []).slice(0, 500);
         const up = {}, now = Date.now();
+        const lotesAll = (await db('GET', 'lotes')) || {};
         items.forEach((x) => {
           const sku = codeKey(x.sku), fecha = ymdOk(x.fecha), r = Number(x.r);
           if (!sku || !fecha || !(r >= 0)) return;
+          // Lo recién puesto (últimos 10 días) no se recorta: el inventario tarda en llegar a InSitu
+          const ents = Object.values(((lotesAll[sku] || {}).f || {})[fecha] && lotesAll[sku].f[fecha].e || {});
+          if (ents.some((e) => now - (e.ts || 0) < 10 * 864e5)) return;
           up[`lotes/${sku}/f/${fecha}/aj`] = { r: r2(r), ts: now, by: who };
         });
         if (Object.keys(up).length) await db('PATCH', '', up);
