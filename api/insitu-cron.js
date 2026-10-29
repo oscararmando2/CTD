@@ -158,12 +158,12 @@ module.exports = async (req, res) => {
     const force = req.query && req.query.force === '1';
     const last = (await db('GET', 'insitu/lastRun')) || {};
     // Una a la vez: si otra sincronización empezó hace menos de 3 min, esta no corre
+    if (!force && last.at && Date.now() - last.at < MIN_GAP) return res.json({ ok: true, skipped: 'reciente', at: last.at, especiales });
     const corriendo = await db('GET', 'insitu/running');
     if (corriendo && Date.now() - corriendo < 3 * 60000) return res.json({ ok: true, skipped: 'en curso', especiales });
-    await db('PUT', 'insitu/running', Date.now());
-    if (!force && last.at && Date.now() - last.at < MIN_GAP) return res.json({ ok: true, skipped: 'reciente', at: last.at, especiales });
     const tok = await db('GET', 'insitu/token');
     if (!tok || !tok.token) return res.json({ ok: false, error: 'Falta la sesión de InSitu: que Oscar, Luis o Diego abran la IA una vez' });
+    await db('PUT', 'insitu/running', Date.now());
 
     const [prods, stocks] = await Promise.all([insituAll(tok, '/products', 'products'), insituAll(tok, '/inventory_stock', 'warehouse_stocks')]);
     const stockBy = {};
