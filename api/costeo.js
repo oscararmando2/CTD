@@ -836,6 +836,19 @@ module.exports = async (req, res) => {
         if (f.status === 'borrador' && f.costeoId) {
           const cl = await db('GET', 'costeoFacturas/' + codeKey(f.costeoId) + '/lines');
           if (Array.isArray(cl) && cl.length) { const up = reciboAlDia(f, cl); if (up.lines) { await db('PATCH', 'recibos/' + f.id, up); Object.assign(f, up); } }
+        } else if (f.costeoId && (f.lines || []).some((l) => !l.sku || /revisa/.test(l.how || ''))) {
+          // Ya revisado/costeado: solo se le pone el producto que ligó o dio de alta Costeo (no se cambia nada más)
+          const cl = (await db('GET', 'costeoFacturas/' + codeKey(f.costeoId) + '/lines')) || [];
+          const nk = (s) => norm(s).replace(/[^a-z0-9]+/g, ' ').trim();
+          let cambio = false;
+          (f.lines || []).forEach((l, i) => {
+            if (l.sku && !/revisa/.test(l.how || '')) return;
+            const c = cl.find((x) => x && nk(x.producto) === nk(l.producto) && (x.codigo_proveedor || '') === (l.codigo_proveedor || '')) || cl.find((x) => x && nk(x.producto) === nk(l.producto));
+            const sku = c && String(c.sku || c.qbId || '');
+            if (!/^\d+$/.test(sku)) return;
+            if (sku !== String(l.sku || '') || /revisa/.test(l.how || '')) { f.lines[i] = { ...l, sku, nombre: c.nombre || l.nombre || l.producto, how: 'costeo', photo: '', upcSis: '' }; cambio = true; }
+          });
+          if (cambio) await db('PATCH', 'recibos/' + f.id, { lines: f.lines });
         }
         return res.json({ recibo: f });
       }
