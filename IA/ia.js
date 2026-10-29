@@ -2349,7 +2349,7 @@
       if (!confirm(`¿Programar ${chosen.length} ${chosen.length === 1 ? 'especial' : 'especiales'} en QuickBooks? Cambia el precio para todos los clientes durante la vigencia.`)) return;
       go.disabled = true; go.textContent = 'Programando…';
       try {
-        const d = await qbCall('schedule', { items: chosen.map((c) => { const m = qbMatches[c.items[0].id]; return { qbId: m.qbId, qbName: m.qbName, sku: c.items[0].id, name: c.items[0].name, special: c.S, regular: m.price, from: c.from, to: c.to, grupo: c.grupo || '', grupoTitulo: c.grupoTitulo || '', grupoCorto: c.grupoCorto || '' }; }) });
+        const d = await qbCall('schedule', { items: chosen.map((c) => { const m = qbMatches[c.items[0].id]; return { qbId: m.qbId, qbName: m.qbName, sku: c.items[0].id, name: c.items[0].name, special: c.S, regular: m.price, from: c.from, to: c.to, grupo: c.grupo || '', grupoTitulo: c.grupoTitulo || '', grupoCorto: c.grupoCorto || '' }; }) }); syncAhora();
         loadVigentes();
         toast(`Programados: ${d.saved.length}${d.applied ? ` · ${d.applied} ya activos hoy` : ''}${d.errors.length ? ` · ${d.errors.length} con error` : ''}`);
         if (d.errors.length) box.insertAdjacentHTML('beforeend', d.errors.map((e) => `<p class="qb-warn">${esc(e.name)}: ${esc(e.error)}</p>`).join(''));
@@ -2408,6 +2408,12 @@
   const ALTA = { vendors: null, busy: false }; // proveedores de QuickBooks para dar de alta (no se guardan en el navegador)
   delete CS.down; // si el costo baja, el precio se queda (decisión de Oscar)
 
+  // Sincronizar con InSitu en ese momento (productos nuevos, fotos, existencia, fechas, precios de especiales)
+  let syncAhoraT = 0;
+  function syncAhora() {
+    if (Date.now() - syncAhoraT < 60000) return; syncAhoraT = Date.now();
+    try { fetch('https://ctd-seven.vercel.app/api/insitu-cron?force=1', { keepalive: true }).catch(() => {}); } catch (e) { /* la de cada 15 min lo hace */ }
+  }
   async function cosCall(action, extra = {}) {
     if (!auth || !auth.currentUser) throw new Error('Vuelve a entrar a la IA');
     const token = await auth.currentUser.getIdToken();
@@ -2952,7 +2958,7 @@
     l.comp.sku = l.comp.sku ? ctdFmt(l.comp.sku) : '';
     b.disabled = true; b.textContent = 'Guardando…';
     try {
-      const d = await cosCall('alta_completar', { qbId: qbIdOf(l) || l.sku, ...l.comp });
+      const d = await cosCall('alta_completar', { qbId: qbIdOf(l) || l.sku, ...l.comp }); syncAhora();
       if (/^https?:\/\//.test(l.comp.photo || '')) l.photo = l.comp.photo; // se ve ya; en InSitu queda en la siguiente sincronización
       const k = String(qbIdOf(l) || l.sku); ALTA.vivo = ALTA.vivo || {}; ALTA.vivo[k] = { ...(ALTA.vivo[k] || {}), qbSku: l.comp.sku || (ALTA.vivo[k] || {}).qbSku, cat: l.comp.cat, brand: l.comp.brand, units: l.comp.units }; // lo recién guardado
       alert(`Listo ✓${d.qbSku ? ` · SKU ${d.qbSku} en QuickBooks` : ''}${d.qbCat ? ` · categoría "${d.qbCat}" en QuickBooks` : ''}${d.insitu ? ' · en InSitu se pone en la siguiente sincronización (máx. 1 hora)' : ''}`);
@@ -3084,7 +3090,7 @@
     if (!confirm(`¿Aplicar en QuickBooks?\n\n• ${nP} cambios de precio\n• ${nC} cambios de costo\n• ${creates.length} productos nuevos${sinPrecio ? ` (${sinPrecio} sin precio escrito: se usa el sugerido de ${CS.target}%)` : ''}\n\nInSitu los recibe en su siguiente sincronización (máx. 1 hora).`)) return;
     const btn = $('#cosApply'); btn.disabled = true;
     try {
-      const d = await cosCall('apply', { changes, creates, factura: `${C.head.proveedor} #${C.head.factura}` });
+      const d = await cosCall('apply', { changes, creates, factura: `${C.head.proveedor} #${C.head.factura}` }); syncAhora();
       C.results = d.results;
       d.results.forEach((r) => {
         const l = r.create ? C.lines.find((x) => x.nuevo && !creado(x) && x.alta && cleanTitle(x.alta.name) === cleanTitle(r.create)) : C.lines.find((x) => qbIdOf(x) === r.qbId && !(x.result && x.result.ok));
@@ -4025,7 +4031,7 @@
       if (pend && !confirm(`Hay ${pend} productos sin revisar. ¿Mandar a Costeo de todos modos? (quedan como "sin revisar")`)) return;
       b.disabled = true;
       try {
-        const st = await saveRecibo(true);
+        const st = await saveRecibo(true); syncAhora();
         const iv = st && st.inv;
         const invTxt = iv ? (iv.errores && iv.errores.length ? ` · inventario: ${Object.keys(iv.aplicado || {}).length} productos, ${iv.errores.length} con problema (ver en la lista)` : ` · inventario actualizado en InSitu (${Object.keys(iv.aplicado || {}).length} productos)`) : '';
         toast((st && st.costeoId ? 'Recibo listo ✓ · ya estaba costeada: le avisamos a Costeo las diferencias' : 'Recibo listo ✓ · ya lo ve Costeo') + invTxt);
