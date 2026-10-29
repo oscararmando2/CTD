@@ -6,7 +6,7 @@
 const { db, loteQueda, r2, tick } = require('./_lib');
 
 const INSITU = 'https://app.b2bmobilesales.com/api/v1';
-const MIN_GAP = 40 * 60 * 1000;
+const MIN_GAP = 10 * 60 * 1000; // la tarea corre cada 15 min; además la IA la pide al aplicar facturas, recibos y especiales
 const codeKey = (c) => String(c || '').trim().replace(/[.#$/[\]\s]+/g, '_').slice(0, 60);
 function packLabel(v) {
   const s = String(v ?? '').trim();
@@ -157,6 +157,10 @@ module.exports = async (req, res) => {
   try {
     const force = req.query && req.query.force === '1';
     const last = (await db('GET', 'insitu/lastRun')) || {};
+    // Una a la vez: si otra sincronización empezó hace menos de 3 min, esta no corre
+    const corriendo = await db('GET', 'insitu/running');
+    if (corriendo && Date.now() - corriendo < 3 * 60000) return res.json({ ok: true, skipped: 'en curso', especiales });
+    await db('PUT', 'insitu/running', Date.now());
     if (!force && last.at && Date.now() - last.at < MIN_GAP) return res.json({ ok: true, skipped: 'reciente', at: last.at, especiales });
     const tok = await db('GET', 'insitu/token');
     if (!tok || !tok.token) return res.json({ ok: false, error: 'Falta la sesión de InSitu: que Oscar, Luis o Diego abran la IA una vez' });
@@ -218,9 +222,11 @@ module.exports = async (req, res) => {
     try { await autoUnidades(prods); } catch (e) { /* sigue */ }
     try { altas = await completarAltas(tok, prods); } catch (e) { altas = { error: String(e.message || e).slice(0, 200) }; } // no detiene la sincronización
     await db('PUT', 'insitu/lastRun', { at: Date.now(), productos: items.length, ajustes, altas });
+    await db('DELETE', 'insitu/running').catch(() => {});
     return res.json({ ok: true, productos: items.length, conExistencia: items.filter((p) => p.stock > 0).length, ajustes, altas, especiales, preciosInsitu });
   } catch (e) {
     await db('PUT', 'insitu/lastRun', { at: Date.now(), error: String(e.message || e).slice(0, 200) }).catch(() => {});
+    await db('DELETE', 'insitu/running').catch(() => {});
     return res.status(e.auth ? 401 : 500).json({ ok: false, error: String(e.message || e) });
   }
 };

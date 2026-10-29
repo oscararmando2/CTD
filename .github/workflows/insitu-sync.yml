@@ -1,9 +1,9 @@
-# Cada hora: el servidor de la IA trae existencia y productos de InSitu y ajusta las fechas de caducidad.
+# Cada 15 minutos: el servidor de la IA trae existencia y productos de InSitu y ajusta las fechas de caducidad.
 # (Vercel en plan gratuito solo permite tareas diarias; GitHub Actions la dispara cada hora.)
 name: InSitu sync (IA)
 on:
   schedule:
-    - cron: '17 * * * *'
+    - cron: '2,17,32,47 * * * *'
   workflow_dispatch:
 jobs:
   sync:
