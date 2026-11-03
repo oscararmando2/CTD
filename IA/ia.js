@@ -4398,7 +4398,7 @@
         box.insertAdjacentHTML('beforeend', `<p class="lbl fech-sin">Sin fecha · en existencia <small>(${sin.length}) toca uno para ponerle fecha</small></p><div class="bd-grid">${sin.map((p) => `<button type="button" class="bd-p" data-bp="${esc(p.id)}">
           <span class="bd-ph">${p.photo ? `<img src="${esc(p.photo)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>
           ${skuFech(p.id) ? `<span class="bd-sku">${esc(skuFech(p.id))}</span>` : ''}<span class="bd-n">${esc(p.name)}</span>
-          <span class="bd-s">${cf[skuKey(p.id)] > 0 ? `${nfmt(Math.max(0, p.stock - cf[skuKey(p.id)]))} sin fecha (llegó nuevo)` : nfmt(p.stock) + ' en existencia · sin fecha'}</span></button>`).join('')}</div>`);
+          ${desgloseHTML(p, false)}</button>`).join('')}</div>`);
       }
     }
   }
@@ -4457,7 +4457,7 @@
           <span class="bd-ph">${p.photo ? `<img src="${esc(p.photo)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>
           ${skuFech(p.id) ? `<span class="bd-sku">${esc(skuFech(p.id))}</span>` : ''}
           <span class="bd-n">${esc(p.name)}</span>
-          <span class="bd-s">${has && nx ? '✓ vence ' + esc(fmtD(nx.d)) + ' ' + String(parseYmd(nx.d).getFullYear()).slice(2) : (cf0[skuKey(p.id)] > 0 ? `${nfmt(Math.max(0, p.stock - cf0[skuKey(p.id)]))} sin fecha (llegó nuevo)` : nfmt(p.stock) + ' en existencia')}</span>
+          ${desgloseHTML(p, has)}
         </button>`;
     };
     // Con algo escrito: resultados de toda la bodega (todos los departamentos)
@@ -4515,12 +4515,32 @@
     ponerFechaBodega(b.dataset.bp);
   });
   // Tocar un producto en existencia → hoja de día/mes/año; se guarda con las cajas que todavía no tienen fecha
+  // Cuántas cajas hay de cada fecha y cuántas sin fecha (la existencia se reparte de la fecha más nueva a la más vieja)
+  function desglose(p) {
+    const v = (R.lotes || {})[skuKey(p.id)] || { fechas: {} };
+    let left = Math.max(0, Number(p.stock) || 0);
+    const fechas = Object.entries(v.fechas || {}).map(([d, x]) => ({ d, q: Number(x.q) || 0 })).sort((a, b) => (a.d < b.d ? 1 : -1))
+      .map((x) => { const q = Math.min(x.q, left); left -= q; return { d: x.d, q }; }).filter((x) => x.q > 0).sort((a, b) => (a.d < b.d ? -1 : 1));
+    return { total: Math.max(0, Number(p.stock) || 0), fechas, sin: r2(left) };
+  }
+  function desgloseHTML(p, done) {
+    const g = desglose(p);
+    const fd = (d) => esc(fmtD(d)) + ' ' + String(parseYmd(d).getFullYear()).slice(2);
+    return `<span class="bd-s">${done ? '✓ ' : ''}<b>${nfmt(g.total)}</b> en existencia</span>
+      ${g.fechas.map((x) => `<span class="bd-s bd-f">${nfmt(x.q)} vence ${fd(x.d)}</span>`).join('')}
+      ${g.sin > 0 ? `<span class="bd-s bd-sin">${nfmt(g.sin)} sin fecha</span>` : ''}`;
+  }
   function ponerFechaBodega(id) {
     const p = fechProds().find((x) => String(x.id) === String(id)); if (!p) return;
-    const ya = conFecha()[skuKey(p.id)] || 0;
-    const q = Math.max(1, Math.round((p.stock || 1) - ya)); // solo las cajas que todavía no tienen fecha
+    const g = desglose(p);
+    const sinQ = Math.max(1, Math.round(g.sin || 0) || 1); // propone las cajas que todavía no tienen fecha
     openSheetFor({ sku: String(p.id), nombre: p.name, photo: p.photo || '', caducidad: '', leida: '' }, async (fecha) => {
       if (!fecha) return;
+      // Cuántas cajas traen ESA fecha (puede haber varias fechas entre las que no tienen)
+      const resp = prompt(`${p.name}\n\n¿Cuántas cajas vencen el ${fmtLong(fecha)}?\n(hay ${nfmt(g.total)} en existencia${g.sin > 0 ? `, ${nfmt(g.sin)} sin fecha` : ''})`, String(sinQ));
+      if (resp == null) return;
+      const q = Math.round(Number(String(resp).replace(',', '.')) || 0);
+      if (!(q > 0)) { toast('Escribe cuántas cajas'); return; }
       // Se marca al instante y se guarda en el servidor
       const k = skuKey(p.id);
       R.lotes = R.lotes || {};
