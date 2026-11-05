@@ -668,8 +668,10 @@ module.exports = async (req, res) => {
         const [pzMem, cat] = await Promise.all([db('GET', 'costeoPz'), db('GET', 'catalogo')]);
         const units = {}, precioPz = {};
         ((cat && cat.items) || []).forEach((p) => { units[String(p.id)] = String(p.units || ''); precioPz[String(p.id)] = Number(p.price) || 0; });
-        const skuCos = {};
-        ((cos && cos.lines) || []).forEach((l) => { const s = l.qbId || l.sku; if (s) skuCos[norm(l.producto)] = { sku: String(s), pz: l.pz || 0 }; });
+        const skuCos = {}, skusPorProd = {};
+        ((cos && cos.lines) || []).forEach((l) => { const s = l.qbId || l.sku; if (s) { skuCos[norm(l.producto)] = { sku: String(s), pz: l.pz || 0 }; (skusPorProd[norm(l.producto)] = skusPorProd[norm(l.producto)] || new Set()).add(String(s)); } });
+        // Lo que ligó Costeo manda sobre lo que encontró Recibo por UPC (ej. Mexiquense #128: el UPC daba MZ JAPONES y Costeo lo ligó a MANZELAZO)
+        const ligadoCosteo = (l) => { const k = norm(l.producto), set = skusPorProd[k]; return set && set.size === 1 && /^\d+$/.test(skuCos[k].sku) ? skuCos[k].sku : ''; };
         // Renglones sin ligar: se buscan en QuickBooks por SKU (código del proveedor, ej. 5205) o UPC — ej. recién dado de alta en Costeo
         for (const l of ((rec && rec.lines) || (cos && cos.lines) || [])) {
           if (l.qbId || l.sku || skuCos[norm(l.producto)]) continue;
@@ -685,7 +687,7 @@ module.exports = async (req, res) => {
         ((rec && rec.lines) || (cos && cos.lines) || []).forEach((l) => {
           const cajas = revisado ? (l.estado === 'ok' ? Number(l.recibido ?? l.cantidad) || 0 : l.estado === 'parcial' ? Number(l.recibido) || 0 : 0) : Number(l.cantidad) || 0;
           const cs = skuCos[norm(l.producto)] || {};
-          const sku = String(l.qbId || l.sku || cs.sku || '');
+          const sku = String(ligadoCosteo(l) || l.qbId || l.sku || cs.sku || '');
           const tag = l.how === 'agregado' ? `SOBRANTE (no viene en la factura${Number(l.costo_caja) > 0 ? ', cobrado' : ''}) · ` : '';
           if (!(cajas > 0)) {
             if (!revisado) return;
@@ -836,16 +838,19 @@ module.exports = async (req, res) => {
         if (f.status === 'borrador' && f.costeoId) {
           const cl = await db('GET', 'costeoFacturas/' + codeKey(f.costeoId) + '/lines');
           if (Array.isArray(cl) && cl.length) { const up = reciboAlDia(f, cl); if (up.lines) { await db('PATCH', 'recibos/' + f.id, up); Object.assign(f, up); } }
-        } else if (f.costeoId && (f.lines || []).some((l) => !l.sku || /revisa/.test(l.how || ''))) {
-          // Ya revisado/costeado: solo se le pone el producto que ligó o dio de alta Costeo (no se cambia nada más)
+        } else if (f.costeoId) {
+          // Ya revisado/costeado: solo se le pone el producto que ligó, religó o dio de alta Costeo (no se cambia nada más)
           const cl = (await db('GET', 'costeoFacturas/' + codeKey(f.costeoId) + '/lines')) || [];
           const nk = (s) => norm(s).replace(/[^a-z0-9]+/g, ' ').trim();
           let cambio = false;
           (f.lines || []).forEach((l, i) => {
-            if (l.sku && !/revisa/.test(l.how || '')) return;
-            const c = cl.find((x) => x && nk(x.producto) === nk(l.producto) && (x.codigo_proveedor || '') === (l.codigo_proveedor || '')) || cl.find((x) => x && nk(x.producto) === nk(l.producto));
+            if (l.how === 'agregado') return;
+            const mismos = cl.filter((x) => x && nk(x.producto) === nk(l.producto));
+            const c = mismos.find((x) => (x.codigo_proveedor || '') === (l.codigo_proveedor || '')) || mismos[0];
             const sku = c && String(c.sku || c.qbId || '');
             if (!/^\d+$/.test(sku)) return;
+            // Si el mismo nombre está ligado a productos distintos en Costeo (ej. sabores), no se adivina
+            if (l.sku && !/revisa/.test(l.how || '') && new Set(mismos.map((x) => String(x.sku || x.qbId || ''))).size > 1) return;
             if (sku !== String(l.sku || '') || /revisa/.test(l.how || '')) { f.lines[i] = { ...l, sku, nombre: c.nombre || l.nombre || l.producto, how: 'costeo', photo: '', upcSis: '' }; cambio = true; }
           });
           if (cambio) await db('PATCH', 'recibos/' + f.id, { lines: f.lines });
