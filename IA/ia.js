@@ -4549,8 +4549,11 @@
       R.lotes[k].fechas[fecha] = { q: prev.q + q, ts: Date.now(), man: (prev.man || 0) + 1 };
       R.lotesV = (R.lotesV || 0) + 1;
       renderFechas(false);
-      try { await cosCall('lote_add', { sku: String(p.id), nombre: p.name, fecha, q }); toast(`✓ ${p.name} · vence ${fmtLong(fecha)}`); }
-      catch (err) { toast('No se guardó: ' + err.message); renderFechas(true); }
+      try { await cosCall('lote_add', { sku: String(p.id), nombre: p.name, fecha, q }); toast(`✓ ${nfmt(q)} ${q === 1 ? 'caja' : 'cajas'} · vence ${fmtLong(fecha)}`); }
+      catch (err) { toast('No se guardó: ' + err.message); renderFechas(true); return; }
+      // Varias fechas en el mismo producto (como en Recibo): si quedan cajas sin fecha, sigue con la otra fecha
+      const quedan = r2((g.sin || 0) - q);
+      if (quedan >= 1 && confirm(`${p.name}\n\nQuedan ${nfmt(quedan)} ${quedan === 1 ? 'caja' : 'cajas'} sin fecha.\n¿Tienen otra fecha? (Aceptar = poner la otra fecha)`)) setTimeout(() => ponerFechaBodega(id), 50);
     });
   }
   $('#fechList').addEventListener('click', (e) => { const b = e.target.closest('[data-bp]'); if (b) ponerFechaBodega(b.dataset.bp); });
