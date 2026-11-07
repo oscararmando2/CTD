@@ -534,7 +534,10 @@ module.exports = async (req, res) => {
         }
         const hasta = ymdOk(body.hasta) || hoy;
         if (hasta < desde) return res.status(400).json({ error: 'Rango de fechas inválido' });
-        const rep = async (nombre, q) => { try { return planoQb(await qb('GET', `reports/${nombre}?${new URLSearchParams({ accounting_method: 'Accrual', ...q })}`)); } catch (e) { return { error: e.message }; } };
+        const rep = async (nombre, q) => {
+          try { return planoQb(await qb('GET', `reports/${nombre}?${new URLSearchParams({ accounting_method: 'Accrual', ...q })}`)); }
+          catch (e) { try { return planoQb(await qb('GET', `reports/${nombre}?${new URLSearchParams(q)}`)); } catch (e2) { return { error: String(e2.message || e.message).slice(0, 300) }; } }
+        };
         const rango = { start_date: desde, end_date: hasta };
                 const [pyg, pygMes, balance, clientes, productos, cxc, cxp, proveedores] = await Promise.all([
           rep('ProfitAndLoss', rango),
@@ -1156,7 +1159,8 @@ const DAY_MS = 86400000;
 const ESTADOS = ['', 'ok', 'parcial', 'no', 'pendiente'];
 // Reporte de QuickBooks → filas planas: { n: nivel, t: 'h' encabezado | 'd' dato | 's' total, g: grupo, c: [texto de cada columna] }
 function planoQb(r) {
-  const cols = ((r && r.Columns && r.Columns.Column) || []).map((c) => String(c.ColTitle || ''));
+  const cols = ((r && r.Columns && r.Columns.Column) || []).map((c) => String(c.ColTitle || ((c.MetaData || []).find((m) => m.Name === 'ColKey') || {}).Value || ''));
+  const keys = ((r && r.Columns && r.Columns.Column) || []).map((c) => String(((c.MetaData || []).find((m) => m.Name === 'ColKey') || {}).Value || ''));
   const filas = [];
   const cd = (x) => ((x && x.ColData) || []).map((c) => String(c.value == null ? '' : c.value));
   // p: grupo de la sección principal (Income, COGS, Expenses…) a la que pertenece la fila
@@ -1168,7 +1172,7 @@ function planoQb(r) {
     if (row.Summary) filas.push({ n, t: 's', g: row.group || '', p, c: cd(row.Summary) });
   });
   walk(r && r.Rows && r.Rows.Row, 0, '');
-  return { cols, filas };
+  return { cols, keys, filas };
 }
 const ymdOk = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '');
 
