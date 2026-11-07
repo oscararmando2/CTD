@@ -5983,7 +5983,7 @@
     const $2 = (v) => (v < 0 ? '-' : '') + '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const pct = (a, b) => (b ? (a / b * 100).toFixed(1) + '%' : '—');
     const fLarga = (s) => { const [y, m, d] = String(s).split('-').map(Number); return `${d} ${REP_MES[m - 1]} ${y}`; };
-    const mesCol = (t) => { const m = String(t).match(/([A-Za-z]{3})\w*\.?\s+(\d{4})/); return m && REP_EN[m[1].toLowerCase()] != null ? `${REP_MES[REP_EN[m[1].toLowerCase()]]} ${m[2]}` : t; };
+    const mesCol = (t) => { const m = String(t).match(/([A-Za-z]{3})[A-Za-z]*\.?\s+(?:\d+\s*-\s*\d+,\s*)?(\d{4})/); return m && REP_EN[m[1].toLowerCase()] != null ? `${REP_MES[REP_EN[m[1].toLowerCase()]]} ${m[2]}` : t; };
     const ok = (r) => r && !r.error && Array.isArray(r.filas);
     const tot = (r, g, col) => { if (!ok(r)) return 0; const f = r.filas.find((x) => x.t === 's' && x.g === g); return f ? n(f.c[col == null ? f.c.length - 1 : col]) : 0; };
     const tiene = (r, g) => ok(r) && r.filas.some((x) => x.t === 's' && x.g === g);
@@ -6008,7 +6008,7 @@
         if (/total/i.test(cols[i])) continue;
         const v = (g) => tot(PM, g, i);
         const vt = v('Income'), ct = v('COGS');
-        meses.push({ mes: mesCol(cols[i]), anio: (String(cols[i]).match(/\d{4}/) || [''])[0], ventas: vt, costo: ct, bruta: tiene(PM, 'GrossProfit') ? v('GrossProfit') : vt - ct, gastos: v('Expenses'), neta: v('NetIncome') });
+        meses.push({ parcial: /\d+\s*-\s*\d+/.test(cols[i]), mes: mesCol(cols[i]) + (/\d+\s*-\s*\d+/.test(cols[i]) ? ' (parcial)' : ''), anio: (String(cols[i]).match(/\d{4}/) || [''])[0], ventas: vt, costo: ct, bruta: tiene(PM, 'GrossProfit') ? v('GrossProfit') : vt - ct, gastos: v('Expenses'), neta: v('NetIncome') });
       }
     }
     while (meses.length && !meses[0].ventas && !meses[0].costo && !meses[0].gastos && !meses[0].neta) meses.shift();
@@ -6035,9 +6035,19 @@
     const clientes = lista(D.clientes, /total/i).filter((x) => x.v).sort((a, b) => b.v - a.v);
     const totCli = clientes.reduce((a, x) => a + x.v, 0);
     const PR = D.productos;
-    const prodCol = (re) => (ok(PR) ? PR.cols.findIndex((t) => re.test(t)) : -1);
-    const iQ = prodCol(/quant|cant/i), iA = prodCol(/^amount|importe|^ventas/i), iC = prodCol(/cogs|costo/i);
-    const productos = ok(PR) ? PR.filas.filter((x) => x.t === 'd' && x.c[0]).map((x) => ({ nombre: x.c[0], q: iQ > 0 ? n(x.c[iQ]) : 0, v: iA > 0 ? n(x.c[iA]) : n(x.c[x.c.length - 1]), c: iC > 0 ? n(x.c[iC]) : null })).filter((x) => x.v).sort((a, b) => b.v - a.v) : [];
+    // Columnas de ventas por producto: la de monto es la que suma lo más parecido a las ventas; la de costo, al costo de ventas
+    const etq = (i) => ((PR.cols[i] || '') + ' ' + ((PR.keys || [])[i] || '')).toLowerCase();
+    const sumCol = (i) => PR.filas.filter((x) => x.t === 'd').reduce((a, x) => a + n(x.c[i]), 0);
+    const masCerca = (meta, excl) => { let best = -1, dist = Infinity; for (let i = 1; i < PR.cols.length; i++) { if (excl.includes(i) || /%|avg|prom/.test(etq(i))) continue; const dd = Math.abs(sumCol(i) - meta); if (dd < dist) { dist = dd; best = i; } } return best; };
+    let iQ = -1, iA = -1, iC = -1;
+    if (ok(PR)) {
+      iQ = PR.cols.findIndex((_, i) => i > 0 && /quant|qty|cant/.test(etq(i)));
+      iA = PR.cols.findIndex((_, i) => i > 0 && /^(amount|sales amount|importe|ventas)\b|income_amount|sales_amount|^amount/.test(etq(i)) && !/%|avg/.test(etq(i)));
+      if (iA < 0 || Math.abs(sumCol(iA) - ventas) > ventas * 0.5) iA = masCerca(ventas, [iQ]);
+      iC = PR.cols.findIndex((_, i) => i > 0 && i !== iA && /cogs|cost/.test(etq(i)) && !/%|avg|prom|margin/.test(etq(i)));
+      if (iC < 0 && costo) { const c = masCerca(costo, [iQ, iA]); if (c > 0 && Math.abs(sumCol(c) - costo) < costo * 0.5) iC = c; }
+    }
+    const productos = ok(PR) ? PR.filas.filter((x) => x.t === 'd' && x.c[0]).map((x) => ({ nombre: x.c[0], q: iQ > 0 ? n(x.c[iQ]) : 0, v: iA > 0 ? n(x.c[iA]) : 0, c: iC > 0 ? n(x.c[iC]) : null })).filter((x) => x.v).sort((a, b) => b.v - a.v) : [];
     const totProd = productos.reduce((a, x) => a + x.v, 0);
     const proveedores = lista(D.proveedores, /total/i).filter((x) => x.v).sort((a, b) => b.v - a.v);
     const totProv = proveedores.reduce((a, x) => a + x.v, 0);
@@ -6162,6 +6172,51 @@
       y = subt(y, 'Lectura rápida');
       doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...C.tinta);
       puntos.forEach((t) => { if (y > H - 60) return; const ls = doc.splitTextToSize(t, W - 2 * M - 14); doc.setFillColor(...C.oro); doc.circle(M + 3, y + 3, 1.6, 'F'); doc.text(ls, M + 12, y + 6); y += ls.length * 11 + 4; });
+    }
+
+    // =================== INDICADORES Y PUNTO DE EQUILIBRIO ===================
+    if (ventas && meses.length) {
+      y = nueva('Indicadores clave y punto de equilibrio');
+      const completos = meses.filter((m) => !m.parcial && m.ventas > 0);
+      const ult = completos.slice(-3);
+      const prom = (k) => (ult.length ? ult.reduce((a, m) => a + m[k], 0) / ult.length : 0);
+      const vtaMes = prom('ventas'), gasMes = prom('gastos'), mgUlt = vtaMes ? prom('bruta') / vtaMes : bruta / ventas;
+      const equilibrio = mgUlt > 0 ? gasMes / mgUlt : 0;
+      const dias = Math.max(1, (Date.parse(D.hasta) - Date.parse(D.desde)) / 864e5 + 1);
+      const vtaDia = ventas / dias, cosDia = costo / dias;
+      const diasCob = vtaDia ? cxcT / vtaDia : 0, diasPag = cosDia ? cxpT / cosDia : 0, diasInv = cosDia ? inventario / cosDia : 0;
+      const capTrab = bancos + cxcT + inventario - cxpT;
+      const cxpVencida = ok(D.cxp) ? (() => { const t = D.cxp.filas.filter((x) => x.t === 's').pop(); return t ? t.c.slice(3, -1).reduce((a, v) => a + n(v), 0) : 0; })() : 0;
+      const cxcVencida = ok(D.cxc) ? (() => { const t = D.cxc.filas.filter((x) => x.t === 's').pop(); return t ? t.c.slice(3, -1).reduce((a, v) => a + n(v), 0) : 0; })() : 0;
+      const filasI = [
+        ['Venta promedio por mes (últimos ' + ult.length + ' meses completos)', $0(vtaMes), ult.map((m) => m.mes).join(', ')],
+        ['Gastos de operación promedio por mes', $0(gasMes), pct(gasMes, vtaMes) + ' de la venta'],
+        ['Margen bruto (últimos meses)', (mgUlt * 100).toFixed(1) + '%', 'de cada $100 vendidos quedan $' + (mgUlt * 100).toFixed(0)],
+        ['VENTA MENSUAL PARA NO PERDER (punto de equilibrio)', $0(equilibrio), vtaMes >= equilibrio ? 'ya se está arriba por ' + $0(vtaMes - equilibrio) : 'faltan ' + $0(equilibrio - vtaMes) + ' al mes'],
+        ['Margen bruto necesario con la venta actual', vtaMes ? pct(gasMes, vtaMes) : '—', 'para cubrir los gastos sin vender más'],
+        ['Cada punto de margen bruto vale', $0(vtaMes / 100) + ' al mes', $0(vtaMes / 100 * 12) + ' al año'],
+        ['Días de cobro (cuentas por cobrar)', Math.round(diasCob) + ' días', $0(cxcVencida) + ' vencido más de 30 días'],
+        ['Días de pago (cuentas por pagar)', Math.round(diasPag) + ' días', $0(cxpVencida) + ' vencido más de 30 días'],
+        ['Días de inventario', Math.round(diasInv) + ' días', $0(inventario) + ' en bodega'],
+        ['Capital de trabajo (bancos + por cobrar + inventario - por pagar)', $0(capTrab), 'bancos: ' + $0(bancos)],
+        ['Concentración de clientes', clientes[0] ? pct(clientes.slice(0, 10).reduce((a, x) => a + x.v, 0), totCli) : '—', 'de la venta en los 10 clientes principales'],
+      ];
+      tabla(y, ['Indicador', 'Valor', 'Lectura'], filasI, {
+        at: { columnStyles: { 0: { cellWidth: 230, fontStyle: 'bold' }, 1: { halign: 'right', cellWidth: 90 } },
+          didParseCell: (c) => { if (c.section === 'body' && c.row.index === 3) { c.cell.styles.fillColor = C.claro; c.cell.styles.fontSize = 9.5; if (c.column.index === 2) c.cell.styles.textColor = vtaMes >= equilibrio ? C.verde : C.rojo; } } },
+      });
+      y = doc.lastAutoTable.finalY + 26;
+      // Gastos por grupo
+      const grupos = ok(P) ? P.filas.filter((x) => x.p === 'Expenses' && x.n === 1 && (x.t === 's' || x.t === 'd')).map((x) => ({ nom: String(x.c[0]).replace(/^Total for /, '').replace(/^[\d.]+\s*/, ''), v: n(x.c[1]) })).filter((x) => x.v) : [];
+      grupos.sort((a, b) => b.v - a.v);
+      if (grupos.length && y < H - 160) {
+        y = subt(y, 'En qué se van los gastos de operación', `total ${$0(gastos)} · ${pct(gastos, ventas)} de la venta`);
+        const mx = grupos[0].v;
+        tabla(y + 4, ['Grupo de gasto', 'Monto', '% de ventas', '% del gasto', ''], grupos.map((g) => [g.nom, $0(g.v), pct(g.v, ventas), pct(g.v, gastos), '']), {
+          at: { columnStyles: { 0: { cellWidth: 170 }, ...der([1, 2, 3]), 4: { cellWidth: 130 } },
+            didDrawCell: (c) => { if (c.section !== 'body' || c.column.index !== 4) return; const w = (c.cell.width - 10) * grupos[c.row.index].v / mx; doc.setFillColor(...C.rojo); doc.rect(c.cell.x + 5, c.cell.y + c.cell.height / 2 - 3, w, 6, 'F'); } },
+        });
+      }
     }
 
     // =================== ESTADO DE RESULTADOS ===================
@@ -6330,7 +6385,7 @@
       'El costo de ventas depende del costo registrado en cada producto de QuickBooks. Si un producto tiene el costo mal capturado (por pieza en lugar de por caja, o al revés), el margen de ese producto y de su categoría sale distorsionado.',
       'Las cuentas por cobrar y por pagar son los saldos abiertos al último día del periodo. Los montos en rojo en la antigüedad tienen más de 30 días.',
       'La lista de proveedores incluye compras de mercancía y gastos registrados a nombre de cada proveedor.',
-      ...(fallos.length ? [`No se pudo leer de QuickBooks: ${fallos.join(', ')}. Esas secciones no aparecen en este reporte.`] : []),
+      ...(fallos.length ? [`No se pudo leer de QuickBooks: ${fallos.map((k) => `${k} (${D[k].error})`).join('; ')}. Esas secciones no aparecen en este reporte.`] : []),
     ];
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...C.tinta);
     notas.forEach((t, i) => { const ls = doc.splitTextToSize(t, W - 2 * M - 20); doc.setFont('helvetica', 'bold'); doc.text(String(i + 1) + '.', M, y); doc.setFont('helvetica', 'normal'); doc.text(ls, M + 16, y); y += ls.length * 12 + 8; });
