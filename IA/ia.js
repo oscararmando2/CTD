@@ -87,6 +87,7 @@
     send: '<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
     gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>',
+    chart: '<path d="M3 3v18h18"/><path d="M7 15v3M12 10v8M17 6v12"/>',
     download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/>',
     qb: '<circle cx="12" cy="12" r="10"/><path d="M9 8v8M9 8h2.5a2.5 2.5 0 0 1 0 5H9M15 16V8M15 16h-2.5a2.5 2.5 0 0 1 0-5H15"/>',
     upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5M12 3v12"/>',
@@ -266,6 +267,7 @@
     const only = onlyView();
     $$('#viewTabs button').forEach((b) => { b.hidden = !!only && !only.includes(b.dataset.v); });
     $('#histBtn').hidden = !!only;
+    $('#repBtn').hidden = !['Oscar', 'Luis'].includes(name); // reporte contable: solo Oscar y Luis
     if (only) {
       if (!only.includes(S.view)) S.view = only[0];
       $('#dropzone').hidden = true;
@@ -5934,6 +5936,417 @@
       if (e && e.name !== 'AbortError') toast('No se pudo mandar (' + (e.message || e) + ')');
     } finally { btn.disabled = false; }
   });
+
+  /* ================= REPORTE CONTABLE =================
+   * Solo Oscar y Luis. El servidor lee los reportes de QuickBooks (no escribe nada) y aquí se arma el PDF:
+   * resumen, estado de resultados, resultados por mes, márgenes por categoría, balance, clientes, productos,
+   * cuentas por cobrar / por pagar y gastos por proveedor. */
+  const REP_MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const REP_EN = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+  function repRango(v) {
+    const hoy = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+    const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const y = hoy.getFullYear(), m = hoy.getMonth();
+    if (v === 'anio') return { desde: `${y}-01-01`, hasta: ymd(hoy) };
+    if (v === 'anioAnt') return { desde: `${y - 1}-01-01`, hasta: `${y - 1}-12-31` };
+    if (v === '12m') return { desde: ymd(new Date(y, m - 11, 1)), hasta: ymd(hoy) };
+    if (v === 'mes') return { desde: ymd(new Date(y, m, 1)), hasta: ymd(hoy) };
+    if (v === 'mesAnt') return { desde: ymd(new Date(y, m - 1, 1)), hasta: ymd(new Date(y, m, 0)) };
+    if (v === 'custom') return { desde: $('#repDesde').value, hasta: $('#repHasta').value };
+    return {};
+  }
+  $('#repBtn').addEventListener('click', () => { $('#repMsg').textContent = ''; openModal('#repModal'); });
+  $('#repPer').addEventListener('change', (e) => { $('#repFechas').hidden = e.target.value !== 'custom'; });
+  $('#repGo').addEventListener('click', async () => {
+    const btn = $('#repGo'), r = repRango($('#repPer').value);
+    if ($('#repPer').value === 'custom' && (!r.desde || !r.hasta || r.hasta < r.desde)) { $('#repMsg').textContent = 'Escoge las dos fechas (desde antes que hasta).'; return; }
+    btn.disabled = true; $('#repMsg').textContent = 'Leyendo QuickBooks… (puede tardar unos segundos)';
+    try {
+      const d = await cosCall('reporte_contable', r);
+      $('#repMsg').textContent = 'Armando el PDF…';
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+      const doc = await repPdf(d);
+      download(doc.output('blob'), `Reporte-Contable-CTD-${d.desde}-a-${d.hasta}.pdf`);
+      $('#repMsg').textContent = '✓ PDF descargado';
+    } catch (e) { $('#repMsg').textContent = 'No se pudo: ' + (e.message || e); }
+    finally { btn.disabled = false; }
+  });
+
+  async function repPdf(D) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    const W = 612, H = 792, M = 40;
+    const C = { negro: [15, 13, 10], oro: [242, 163, 30], rojo: [219, 44, 26], verde: [36, 114, 50], gris: [110, 106, 100], claro: [246, 242, 233], linea: [225, 220, 210], tinta: [35, 32, 28] };
+    const n = (v) => { const x = parseFloat(String(v == null ? '' : v).replace(/[$,\s]/g, '')); return isFinite(x) ? x : 0; };
+    const $0 = (v) => (v < 0 ? '-' : '') + '$' + Math.round(Math.abs(v)).toLocaleString('en-US');
+    const $2 = (v) => (v < 0 ? '-' : '') + '$' + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const pct = (a, b) => (b ? (a / b * 100).toFixed(1) + '%' : '—');
+    const fLarga = (s) => { const [y, m, d] = String(s).split('-').map(Number); return `${d} ${REP_MES[m - 1]} ${y}`; };
+    const mesCol = (t) => { const m = String(t).match(/([A-Za-z]{3})\w*\.?\s+(\d{4})/); return m && REP_EN[m[1].toLowerCase()] != null ? `${REP_MES[REP_EN[m[1].toLowerCase()]]} ${m[2]}` : t; };
+    const ok = (r) => r && !r.error && Array.isArray(r.filas);
+    const tot = (r, g, col) => { if (!ok(r)) return 0; const f = r.filas.find((x) => x.t === 's' && x.g === g); return f ? n(f.c[col == null ? f.c.length - 1 : col]) : 0; };
+    const tiene = (r, g) => ok(r) && r.filas.some((x) => x.t === 's' && x.g === g);
+    const gen = new Date(D.generado || Date.now());
+    const periodo = `${fLarga(D.desde)} al ${fLarga(D.hasta)}`;
+
+    // ---------- números clave ----------
+    const P = D.pyg;
+    const ventas = tot(P, 'Income'), costo = tot(P, 'COGS'), bruta = tiene(P, 'GrossProfit') ? tot(P, 'GrossProfit') : ventas - costo;
+    const gastos = tot(P, 'Expenses'), opera = tiene(P, 'NetOperatingIncome') ? tot(P, 'NetOperatingIncome') : bruta - gastos;
+    const neta = tot(P, 'NetIncome'), otros = tot(P, 'NetOtherIncome');
+    const B = D.balance;
+    const bfila = (re) => ok(B) ? B.filas.find((x) => x.t !== 'h' && re.test(x.c[0] || '')) : null;
+    const bancos = tot(B, 'BankAccounts'), cxcT = tot(B, 'AR'), activos = tot(B, 'TotalAssets'), pasivos = tot(B, 'Liabilities'), capital = tot(B, 'Equity'), cxpT = tot(B, 'AP');
+    const invF = bfila(/inventory asset|inventario/i), inventario = invF ? n(invF.c[invF.c.length - 1]) : 0;
+
+    // ---------- resultados por mes ----------
+    const PM = D.pygMes, meses = [];
+    if (ok(PM)) {
+      const cols = PM.cols;
+      for (let i = 1; i < cols.length; i++) {
+        if (/total/i.test(cols[i])) continue;
+        const v = (g) => tot(PM, g, i);
+        const vt = v('Income'), ct = v('COGS');
+        meses.push({ mes: mesCol(cols[i]), anio: (String(cols[i]).match(/\d{4}/) || [''])[0], ventas: vt, costo: ct, bruta: tiene(PM, 'GrossProfit') ? v('GrossProfit') : vt - ct, gastos: v('Expenses'), neta: v('NetIncome') });
+      }
+    }
+    while (meses.length && !meses[0].ventas && !meses[0].costo && !meses[0].gastos && !meses[0].neta) meses.shift();
+
+    // ---------- márgenes por categoría (cuentas de ingreso vs. su costo) ----------
+    const limpio = (s) => String(s).replace(/^[\d.]+\s*/, '').replace(/^cogs\s*-\s*/i, '').trim().toLowerCase();
+    const cats = [];
+    if (ok(P)) {
+      const costos = {};
+      P.filas.filter((x) => x.t === 'd' && x.p === 'COGS').forEach((x) => { costos[limpio(x.c[0])] = (costos[limpio(x.c[0])] || 0) + n(x.c[1]); });
+      P.filas.filter((x) => x.t === 'd' && x.p === 'Income' && n(x.c[1]) > 0 && !/freight|return|credit/i.test(x.c[0])).forEach((x) => {
+        const v = n(x.c[1]), k = limpio(x.c[0]), c = costos[k];
+        cats.push({ nombre: String(x.c[0]).replace(/^[\d.]+\s*/, ''), ventas: v, costo: c == null ? null : c });
+      });
+      cats.sort((a, b) => b.ventas - a.ventas);
+    }
+
+    // ---------- clientes / productos / proveedores ----------
+    const lista = (r, re) => {
+      if (!ok(r)) return [];
+      const ci = r.cols.findIndex((t) => re.test(t)); const k = ci > 0 ? ci : r.cols.length - 1;
+      return r.filas.filter((x) => x.t === 'd' && x.c[0]).map((x) => ({ nombre: x.c[0], v: n(x.c[k]), c: x.c }));
+    };
+    const clientes = lista(D.clientes, /total/i).filter((x) => x.v).sort((a, b) => b.v - a.v);
+    const totCli = clientes.reduce((a, x) => a + x.v, 0);
+    const PR = D.productos;
+    const prodCol = (re) => (ok(PR) ? PR.cols.findIndex((t) => re.test(t)) : -1);
+    const iQ = prodCol(/quant|cant/i), iA = prodCol(/^amount|importe|^ventas/i), iC = prodCol(/cogs|costo/i);
+    const productos = ok(PR) ? PR.filas.filter((x) => x.t === 'd' && x.c[0]).map((x) => ({ nombre: x.c[0], q: iQ > 0 ? n(x.c[iQ]) : 0, v: iA > 0 ? n(x.c[iA]) : n(x.c[x.c.length - 1]), c: iC > 0 ? n(x.c[iC]) : null })).filter((x) => x.v).sort((a, b) => b.v - a.v) : [];
+    const totProd = productos.reduce((a, x) => a + x.v, 0);
+    const proveedores = lista(D.proveedores, /total/i).filter((x) => x.v).sort((a, b) => b.v - a.v);
+    const totProv = proveedores.reduce((a, x) => a + x.v, 0);
+
+    // ---------- encabezado y pie ----------
+    const conEnc = new Set([1]);
+    const barra = () => {
+      doc.setFillColor(...C.oro); doc.rect(0, 0, W, 4, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...C.gris);
+      doc.text('CENTRAL TRADE DISTRIBUTION LLC  ·  REPORTE CONTABLE', M, 26);
+      doc.setFont('helvetica', 'normal'); doc.text(periodo, W - M, 26, { align: 'right' });
+    };
+    const encabezado = (titulo) => {
+      conEnc.add(doc.internal.getCurrentPageInfo().pageNumber);
+      doc.setFillColor(...C.oro); doc.rect(0, 0, W, 4, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(...C.gris);
+      doc.text('CENTRAL TRADE DISTRIBUTION LLC  ·  REPORTE CONTABLE', M, 26);
+      doc.setFont('helvetica', 'normal'); doc.text(periodo, W - M, 26, { align: 'right' });
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(...C.negro);
+      doc.text(titulo, M, 56);
+      doc.setDrawColor(...C.linea); doc.setLineWidth(0.6); doc.line(M, 66, W - M, 66);
+      return 82;
+    };
+    const nueva = (titulo) => { doc.addPage(); return encabezado(titulo); };
+    const subt = (y, t, nota) => {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...C.negro); doc.text(t, M, y);
+      if (nota) { doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...C.gris); doc.text(nota, W - M, y, { align: 'right' }); }
+      return y + 8;
+    };
+    const tabla = (y, head, body, opts = {}) => {
+      doc.autoTable({
+        startY: y, head: [head], body, margin: { left: M, right: M, top: 44, bottom: 50 }, theme: 'plain',
+        styles: { font: 'helvetica', fontSize: 8.5, cellPadding: { top: 4, bottom: 4, left: 5, right: 5 }, textColor: C.tinta, lineColor: C.linea, lineWidth: { bottom: 0.4 } },
+        headStyles: { fillColor: C.negro, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8, lineWidth: 0 },
+        alternateRowStyles: opts.zebra === false ? {} : { fillColor: [250, 248, 243] },
+        ...opts.at,
+        didParseCell: (c) => {
+          const cs = (opts.at && opts.at.columnStyles) || {};
+          if (c.section === 'head' && cs[c.column.index] && cs[c.column.index].halign === 'right') c.cell.styles.halign = 'right';
+          if (opts.at && opts.at.didParseCell) opts.at.didParseCell(c);
+        },
+      });
+      return doc.lastAutoTable.finalY + 22;
+    };
+    const der = (cols) => Object.fromEntries(cols.map((i) => [i, { halign: 'right' }]));
+
+    // =================== PÁGINA 1: RESUMEN ===================
+    doc.setFillColor(...C.negro); doc.rect(0, 0, W, 170, 'F');
+    doc.setFillColor(...C.oro); doc.rect(0, 170, W, 4, 'F');
+    try {
+      const logo = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = 'ctd-logo.png'; });
+      const cv = document.createElement('canvas'); cv.width = logo.naturalWidth; cv.height = logo.naturalHeight; cv.getContext('2d').drawImage(logo, 0, 0);
+      const h = 54, w = h * logo.naturalWidth / logo.naturalHeight;
+      doc.setFillColor(255, 255, 255); doc.roundedRect(M - 6, 34, w + 12, h + 12, 6, 6, 'F');
+      doc.addImage(cv.toDataURL('image/png'), 'PNG', M, 40, w, h);
+    } catch (e) { /* sin logo */ }
+    doc.setTextColor(...C.oro); doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
+    doc.text('REPORTE CONTABLE', W - M, 48, { align: 'right' });
+    doc.setTextColor(255, 255, 255); doc.setFontSize(22);
+    doc.text('Central Trade Distribution LLC', W - M, 76, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.setTextColor(220, 214, 204);
+    doc.text(`Periodo: ${periodo}`, W - M, 98, { align: 'right' });
+    doc.setFontSize(8.5);
+    doc.text(`Base devengado (accrual) · Fuente: QuickBooks Online · Generado el ${gen.getDate()} ${REP_MES[gen.getMonth()]} ${gen.getFullYear()} por ${D.por || ''}`, W - M, 116, { align: 'right' });
+    doc.text('Kansas City · Distribuidora mayorista de alimentos latinos', W - M, 132, { align: 'right' });
+
+    // Tarjetas
+    let y = 196;
+    const tiles = [
+      ['VENTAS NETAS', $0(ventas), ''],
+      ['COSTO DE VENTAS', $0(costo), pct(costo, ventas) + ' de las ventas'],
+      ['UTILIDAD BRUTA', $0(bruta), 'Margen bruto ' + pct(bruta, ventas)],
+      ['GASTOS DE OPERACIÓN', $0(gastos), pct(gastos, ventas) + ' de las ventas'],
+      ['UTILIDAD DE OPERACIÓN', $0(opera), 'Margen ' + pct(opera, ventas)],
+      ['UTILIDAD NETA', $0(neta), 'Margen neto ' + pct(neta, ventas)],
+      ['BANCOS (al ' + fLarga(D.hasta) + ')', $0(bancos), ''],
+      ['CUENTAS POR COBRAR', $0(cxcT), ventas && meses.length ? `aprox. ${Math.round(cxcT / (ventas / Math.max(1, meses.length * 30.4)))} días de venta` : ''],
+      ['INVENTARIO', $0(inventario), ''],
+    ];
+    const tw = (W - 2 * M - 2 * 10) / 3, th = 60;
+    tiles.forEach((t, i) => {
+      const x = M + (i % 3) * (tw + 10), yy = y + Math.floor(i / 3) * (th + 10);
+      doc.setFillColor(...C.claro); doc.roundedRect(x, yy, tw, th, 6, 6, 'F');
+      const neg = /UTILIDAD/.test(t[0]) && n(t[1]) < 0;
+      doc.setFillColor(...(neg ? C.rojo : /UTILIDAD/.test(t[0]) ? C.verde : C.oro)); doc.rect(x, yy + 10, 3, th - 20, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(...C.gris); doc.text(t[0], x + 12, yy + 17);
+      doc.setFontSize(16); doc.setTextColor(...(neg ? C.rojo : C.negro)); doc.text(t[1], x + 12, yy + 38);
+      if (t[2]) { doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...C.gris); doc.text(t[2], x + 12, yy + 51); }
+    });
+    y += 3 * (th + 10) + 12;
+
+    // Gráfica: ventas y utilidad bruta por mes
+    if (meses.length) {
+      y = subt(y, 'Ventas y utilidad bruta por mes');
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...C.gris);
+      doc.setFillColor(...C.oro); doc.rect(W - M - 128, y - 15, 7, 7, 'F'); doc.text('Ventas', W - M - 117, y - 9);
+      doc.setFillColor(...C.verde); doc.rect(W - M - 72, y - 15, 7, 7, 'F'); doc.text('Utilidad bruta', W - M - 61, y - 9);
+      const gx = M + 34, gw = W - M - gx, gh = 150, gy = y + 6;
+      const mx = Math.max(...meses.map((m) => m.ventas), 1);
+      const paso = Math.pow(10, Math.floor(Math.log10(mx))); const tope = Math.ceil(mx / paso) * paso;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...C.gris); doc.setDrawColor(...C.linea); doc.setLineWidth(0.4);
+      for (let k = 0; k <= 4; k++) { const v = tope * k / 4, yy = gy + gh - gh * k / 4; doc.line(gx, yy, gx + gw, yy); doc.text(v >= 1000 ? '$' + Math.round(v / 1000) + 'k' : '$' + Math.round(v), gx - 4, yy + 2, { align: 'right' }); }
+      const bw = gw / meses.length;
+      meses.forEach((m, i) => {
+        const x = gx + i * bw, hv = gh * Math.max(0, m.ventas) / tope, hb = gh * Math.max(0, m.bruta) / tope;
+        doc.setFillColor(...C.oro); doc.rect(x + bw * 0.12, gy + gh - hv, bw * 0.4, hv, 'F');
+        doc.setFillColor(...C.verde); doc.rect(x + bw * 0.5, gy + gh - hb, bw * 0.38, hb, 'F');
+        if (meses.length <= 18 || i % Math.ceil(meses.length / 18) === 0) { doc.setTextColor(...C.gris); doc.text(m.mes.replace(' 20', " '"), x + bw / 2, gy + gh + 10, { align: 'center' }); }
+      });
+      y = gy + gh + 28;
+    }
+
+    // Lectura rápida
+    const puntos = [];
+    if (ventas) puntos.push(`De cada $100 vendidos, $${(costo / ventas * 100).toFixed(0)} son costo de la mercancía y quedan $${(bruta / ventas * 100).toFixed(0)} de utilidad bruta.`);
+    if (ventas) puntos.push(`Los gastos de operación equivalen al ${pct(gastos, ventas)} de las ventas; ${neta >= 0 ? 'queda' : 'el resultado es'} una utilidad neta de ${$0(neta)} (${pct(neta, ventas)}).`);
+    const mejor = meses.slice().sort((a, b) => b.ventas - a.ventas)[0];
+    if (mejor && meses.length > 1) puntos.push(`Mejor mes en ventas: ${mejor.mes} con ${$0(mejor.ventas)}. Promedio mensual: ${$0(meses.reduce((a, m) => a + m.ventas, 0) / meses.length)}.`);
+    if (cats[0]) puntos.push(`Categoría más vendida: ${cats[0].nombre} (${pct(cats[0].ventas, ventas)} de las ventas).`);
+    if (clientes[0]) puntos.push(`Cliente principal: ${clientes[0].nombre} (${pct(clientes[0].v, totCli)}); los 10 primeros suman el ${pct(clientes.slice(0, 10).reduce((a, x) => a + x.v, 0), totCli)} de la venta.`);
+    if (puntos.length && y < H - 120) {
+      y = subt(y, 'Lectura rápida');
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...C.tinta);
+      puntos.forEach((t) => { if (y > H - 60) return; const ls = doc.splitTextToSize(t, W - 2 * M - 14); doc.setFillColor(...C.oro); doc.circle(M + 3, y + 3, 1.6, 'F'); doc.text(ls, M + 12, y + 6); y += ls.length * 11 + 4; });
+    }
+
+    // =================== ESTADO DE RESULTADOS ===================
+    if (ok(P)) {
+      y = nueva('Estado de resultados');
+      const fuertes = ['GrossProfit', 'NetOperatingIncome', 'NetIncome'];
+      const body = P.filas.filter((x) => !(x.t === 'h' && !x.c[0])).map((x) => {
+        const v = x.t === 'h' ? null : n(x.c[1]);
+        let nom = x.c[0] || ''; if (x.t === 's' && !nom) nom = x.g;
+        nom = nom.replace(/^Total for /, 'Total ').replace(/^Total Income$/, 'Total ingresos').replace(/^Total Cost of Goods Sold$/, 'Total costo de ventas').replace(/^Gross Profit$/, 'UTILIDAD BRUTA').replace(/^Total Expenses$/, 'Total gastos de operación').replace(/^Net Operating Income$/, 'UTILIDAD DE OPERACIÓN').replace(/^Net Other Income$/, 'Otros ingresos (gastos) netos').replace(/^Net Income$/, 'UTILIDAD NETA').replace(/^Income$/, 'INGRESOS').replace(/^Cost of Goods Sold$/, 'COSTO DE VENTAS').replace(/^Expenses$/, 'GASTOS DE OPERACIÓN').replace(/^Other Income$/, 'OTROS INGRESOS').replace(/^Other Expenses$/, 'OTROS GASTOS').replace(/^Total Other Income$/, 'Total otros ingresos').replace(/^Total Other Expenses$/, 'Total otros gastos');
+        return { nom, v, t: x.t, nivel: x.n, fuerte: fuertes.includes(x.g) && x.t === 's' };
+      });
+      tabla(y, ['Concepto', 'Monto', '% de ventas'], body.map((r) => [r.nom, r.v == null ? '' : $2(r.v), r.v == null || !ventas ? '' : pct(r.v, ventas)]), {
+        zebra: false,
+        at: {
+          columnStyles: { 0: { cellWidth: 330 }, ...der([1, 2]) },
+          didParseCell: (c) => {
+            if (c.section !== 'body') return; const r = body[c.row.index];
+            if (c.column.index === 0) c.cell.styles.cellPadding = { top: 3.2, bottom: 3.2, left: 5 + r.nivel * 12, right: 5 };
+            else c.cell.styles.cellPadding = { top: 3.2, bottom: 3.2, left: 5, right: 5 };
+            if (r.t !== 'd') c.cell.styles.fontStyle = 'bold';
+            if (r.t === 'h' && r.nivel === 0) { c.cell.styles.textColor = C.oro; c.cell.styles.fontSize = 8; }
+            if (r.fuerte) { c.cell.styles.fillColor = C.claro; c.cell.styles.fontSize = 9.5; if (r.v < 0 && c.column.index > 0) c.cell.styles.textColor = C.rojo; }
+            if (r.t === 'd') c.cell.styles.lineWidth = 0;
+          },
+        },
+      });
+    }
+
+    // =================== RESULTADOS POR MES ===================
+    if (meses.length) {
+      y = nueva('Resultados por mes');
+      const filas = [], marcas = [];
+      const anios = [...new Set(meses.map((m) => m.anio))];
+      const suma = (arr) => ['ventas', 'costo', 'bruta', 'gastos', 'neta'].reduce((o, k) => (o[k] = arr.reduce((a, m) => a + m[k], 0), o), {});
+      const fila = (nom, m) => [nom, $0(m.ventas), $0(m.costo), $0(m.bruta), pct(m.bruta, m.ventas), $0(m.gastos), $0(m.neta), pct(m.neta, m.ventas)];
+      anios.forEach((a) => {
+        const ms = meses.filter((m) => m.anio === a);
+        ms.forEach((m) => filas.push(fila(m.mes, m)));
+        if (anios.length > 1) { marcas.push(filas.length); filas.push(fila('Total ' + a, suma(ms))); }
+      });
+      marcas.push(filas.length); filas.push(fila('TOTAL DEL PERIODO', suma(meses)));
+      tabla(y, ['Mes', 'Ventas', 'Costo', 'Utilidad bruta', 'Margen', 'Gastos', 'Utilidad neta', 'Margen neto'], filas, {
+        at: {
+          columnStyles: der([1, 2, 3, 4, 5, 6, 7]),
+          didParseCell: (c) => {
+            if (c.section !== 'body') return;
+            if (marcas.includes(c.row.index)) { c.cell.styles.fontStyle = 'bold'; c.cell.styles.fillColor = C.claro; }
+            if ((c.column.index === 6 || c.column.index === 7) && /^-/.test(String(c.cell.raw))) c.cell.styles.textColor = C.rojo;
+          },
+        },
+      });
+    }
+
+    // =================== MÁRGENES POR CATEGORÍA ===================
+    if (cats.length) {
+      y = nueva('Ventas y margen por categoría');
+      const mx = Math.max(...cats.map((c) => c.ventas));
+      const body = cats.map((c) => [c.nombre, $0(c.ventas), pct(c.ventas, ventas), c.costo == null ? '—' : $0(c.costo), c.costo == null ? '—' : $0(c.ventas - c.costo), c.costo == null ? '—' : pct(c.ventas - c.costo, c.ventas), '']);
+      tabla(y, ['Categoría', 'Ventas', '% del total', 'Costo', 'Utilidad bruta', 'Margen', ''], body, {
+        at: {
+          columnStyles: { 0: { cellWidth: 110 }, ...der([1, 2, 3, 4, 5]), 6: { cellWidth: 110 } },
+          didDrawCell: (c) => {
+            if (c.section !== 'body' || c.column.index !== 6) return;
+            const cat = cats[c.row.index], w = (c.cell.width - 10) * cat.ventas / mx;
+            doc.setFillColor(...C.oro); doc.rect(c.cell.x + 5, c.cell.y + c.cell.height / 2 - 3, w, 6, 'F');
+          },
+        },
+      });
+      y = doc.lastAutoTable.finalY + 14;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(...C.gris);
+      doc.text(doc.splitTextToSize('El costo de cada categoría es la cuenta de costo (COGS) del mismo nombre en QuickBooks. Fletes, mermas y devoluciones van aparte en el estado de resultados.', W - 2 * M), M, y);
+    }
+
+    // =================== BALANCE GENERAL ===================
+    if (ok(B)) {
+      y = nueva('Balance general');
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...C.gris); doc.text(`Al ${fLarga(D.hasta)}`, M, y - 4);
+      const kpi = [['Activos', activos], ['Pasivos', pasivos], ['Capital', capital]];
+      const kw = (W - 2 * M - 20) / 3;
+      kpi.forEach(([t, v], i) => { const x = M + i * (kw + 10); doc.setFillColor(...C.claro); doc.roundedRect(x, y + 4, kw, 44, 6, 6, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(7); doc.setTextColor(...C.gris); doc.text(t.toUpperCase(), x + 10, y + 18); doc.setFontSize(14); doc.setTextColor(...(v < 0 ? C.rojo : C.negro)); doc.text($0(v), x + 10, y + 38); });
+      y += 66;
+      const body = B.filas.filter((x) => !(x.t === 'h' && !x.c[0])).map((x) => ({ nom: (x.c[0] || x.g).replace(/^Total for /, 'Total ').replace(/^TOTAL ASSETS$/i, 'TOTAL ACTIVOS').replace(/^TOTAL LIABILITIES AND EQUITY$/i, 'TOTAL PASIVO Y CAPITAL').replace(/^ASSETS$/i, 'ACTIVOS').replace(/^LIABILITIES AND EQUITY$/i, 'PASIVO Y CAPITAL').replace(/^Liabilities$/, 'Pasivos').replace(/^Equity$/, 'Capital').replace(/^Total Liabilities$/, 'Total pasivos').replace(/^Total Equity$/, 'Total capital').replace(/^Current Assets$/, 'Activo circulante').replace(/^Total Current Assets$/, 'Total activo circulante').replace(/^Bank Accounts$/, 'Bancos').replace(/^Total Bank Accounts$/, 'Total bancos').replace(/^Accounts Receivable$/, 'Cuentas por cobrar').replace(/^Total Accounts Receivable$/, 'Total cuentas por cobrar').replace(/^Other Current Assets$/, 'Otros activos circulantes').replace(/^Total Other Current Assets$/, 'Total otros activos circulantes').replace(/^Fixed Assets$/, 'Activo fijo').replace(/^Total Fixed Assets$/, 'Total activo fijo').replace(/^Current Liabilities$/, 'Pasivo circulante').replace(/^Total Current Liabilities$/, 'Total pasivo circulante').replace(/^Accounts Payable$/, 'Cuentas por pagar').replace(/^Total Accounts Payable$/, 'Total cuentas por pagar').replace(/^Credit Cards$/, 'Tarjetas de crédito').replace(/^Total Credit Cards$/, 'Total tarjetas de crédito').replace(/^Other Current Liabilities$/, 'Otros pasivos circulantes').replace(/^Total Other Current Liabilities$/, 'Total otros pasivos circulantes').replace(/^Long-Term Liabilities$/, 'Pasivo a largo plazo').replace(/^Total Long-Term Liabilities$/, 'Total pasivo a largo plazo').replace(/^Net Income$/, 'Utilidad neta del periodo'),
+        v: x.t === 'h' ? null : n(x.c[x.c.length - 1]), t: x.t, nivel: x.n, top: x.n === 0 && x.t === 's' }));
+      tabla(y, ['Concepto', 'Monto'], body.map((r) => [r.nom, r.v == null ? '' : $2(r.v)]), {
+        zebra: false,
+        at: {
+          columnStyles: { 0: { cellWidth: 380 }, 1: { halign: 'right' } },
+          didParseCell: (c) => {
+            if (c.section !== 'body') return; const r = body[c.row.index];
+            c.cell.styles.cellPadding = { top: 3, bottom: 3, left: c.column.index === 0 ? 5 + r.nivel * 12 : 5, right: 5 };
+            if (r.t !== 'd') c.cell.styles.fontStyle = 'bold'; else c.cell.styles.lineWidth = 0;
+            if (r.t === 'h' && r.nivel === 0) c.cell.styles.textColor = C.oro;
+            if (r.top) { c.cell.styles.fillColor = C.claro; c.cell.styles.fontSize = 9.5; }
+            if (c.column.index === 1 && r.v < 0) c.cell.styles.textColor = C.rojo;
+          },
+        },
+      });
+    }
+
+    // =================== CLIENTES ===================
+    if (clientes.length) {
+      y = nueva('Ventas por cliente');
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...C.gris);
+      doc.text(`${clientes.length} clientes con venta en el periodo · total ${$0(totCli)}`, M, y - 4);
+      let acum = 0;
+      const top = clientes.slice(0, 40).map((c, i) => { acum += c.v; return [String(i + 1), c.nombre, $2(c.v), pct(c.v, totCli), pct(acum, totCli)]; });
+      if (clientes.length > 40) { const r = clientes.slice(40).reduce((a, x) => a + x.v, 0); top.push(['', `Otros ${clientes.length - 40} clientes`, $2(r), pct(r, totCli), '100.0%']); }
+      top.push(['', 'TOTAL', $2(totCli), '100.0%', '']);
+      tabla(y + 6, ['#', 'Cliente', 'Ventas', '% del total', '% acumulado'], top, { at: { columnStyles: { 0: { cellWidth: 24, halign: 'right' }, ...der([2, 3, 4]) }, didParseCell: (c) => { if (c.section === 'body' && c.row.index === top.length - 1) { c.cell.styles.fontStyle = 'bold'; c.cell.styles.fillColor = C.claro; } } } });
+    }
+
+    // =================== PRODUCTOS ===================
+    if (productos.length) {
+      y = nueva('Productos más vendidos');
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...C.gris);
+      doc.text(`${productos.length} productos con venta · los 60 primeros por monto · total ${$0(totProd)}`, M, y - 4);
+      const conCosto = productos.some((p) => p.c != null);
+      const body = productos.slice(0, 60).map((p, i) => [String(i + 1), p.nombre, p.q ? Math.round(p.q).toLocaleString('en-US') : '', $0(p.v), pct(p.v, totProd), ...(conCosto ? [p.c == null ? '—' : $0(p.c), p.c == null || !p.v ? '—' : pct(p.v - p.c, p.v)] : [])]);
+      tabla(y + 6, ['#', 'Producto', 'Cantidad', 'Ventas', '% del total', ...(conCosto ? ['Costo', 'Margen'] : [])], body, {
+        at: { styles: { fontSize: 7.8 }, columnStyles: { 0: { cellWidth: 22, halign: 'right' }, 1: { cellWidth: conCosto ? 220 : 300 }, ...der([2, 3, 4, 5, 6]) },
+          didParseCell: (c) => { if (c.section === 'body' && c.column.index === 6 && /^-/.test(String(c.cell.raw))) c.cell.styles.textColor = C.rojo; } },
+      });
+    }
+
+    // =================== CUENTAS POR COBRAR / PAGAR ===================
+    const antig = (r, titulo, quien) => {
+      if (!ok(r)) return;
+      const datos = r.filas.filter((x) => x.t === 'd' && x.c[0]);
+      const total = r.filas.filter((x) => x.t === 's').pop();
+      y = nueva(titulo);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...C.gris);
+      doc.text(`Al ${fLarga(D.hasta)} · ${datos.length} ${quien} con saldo`, M, y - 4);
+      const cols = r.cols.map((t, i) => (i === 0 ? (quien === 'clientes' ? 'Cliente' : 'Proveedor') : String(t).replace(/^Current$/i, 'Al corriente').replace(/and over/i, 'y más').replace(/^Total$/i, 'Total')));
+      const ord = datos.slice().sort((a, b) => n(b.c[b.c.length - 1]) - n(a.c[a.c.length - 1]));
+      const body = ord.map((x) => x.c.map((v, i) => (i === 0 ? v : v === '' ? '' : $2(n(v)))));
+      if (total) body.push(total.c.map((v, i) => (i === 0 ? 'TOTAL' : $2(n(v)))));
+      tabla(y + 6, cols, body, {
+        at: { styles: { fontSize: 7.8 }, columnStyles: { 0: { cellWidth: 150 }, ...der(cols.map((_, i) => i).slice(1)) },
+          didParseCell: (c) => {
+            if (c.section !== 'body') return;
+            if (total && c.row.index === body.length - 1) { c.cell.styles.fontStyle = 'bold'; c.cell.styles.fillColor = C.claro; }
+            else if (c.column.index >= 3 && c.column.index < cols.length - 1 && n(c.cell.raw) > 0) c.cell.styles.textColor = C.rojo;
+          } },
+      });
+    };
+    antig(D.cxc, 'Cuentas por cobrar (antigüedad)', 'clientes');
+    antig(D.cxp, 'Cuentas por pagar (antigüedad)', 'proveedores');
+
+    // =================== PROVEEDORES ===================
+    if (proveedores.length) {
+      y = nueva('Compras y gastos por proveedor');
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...C.gris);
+      doc.text(`${proveedores.length} proveedores · total ${$0(totProv)}`, M, y - 4);
+      const body = proveedores.slice(0, 40).map((p, i) => [String(i + 1), p.nombre, $2(p.v), pct(p.v, totProv)]);
+      if (proveedores.length > 40) { const r = proveedores.slice(40).reduce((a, x) => a + x.v, 0); body.push(['', `Otros ${proveedores.length - 40} proveedores`, $2(r), pct(r, totProv)]); }
+      body.push(['', 'TOTAL', $2(totProv), '100.0%']);
+      tabla(y + 6, ['#', 'Proveedor', 'Monto', '% del total'], body, { at: { columnStyles: { 0: { cellWidth: 24, halign: 'right' }, ...der([2, 3]) }, didParseCell: (c) => { if (c.section === 'body' && c.row.index === body.length - 1) { c.cell.styles.fontStyle = 'bold'; c.cell.styles.fillColor = C.claro; } } } });
+    }
+
+    // =================== NOTAS ===================
+    y = nueva('Notas');
+    const fallos = ['pyg', 'pygMes', 'balance', 'clientes', 'productos', 'cxc', 'cxp', 'proveedores'].filter((k) => D[k] && D[k].error);
+    const notas = [
+      'Todas las cifras salen directo de QuickBooks Online al momento de generar el reporte, en base devengado (accrual): las ventas cuentan cuando se facturan y los gastos cuando se registran, aunque no se hayan cobrado o pagado.',
+      'El costo de ventas depende del costo registrado en cada producto de QuickBooks. Si un producto tiene el costo mal capturado (por pieza en lugar de por caja, o al revés), el margen de ese producto y de su categoría sale distorsionado.',
+      'Las cuentas por cobrar y por pagar son los saldos abiertos al último día del periodo. Los montos en rojo en la antigüedad tienen más de 30 días.',
+      'La lista de proveedores incluye compras de mercancía y gastos registrados a nombre de cada proveedor.',
+      ...(fallos.length ? [`No se pudo leer de QuickBooks: ${fallos.join(', ')}. Esas secciones no aparecen en este reporte.`] : []),
+    ];
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...C.tinta);
+    notas.forEach((t, i) => { const ls = doc.splitTextToSize(t, W - 2 * M - 20); doc.setFont('helvetica', 'bold'); doc.text(String(i + 1) + '.', M, y); doc.setFont('helvetica', 'normal'); doc.text(ls, M + 16, y); y += ls.length * 12 + 8; });
+
+    // Pie de página en todas
+    const total = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= total; i++) {
+      doc.setPage(i);
+      if (!conEnc.has(i)) barra(); // páginas que agregó autoTable al partir una tabla larga
+      doc.setDrawColor(...C.linea); doc.setLineWidth(0.5); doc.line(M, H - 34, W - M, H - 34);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(...C.gris);
+      doc.text('Central Trade Distribution LLC · Confidencial · Fuente: QuickBooks Online', M, H - 22);
+      doc.text(`Página ${i} de ${total}`, W - M, H - 22, { align: 'right' });
+    }
+    return doc;
+  }
 
   /* ================= INICIO ================= */
   fillIcons();

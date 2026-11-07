@@ -523,6 +523,32 @@ module.exports = async (req, res) => {
             grupo: e.grupo || '', grupoTitulo: e.grupoTitulo || '', grupoCorto: e.grupoCorto || '' }));
         return res.json({ list, today });
       }
+      case 'reporte_contable': {
+        // Reporte contable (solo lectura de reportes de QuickBooks; no escribe nada). Solo Oscar y Luis.
+        if (!['Oscar', 'Luis'].includes(who)) return res.status(403).json({ error: 'Sin permiso' });
+        const hoy = todayCT();
+        let desde = ymdOk(body.desde) || '';
+        if (!desde) {
+          const prim = await Promise.all(['Invoice', 'SalesReceipt', 'Bill', 'Purchase', 'JournalEntry'].map((e) => qbQuery(`select * from ${e} orderby TxnDate maxresults 1`).then((d) => ((d[e] || [])[0] || {}).TxnDate || '').catch(() => '')));
+          desde = prim.filter(Boolean).sort()[0] || '2023-01-01';
+        }
+        const hasta = ymdOk(body.hasta) || hoy;
+        if (hasta < desde) return res.status(400).json({ error: 'Rango de fechas inválido' });
+        const rep = async (nombre, q) => { try { return planoQb(await qb('GET', `reports/${nombre}?${new URLSearchParams({ accounting_method: 'Accrual', ...q })}`)); } catch (e) { return { error: e.message }; } };
+        const rango = { start_date: desde, end_date: hasta };
+                const [pyg, pygMes, balance, clientes, productos, cxc, cxp, proveedores] = await Promise.all([
+          rep('ProfitAndLoss', rango),
+          rep('ProfitAndLoss', { ...rango, summarize_column_by: 'Month' }),
+          rep('BalanceSheet', { start_date: hasta, end_date: hasta }),
+          rep('CustomerSales', rango),
+          rep('ItemSales', rango),
+          rep('AgedReceivables', { report_date: hasta }),
+          rep('AgedPayables', { report_date: hasta }),
+          rep('VendorExpenses', rango),
+        ]);
+        await log({ action: 'reporte-contable', name: `${desde} a ${hasta}`, by: who });
+        return res.json({ desde, hasta, generado: Date.now(), por: who, pyg, pygMes, balance, clientes, productos, cxc, cxp, proveedores });
+      }
       case 'vend_actividad': {
         // Comportamiento del vendedor (InSitu): visitas, pedidos y rastreo por día. Solo Oscar, Luis y Diego.
         if (RECIBO_ONLY.includes(who) || COSTEO_ONLY.includes(who)) return res.status(403).json({ error: 'Sin permiso' });
@@ -1128,6 +1154,22 @@ const NOV_TIPOS = ['damaged', 'missing item', 'short date format', 'spare'];
 const RECIBO_ACTIONS = ['ord_list', 'ord_save', 'ordenes_data', 'novedad_num', 'qb_bill', 'recibo_inventario', 'parse', 'map', 'lookup', 'catalogo', 'recibo_find', 'lote_add', 'lote_del', 'recibo_save', 'recibo_list', 'recibo_get', 'lotes'];
 const DAY_MS = 86400000;
 const ESTADOS = ['', 'ok', 'parcial', 'no', 'pendiente'];
+// Reporte de QuickBooks → filas planas: { n: nivel, t: 'h' encabezado | 'd' dato | 's' total, g: grupo, c: [texto de cada columna] }
+function planoQb(r) {
+  const cols = ((r && r.Columns && r.Columns.Column) || []).map((c) => String(c.ColTitle || ''));
+  const filas = [];
+  const cd = (x) => ((x && x.ColData) || []).map((c) => String(c.value == null ? '' : c.value));
+  // p: grupo de la sección principal (Income, COGS, Expenses…) a la que pertenece la fila
+  const walk = (rows, n, top) => (rows || []).forEach((row) => {
+    const p = n === 0 ? (row.group || '') : top;
+    if (row.Header) filas.push({ n, t: 'h', g: row.group || '', p, c: cd(row.Header) });
+    if (row.ColData) filas.push({ n, t: 'd', g: row.group || '', p, c: cd(row) });
+    if (row.Rows) walk(row.Rows.Row, n + 1, p);
+    if (row.Summary) filas.push({ n, t: 's', g: row.group || '', p, c: cd(row.Summary) });
+  });
+  walk(r && r.Rows && r.Rows.Row, 0, '');
+  return { cols, filas };
+}
 const ymdOk = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? String(v) : '');
 
 // Costeo cambió renglones (separó un mix, ligó a otro producto…): bodega ve lo mismo sin recargar nada.

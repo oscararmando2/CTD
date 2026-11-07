@@ -79,6 +79,7 @@
     </div>
     <div class="topbar-r">
       <span id="whoami" class="whoami"></span>
+      <button id="repBtn" class="icon-btn" type="button" aria-label="Reporte contable" title="Reporte contable" hidden><i data-icon="chart"></i></button>
       <button id="histBtn" class="icon-btn" type="button" aria-label="Historial" title="Historial"><i data-icon="clock"></i><span id="histCount" class="badge"></span></button>
       <button id="logoutBtn" class="icon-btn" type="button" aria-label="Salir" title="Salir"><i data-icon="logout"></i></button>
     </div>
@@ -397,6 +398,34 @@
       </div>
       <button id="applyBtn" class="btn btn-oro btn-lg btn-block" type="button">Generar con estos ajustes</button>
     </div>
+  </div>
+</div>
+
+<!-- Reporte contable (solo Oscar y Luis): lee QuickBooks y arma el PDF -->
+<div id="repModal" class="modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <h3>Reporte contable</h3>
+      <button class="icon-btn" data-close type="button" aria-label="Cerrar"><i data-icon="x"></i></button>
+    </div>
+    <p class="data-info">Sale de QuickBooks al momento: estado de resultados, resultados por mes, márgenes por categoría, balance general, clientes, productos, cuentas por cobrar y por pagar, y gastos por proveedor.</p>
+    <label class="field"><span>Periodo</span>
+      <select id="repPer">
+        <option value="todo">Todo el tiempo</option>
+        <option value="anio">Este año</option>
+        <option value="anioAnt">Año pasado</option>
+        <option value="12m">Últimos 12 meses</option>
+        <option value="mes">Este mes</option>
+        <option value="mesAnt">Mes pasado</option>
+        <option value="custom">Escoger fechas…</option>
+      </select>
+    </label>
+    <div id="repFechas" class="rep-fechas" hidden>
+      <label class="field"><span>Desde</span><input id="repDesde" type="date"></label>
+      <label class="field"><span>Hasta</span><input id="repHasta" type="date"></label>
+    </div>
+    <button id="repGo" class="btn btn-oro btn-lg btn-block" type="button"><i data-icon="download"></i>Generar PDF</button>
+    <p id="repMsg" class="data-info" role="status" aria-live="polite"></p>
   </div>
 </div>
 
