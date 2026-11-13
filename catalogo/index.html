@@ -1297,9 +1297,9 @@
           <span class="time" data-i18n="intro.now">ahora</span>
         </div>
       </div>
-      <div class="intro-title" id="introTitle" data-i18n="intro.title">🌽 ¡Llegaron las Hojas de Maíz Delicias Yeya!</div>
-      <div class="intro-body" data-i18n="intro.body">Perfectas para tamales — 1 LB, producto de México. Cotiza por WhatsApp.</div>
-      <img class="intro-img" src="./tamal-banner.jpg" alt="" data-i18n-attr="alt=tamal.bannerAlt" />
+      <div class="intro-title" id="introTitle" data-i18n="intro.title">🌮 ¡Llegó Charras!</div>
+      <div class="intro-body" data-i18n="intro.body">Tostadas, totopos y botanas — displays de pallet y ¼ pallet. Cotiza por WhatsApp.</div>
+      <img class="intro-img" src="./charras/original-cuarto-pallet.jpg" alt="" data-i18n-attr="alt=charras.introAlt" />
       <button class="intro-btn" id="introOk" data-i18n="intro.ok">Listo</button>
     </div>
   </div>
@@ -1534,8 +1534,9 @@
         'tamal.sub': 'Perfectas para tamales — cotiza por WhatsApp.',
         'tamal.bannerAlt': 'Hojas de maíz Delicias Yeya, 1 LB — perfectas para tamales',
         'intro.now': 'ahora',
-        'intro.title': '🌽 ¡Llegaron las Hojas de Maíz Delicias Yeya!',
-        'intro.body': 'Perfectas para tamales — 1 LB, producto de México. Cotiza por WhatsApp.',
+        'intro.title': '🌮 ¡Llegó Charras!',
+        'intro.body': 'Tostadas, totopos y botanas — displays de pallet y ¼ pallet. Cotiza por WhatsApp.',
+        'charras.introAlt': 'Display de ¼ pallet de tostadas Charras Original',
         'intro.ok': 'Listo',
         'search.placeholder': 'Buscar producto (nombre, marca, código…)',
         'filter.allBrands': 'Todas las marcas',
@@ -1599,8 +1600,9 @@
         'tamal.sub': 'Perfect for tamales — quote on WhatsApp.',
         'tamal.bannerAlt': 'Delicias Yeya corn husks, 1 LB — perfect for tamales',
         'intro.now': 'now',
-        'intro.title': '🌽 Delicias Yeya Corn Husks are here!',
-        'intro.body': 'Perfect for tamales — 1 LB, product of Mexico. Quote on WhatsApp.',
+        'intro.title': '🌮 Charras is here!',
+        'intro.body': 'Tostadas, tortilla chips and snacks — pallet and ¼ pallet displays. Quote on WhatsApp.',
+        'charras.introAlt': 'Charras Original tostadas ¼ pallet display',
         'intro.ok': 'Got it',
         'search.placeholder': 'Search product (name, brand, code…)',
         'filter.allBrands': 'All brands',
@@ -2452,10 +2454,10 @@
         introOverlay.classList.remove('visible');
         introOverlay.setAttribute('aria-hidden', 'true');
         document.body.style.overflow = '';
-        try { sessionStorage.setItem('ctd_intro_seen_v3', '1'); } catch (e) {}
+        try { sessionStorage.setItem('ctd_intro_seen_v4', '1'); } catch (e) {}
       }
       let introSeen = null;
-      try { introSeen = sessionStorage.getItem('ctd_intro_seen_v3'); } catch (e) {}
+      try { introSeen = sessionStorage.getItem('ctd_intro_seen_v4'); } catch (e) {}
       if (introOverlay && !introSeen) {
         // Traducir textos del intro al idioma actual antes de mostrar
         introOverlay.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
