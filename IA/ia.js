@@ -2218,13 +2218,18 @@
       await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
       if (document.fonts && document.fonts.ready) await document.fonts.ready;
       const pages = $$('#clientSheet .pg');
-      // Espera las fotos; si alguna no carga, se queda el espacio en blanco
-      await Promise.all($$('#clientSheet img').map((im) => (im.complete ? 0 : new Promise((r) => { im.onload = im.onerror = r; }))));
+      // Espera las fotos máximo 10 s; la que no cargue se deja en blanco (una foto trabada dejaba el PDF "Generando…" varios minutos)
+      const espera = (im) => (im.complete ? 0 : new Promise((r) => { im.addEventListener('load', r, { once: true }); im.addEventListener('error', r, { once: true }); }));
+      await Promise.race([Promise.all($$('#clientSheet img').map(espera)), new Promise((r) => setTimeout(r, 10000))]);
+      $$('#clientSheet img').forEach((im) => { if (!im.complete || !im.naturalWidth) im.style.visibility = 'hidden'; });
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+      const escala = pages.length > 8 ? 1.5 : 2; // catálogo largo: más ligero para que no se trabe en el celular
       for (let i = 0; i < pages.length; i++) {
+        btn.textContent = 'Generando PDF… ' + (i + 1) + ' de ' + pages.length;
+        await new Promise((r) => setTimeout(r, 0));
         const canvas = await window.html2canvas(pages[i], {
-          scale: 2, useCORS: true, backgroundColor: null, width: 816, height: 1056, windowWidth: 816,
+          scale: escala, useCORS: true, imageTimeout: 8000, backgroundColor: null, width: 816, height: 1056, windowWidth: 816,
           onclone: (d) => { d.querySelectorAll('.pg').forEach((p) => { p.style.transform = 'none'; }); },
         });
         if (i) doc.addPage();
