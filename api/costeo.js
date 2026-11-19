@@ -711,6 +711,15 @@ module.exports = async (req, res) => {
             } catch (e) { /* sigue */ }
           }
         }
+        // Precio de venta de los que se venden por pieza: si la copia del catálogo no lo trae, se lee de QuickBooks
+        // (iLAM1248: Queso para Frijoles Doña Nita 60 piezas a $4.89 salió en la orden como 720 a $0.41)
+        for (const l of ((rec && rec.lines) || (cos && cos.lines) || [])) {
+          const cs = skuCos[norm(l.producto)] || {};
+          const sku = String(ligadoCosteo(l) || l.qbId || l.sku || cs.sku || '');
+          if (!/^\d+$/.test(sku) || precioPz[sku] > 0) continue;
+          if (!(cs.pz > 1) && !(((pzMem || {})[codeKey(sku)] || 0) > 1) && !/each|count|pieza|unit/i.test(units[sku] || '')) continue;
+          try { const it = await qbItem(sku); if (it && Number(it.UnitPrice) > 0) precioPz[sku] = Number(it.UnitPrice); } catch (e) { /* sigue */ }
+        }
         const lines = [], faltan = [], sinLigarNo = [];
         // Todo tal cual como lo revisó bodega: lo que no llegó va en 0 y lo que sobró (agregado) va con su nota
         ((rec && rec.lines) || (cos && cos.lines) || []).forEach((l) => {
@@ -737,8 +746,10 @@ module.exports = async (req, res) => {
           const nCaja = pzL > 1 ? pzL : Number(l.unidades_por_caja) > 1 ? Number(l.unidades_por_caja) : 0;
           if (nCaja > 1 && tl > 0 && cant > 0 && Math.abs(cant * cc / nCaja - tl) < Math.abs(cant * cc - tl)) yaPiezas = true;
           // Si el costo del renglón no llega ni al precio de venta de UNA pieza, la factura ya viene en piezas: no se multiplica
-          if (pzL > 1 && precioPz[sku] > 0 && (Number(l.costo_caja) || 0) <= precioPz[sku] * 1.2) pzL = 0;
-          const porPieza = pzL > 1 || (!deCosteo && mem == null && /each|count|pieza|unit/i.test(units[sku] || ''));
+          // (también cuando todavía no hay Costeo: iLAM1248 se mandó antes de costear y el Queso Doña Nita salió ×12)
+          const yaEsPieza = precioPz[sku] > 0 && (Number(l.costo_caja) || 0) <= precioPz[sku] * 1.2;
+          if (pzL > 1 && yaEsPieza) pzL = 0;
+          const porPieza = pzL > 1 || (!deCosteo && mem == null && !yaEsPieza && /each|count|pieza|unit/i.test(units[sku] || ''));
           const n = pzL > 1 ? pzL : piezasDe(l);
           if (porPieza && !(n > 1)) { faltan.push(`${l.nombre || l.producto} (por pieza: no sé cuántas trae la caja)`); return; }
           const costo = Number(l.costo_caja) || 0;
